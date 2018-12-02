@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 #ifndef KBE_READ_ENTITY_HELPER_H
 #define KBE_READ_ENTITY_HELPER_H
@@ -82,23 +64,49 @@ public:
 				// 查询命令保证了查询到的每条记录都会有dbid
 				std::stringstream sval;
 				sval << arow[0];
+
 				DBID item_dbid;
 				sval >> item_dbid;
 
 				// 将dbid记录到列表中，如果当前表还存在子表引用则会去子表查每一条与此dbid相关的记录
-				context.dbids[context.dbid].push_back(item_dbid);
+				std::vector<DBID>& itemDBIDs = context.dbids[context.dbid];
+				int fidx = -100;
+
+				// 如果当前这个item的dbid小于该表下最后一个记录的dbid大小，那么需要在itemDBIDs中指定的位置插入这个dbid，以保证从小到大的顺序
+				if (itemDBIDs.size() > 0 && itemDBIDs[itemDBIDs.size() - 1] > item_dbid)
+				{
+					for (fidx = itemDBIDs.size() - 1; fidx > 0; --fidx)
+					{
+						if (itemDBIDs[fidx] < item_dbid)
+							break;
+					}
+
+					itemDBIDs.insert(itemDBIDs.begin() + fidx, item_dbid);
+				}
+				else
+				{
+					itemDBIDs.push_back(item_dbid);
+				}
 
 				// 如果这条记录除了dbid以外还存在其他数据，则将数据填充到结果集中
 				if(nfields > 1)
 				{
+					std::vector<std::string>& itemResults = context.results[item_dbid].second;
+					context.results[item_dbid].first = 0;
+
 					KBE_ASSERT(nfields == context.items.size() + 1);
+
 					for (uint32 i = 1; i < nfields; ++i)
 					{
 						KBEShared_ptr<mysql::DBContext::DB_ITEM_DATA> pSotvs = context.items[i - 1];
 						std::string data;
 						data.assign(arow[i], lengths[i]);
 
-						context.results.push_back(data);
+						// 如果上面计算加入dbid时是插入方式，那么结果集中也需要插入到对应的位置
+						if (fidx != -100)
+							itemResults.insert(itemResults.begin() + fidx++, data);
+						else
+							itemResults.push_back(data);
 					}
 				}
 			}
@@ -165,30 +173,58 @@ public:
 				// 查询命令保证了查询到的每条记录都会有dbid
 				std::stringstream sval;
 				sval << arow[0];
+
 				DBID item_dbid;
 				sval >> item_dbid;
 
 				sval.clear();
 				sval << arow[1];
+
 				DBID parentID;
 				sval >> parentID;
 
 				// 将dbid记录到列表中，如果当前表还存在子表引用则会去子表查每一条与此dbid相关的记录
-				context.dbids[parentID].push_back(item_dbid);
-				t_parentTableDBIDs.push_back(item_dbid);
+				std::vector<DBID>& itemDBIDs = context.dbids[parentID];
+				int fidx = -100;
+
+				// 如果当前这个item的dbid小于该表下最后一个记录的dbid大小，那么需要在itemDBIDs中指定的位置插入这个dbid，以保证从小到大的顺序
+				if (itemDBIDs.size() > 0 && itemDBIDs[itemDBIDs.size() - 1] > item_dbid)
+				{
+					for (fidx = itemDBIDs.size() - 1; fidx > 0; --fidx)
+					{
+						if (itemDBIDs[fidx] < item_dbid)
+							break;
+					}
+
+					itemDBIDs.insert(itemDBIDs.begin() + fidx, item_dbid);
+					t_parentTableDBIDs.insert(t_parentTableDBIDs.begin() + t_parentTableDBIDs.size() - (itemDBIDs.size() - fidx - 1), item_dbid);
+				}
+				else
+				{
+					itemDBIDs.push_back(item_dbid);
+					t_parentTableDBIDs.push_back(item_dbid);
+				}
 
 				// 如果这条记录除了dbid以外还存在其他数据，则将数据填充到结果集中
 				const uint32 const_fields = 2; // id, parentID
 				if(nfields > const_fields)
 				{
+					std::vector<std::string>& itemResults = context.results[item_dbid].second;
+					context.results[item_dbid].first = 0;
+
 					KBE_ASSERT(nfields == context.items.size() + const_fields);
+
 					for (uint32 i = const_fields; i < nfields; ++i)
 					{
 						KBEShared_ptr<mysql::DBContext::DB_ITEM_DATA> pSotvs = context.items[i - const_fields];
 						std::string data;
 						data.assign(arow[i], lengths[i]);
 
-						context.results.push_back(data);
+						// 如果当前这个item的dbid大于该表下所有记录集的dbid大小，那么需要在itemDBIDs中指定的位置插入这个dbid，以保证从小到大的顺序
+						if (fidx != -100)
+							itemResults.insert(itemResults.begin() + fidx++, data);
+						else
+							itemResults.push_back(data);
 					}
 				}
 			}

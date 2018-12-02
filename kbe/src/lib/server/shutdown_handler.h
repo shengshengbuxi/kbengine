@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 #ifndef KBE_SHUTDOWN_HANDLER_H
 #define KBE_SHUTDOWN_HANDLER_H
@@ -38,6 +20,14 @@ public:
 		SHUTDOWN_STATE_END = COMPONENT_STATE_STOP
 	};
 
+	enum CAN_SHUTDOWN_STATE
+	{
+		CAN_SHUTDOWN_STATE_USER_FALSE = 0,
+		CAN_SHUTDOWN_STATE_USER_TRUE = 1,
+		CAN_SHUTDOWN_STATE_FALSE = 2,
+		CAN_SHUTDOWN_STATE_TRUE = 3
+	};
+
 	ShutdownHandler():lastShutdownFailReason_("tasks"),
 	shuttingdown_(SHUTDOWN_STATE_STOP){
 	}
@@ -48,7 +38,7 @@ public:
 	virtual void onShutdown(bool first) = 0;
 	virtual void onShutdownEnd() = 0;
 	
-	virtual bool canShutdown(){ return true; }
+	virtual CAN_SHUTDOWN_STATE canShutdown() { return CAN_SHUTDOWN_STATE_TRUE; }
 	
 	void setShuttingdown(SHUTDOWN_STATE state){ shuttingdown_ = state; }
 	bool isShuttingdown() const{ return shuttingdown_ != SHUTDOWN_STATE_STOP; }

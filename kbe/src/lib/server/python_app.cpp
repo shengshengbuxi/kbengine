@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 
 #include "python_app.h"
@@ -37,6 +19,7 @@ public:
 		pyCallback_(callback),
 		scriptTimers_(scriptTimers)
 	{
+		Py_INCREF(pyCallback_);
 	}
 
 	~ScriptTimerHandler()
@@ -186,15 +169,19 @@ bool PythonApp::installPyScript()
 	pyPaths += user_scripts_path + L"data;";
 	pyPaths += user_scripts_path + L"user_type;";
 
-	switch(componentType_)
+	switch (componentType_)
 	{
 	case BASEAPP_TYPE:
 		pyPaths += user_scripts_path + L"server_common;";
 		pyPaths += user_scripts_path + L"base;";
+		pyPaths += user_scripts_path + L"base/interfaces;";
+		pyPaths += user_scripts_path + L"base/components;";
 		break;
 	case CELLAPP_TYPE:
 		pyPaths += user_scripts_path + L"server_common;";
 		pyPaths += user_scripts_path + L"cell;";
+		pyPaths += user_scripts_path + L"cell/interfaces;";
+		pyPaths += user_scripts_path + L"cell/components;";
 		break;
 	case DBMGR_TYPE:
 		pyPaths += user_scripts_path + L"server_common;";
@@ -214,6 +201,8 @@ bool PythonApp::installPyScript()
 		break;
 	default:
 		pyPaths += user_scripts_path + L"client;";
+		pyPaths += user_scripts_path + L"client/interfaces;";
+		pyPaths += user_scripts_path + L"client/components;";
 		break;
 	};
 	
@@ -650,6 +639,9 @@ PyObject* PythonApp::__py_listPathRes(PyObject* self, PyObject* args)
 void PythonApp::startProfile_(Network::Channel* pChannel, std::string profileName, 
 	int8 profileType, uint32 timelen)
 {
+	if(pChannel->isExternal())
+		return;
+	
 	switch(profileType)
 	{
 	case 0:	// pyprofile
@@ -665,6 +657,9 @@ void PythonApp::startProfile_(Network::Channel* pChannel, std::string profileNam
 //-------------------------------------------------------------------------------------
 void PythonApp::onExecScriptCommand(Network::Channel* pChannel, KBEngine::MemoryStream& s)
 {
+	if(pChannel->isExternal())
+		return;
+	
 	std::string cmd;
 	s.readBlob(cmd);
 
@@ -688,7 +683,7 @@ void PythonApp::onExecScriptCommand(Network::Channel* pChannel, KBEngine::Memory
 	}
 
 	// 将结果返回给客户端
-	Network::Bundle* pBundle = Network::Bundle::createPoolObject();
+	Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
 	ConsoleInterface::ConsoleExecCommandCBMessageHandler msgHandler;
 	(*pBundle).newMessage(msgHandler);
 	ConsoleInterface::ConsoleExecCommandCBMessageHandlerArgs1::staticAddToBundle((*pBundle), retbuf);
@@ -753,7 +748,6 @@ PyObject* PythonApp::__py_addTimer(PyObject* self, PyObject* args)
 		S_Return;
 	}
 
-	Py_INCREF(pyCallback);
 	return PyLong_FromLong(id);
 }
 

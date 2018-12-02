@@ -1,34 +1,15 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 #ifndef KBE_ENTITY_H
 #define KBE_ENTITY_H
 	
-// common include
-//#include "entitymovecontroller.h"
 #include "profile.h"
 #include "common/timer.h"
 #include "common/common.h"
 #include "common/smartpointer.h"
 #include "helper/debug_helper.h"
-#include "entitydef/entity_mailbox.h"
+#include "entitydef/entity_call.h"
+#include "entitydef/entity_component.h"
 #include "pyscript/math.h"
 #include "pyscript/scriptobject.h"
 #include "entitydef/datatypes.h"	
@@ -36,19 +17,13 @@ along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
 #include "entitydef/scriptdef_module.h"
 #include "entitydef/entity_macro.h"	
 #include "server/script_timers.h"	
-
-//#define NDEBUG
-// windows include	
-#if KBE_PLATFORM == PLATFORM_WIN32
-#else
-// linux include
-#endif
 	
 namespace KBEngine{
 
 class Chunk;
 class Entity;
-class EntityMailbox;
+class EntityCall;
+class EntityComponent;
 class Cellapp;
 class Witness;
 class AllClients;
@@ -56,7 +31,7 @@ class CoordinateSystem;
 class EntityCoordinateNode;
 class Controller;
 class Controllers;
-class Space;
+class SpaceMemory;
 class VolatileInfo;
 
 namespace Network
@@ -75,7 +50,8 @@ class Entity : public script::ScriptObject
 	ENTITY_HEADER(Entity)
 
 public:
-	Entity(ENTITY_ID id, const ScriptDefModule* pScriptModule);
+	Entity(ENTITY_ID id, const ScriptDefModule* pScriptModule,
+		PyTypeObject* pyType = getScriptType(), bool isInitialised = true);
 	~Entity();
 	
 	/** 
@@ -119,7 +95,7 @@ public:
 	/** 
 		定义属性数据被改变了 
 	*/
-	void onDefDataChanged(const PropertyDescription* propertyDescription, 
+	void onDefDataChanged(EntityComponent* pEntityComponent, const PropertyDescription* propertyDescription,
 			PyObject* pyData);
 	
 	/** 
@@ -130,15 +106,15 @@ public:
 
 public:
 	/** 
-		mailbox section
+		entityCall section
 	*/
-	INLINE EntityMailbox* baseMailbox() const;
-	DECLARE_PY_GET_MOTHOD(pyGetBaseMailbox);
-	INLINE void baseMailbox(EntityMailbox* mailbox);
+	INLINE EntityCall* baseEntityCall() const;
+	DECLARE_PY_GET_MOTHOD(pyGetBaseEntityCall);
+	INLINE void baseEntityCall(EntityCall* entityCall);
 	
-	INLINE EntityMailbox* clientMailbox() const;
-	DECLARE_PY_GET_MOTHOD(pyGetClientMailbox);
-	INLINE void clientMailbox(EntityMailbox* mailbox);
+	INLINE EntityCall* clientEntityCall() const;
+	DECLARE_PY_GET_MOTHOD(pyGetClientEntityCall);
+	INLINE void clientEntityCall(EntityCall* entityCall);
 
 	/**
 		all_clients
@@ -157,12 +133,12 @@ public:
 	/**
 		脚本获取controlledBy属性
 	*/
-	INLINE bool isControlledNotSelfCleint() const;
-	INLINE EntityMailbox* controlledBy() const;
-	INLINE void controlledBy(EntityMailbox* baseMailbox);
+	INLINE bool isControlledNotSelfClient() const;
+	INLINE EntityCall* controlledBy() const;
+	INLINE void controlledBy(EntityCall* baseEntityCall);
 	DECLARE_PY_GETSET_MOTHOD(pyGetControlledBy, pySetControlledBy);
-	bool setControlledBy(EntityMailbox* baseMailbox);
-	void sendControlledByStatusMessage(EntityMailbox* baseMailbox, int8 isControlled);
+	bool setControlledBy(EntityCall* baseEntityCall);
+	void sendControlledByStatusMessage(EntityCall* baseEntityCall, int8 isControlled);
 
 	/** 
 		脚本获取和设置entity的position 
@@ -236,8 +212,8 @@ public:
 	void teleport(PyObject_ptr nearbyMBRef, Position3D& pos, Direction3D& dir);
 	void teleportLocal(PyObject_ptr nearbyMBRef, Position3D& pos, Direction3D& dir);
 	void teleportRefEntity(Entity* entity, Position3D& pos, Direction3D& dir);
-	void teleportRefMailbox(EntityMailbox* nearbyMBRef, Position3D& pos, Direction3D& dir);
-	void onTeleportRefMailbox(EntityMailbox* nearbyMBRef, Position3D& pos, Direction3D& dir);
+	void teleportRefEntityCall(EntityCall* nearbyMBRef, Position3D& pos, Direction3D& dir);
+	void onTeleportRefEntityCall(EntityCall* nearbyMBRef, Position3D& pos, Direction3D& dir);
 
 	/**
 		传送成功和失败相关回调
@@ -259,8 +235,8 @@ public:
 	/**
 		进入离开space等回调
 	*/
-	void onEnterSpace(Space* pSpace);
-	void onLeaveSpace(Space* pSpace);
+	void onEnterSpace(SpaceMemory* pSpace);
+	void onLeaveSpace(SpaceMemory* pSpace);
 
 	/** 
 		当cellapp意外终止后， baseapp如果能找到合适的cellapp则将其恢复后
@@ -269,20 +245,20 @@ public:
 	void onRestore();
 
 	/**
-		脚本调试aoi
+		脚本调试view
 	*/
-	void debugAOI();
-	DECLARE_PY_MOTHOD_ARG0(pyDebugAOI);
+	void debugView();
+	DECLARE_PY_MOTHOD_ARG0(pyDebugView);
 
 	/** 
-		当前entity设置自身的Aoi半径范围 
+		当前entity设置自身的View半径范围 
 	*/
-	int32 setAoiRadius(float radius, float hyst);
-	float getAoiRadius(void) const;
-	float getAoiHystArea(void) const;
-	DECLARE_PY_MOTHOD_ARG2(pySetAoiRadius, float, float);
-	DECLARE_PY_MOTHOD_ARG0(pyGetAoiRadius);
-	DECLARE_PY_MOTHOD_ARG0(pyGetAoiHystArea);
+	int32 setViewRadius(float radius, float hyst);
+	float getViewRadius(void) const;
+	float getViewHystArea(void) const;
+	DECLARE_PY_MOTHOD_ARG2(pySetViewRadius, float, float);
+	DECLARE_PY_MOTHOD_ARG0(pyGetViewRadius);
+	DECLARE_PY_MOTHOD_ARG0(pyGetViewHystArea);
 
 	/** 
 		当前entity是否为real 
@@ -336,9 +312,15 @@ public:
 		entity移动到某个entity 
 	*/
 	uint32 moveToEntity(ENTITY_ID targetID, float velocity, float distance,
-			PyObject* userData, bool faceMovement, bool moveVertically);
+			PyObject* userData, bool faceMovement, bool moveVertically, const Position3D& offsetPos);
 	
-	DECLARE_PY_MOTHOD_ARG6(pyMoveToEntity, int32, float, float, PyObject_ptr, int32, int32);
+	static PyObject* __py_pyMoveToEntity(PyObject* self, PyObject* args);
+
+	/**
+	entity移动加速
+	*/
+	float accelerate(const char* type, float acceleration);
+	DECLARE_PY_MOTHOD_ARG2(pyAccelerate, const_charptr, float);
 
 	/** 
 		脚本获取和设置entity的最高xz移动速度 
@@ -360,9 +342,9 @@ public:
 	static PyObject* __py_pyEntitiesInRange(PyObject* self, PyObject* args);
 
 	/** 
-		脚本请求获得AOI范围内的entities 
+		脚本请求获得View范围内的entities 
 	*/
-	DECLARE_PY_MOTHOD_ARG0(pyEntitiesInAOI);
+	DECLARE_PY_MOTHOD_ARG0(pyEntitiesInView);
 
 	/**
 		设置获取是否自动备份
@@ -376,7 +358,8 @@ public:
 	*/
 	void onRemoteMethodCall(Network::Channel* pChannel, MemoryStream& s);
 	void onRemoteCallMethodFromClient(Network::Channel* pChannel, ENTITY_ID srcEntityID, MemoryStream& s);
-	void onRemoteMethodCall_(MethodDescription* pMethodDescription, ENTITY_ID srcEntityID, MemoryStream& s);
+	void onRemoteMethodCall_(PropertyDescription* pComponentPropertyDescription, 
+		MethodDescription* pMethodDescription, ENTITY_ID srcEntityID, MemoryStream& s);
 
 	/**
 		观察者
@@ -441,7 +424,7 @@ public:
 	DECLARE_PY_MOTHOD_ARG3(pyAddProximity, float, float, int32);
 
 	/** 
-		添加一个范围触发器  
+		调用客户端实体的方法  
 	*/
 	DECLARE_PY_MOTHOD_ARG1(pyClientEntity, ENTITY_ID);
 
@@ -477,9 +460,9 @@ public:
 							uint32 controllerID, int32 userarg);
 
 	/** 
-		一个entity进入了AOI区域
+		一个entity进入了View区域
 	*/
-	void onEnteredAoI(Entity* entity);
+	void onEnteredView(Entity* entity);
 
 	/** 
 		停止任何移动行为
@@ -531,6 +514,7 @@ public:
 	*/
 	void installCoordinateNodes(CoordinateSystem* pCoordinateSystem);
 	void uninstallCoordinateNodes(CoordinateSystem* pCoordinateSystem);
+	void onCoordinateNodesDestroy(EntityCoordinateNode* pEntityCoordinateNode);
 
 	/**
 		获取entity位置朝向在某时间是否改变过
@@ -578,6 +562,9 @@ public:
 	void addMovementHandlerToStream(KBEngine::MemoryStream& s);
 	void createMovementHandlerFromStream(KBEngine::MemoryStream& s);
 	
+	void addEventsToStream(KBEngine::MemoryStream& s);
+	void createEventsFromStream(KBEngine::MemoryStream& s);
+
 	/** 
 		获得实体控制器管理器
 	*/
@@ -586,14 +573,20 @@ public:
 	/** 
 		设置实体持久化数据是否已脏，脏了会自动存档 
 	*/
-	INLINE void setDirty(bool dirty = true);
+	INLINE void setDirty(uint32* digest = NULL);
 	INLINE bool isDirty() const;
 	
 	/**
-	VolatileInfo section
+		VolatileInfo section
 	*/
 	INLINE VolatileInfo* pCustomVolatileinfo(void);
 	DECLARE_PY_GETSET_MOTHOD(pyGetVolatileinfo, pySetVolatileinfo);
+
+	/**
+		调用实体的回调函数，有可能被缓存
+	*/
+	bool bufferOrExeCallback(const char * funcName, PyObject * funcArgs, bool notFoundIsOK = true);
+	static void bufferCallback(bool enable);
 
 private:
 	/** 
@@ -602,19 +595,34 @@ private:
 	void _sendBaseTeleportResult(ENTITY_ID sourceEntityID, COMPONENT_ID sourceBaseAppID, 
 		SPACE_ID spaceID, SPACE_ID lastSpaceID, bool fromCellTeleport);
 
-protected:
-	// 这个entity的客户端部分的mailbox
-	EntityMailbox*											clientMailbox_;
+private:
+	struct BufferedScriptCall
+	{
+		EntityPtr		entityPtr;
+		PyObject *		pyCallable;
+		// 可以为NULL， NULL说明没有参数
+		PyObject *		pyFuncArgs;
+		const char*		funcName;
+	};
 
-	// 这个entity的baseapp部分的mailbox
-	EntityMailbox*											baseMailbox_;
+	typedef std::list<BufferedScriptCall*>					BufferedScriptCallArray;
+	static BufferedScriptCallArray							_scriptCallbacksBuffer;
+	static int32											_scriptCallbacksBufferNum;
+	static int32											_scriptCallbacksBufferCount;
+
+protected:
+	// 这个entity的客户端部分的entityCall
+	EntityCall*												clientEntityCall_;
+
+	// 这个entity的baseapp部分的entityCall
+	EntityCall*												baseEntityCall_;
 
 	/** 这个entity的坐标和朝向当前受谁的客户端控制
 	    null表示没有客户端在控制（即系统控制），
-	    否则指向控制这个entity的对象的baseMailbox_，
+	    否则指向控制这个entity的对象的baseEntityCall_，
 		玩家自己控制自己则Entity.controlledBy = self.base
 	*/
-	EntityMailbox *											controlledBy_;
+	EntityCall *											controlledBy_;
 
 	// 如果一个entity为ghost，那么entity会存在一个源cell的指向
 	COMPONENT_ID											realCell_;
@@ -673,8 +681,8 @@ protected:
 	// 在脚本层做搜索的时候可以按层搜索.
 	int8													layer_;
 	
-	// 需要持久化的数据是否变脏，如果没有变脏不需要持久化
-	bool													isDirty_;
+	// 需要持久化的数据是否变脏（内存sha1），如果没有变脏不需要持久化
+	uint32													persistentDigest_[5];
 
 	// 如果用户有设置过Volatileinfo，则此处创建Volatileinfo，否则为NULL使用ScriptDefModule的Volatileinfo
 	VolatileInfo*											pCustomVolatileinfo_;

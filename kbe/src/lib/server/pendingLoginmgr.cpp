@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 
 #include "pendingLoginmgr.h"
@@ -77,7 +59,6 @@ bool PendingLoginMgr::add(PLInfos* infos)
 	pPLMap_[infos->accountName] = infos;
 	infos->lastProcessTime = timestamp();
 
-
 	DEBUG_MSG(fmt::format("PendingLoginMgr::add: {}, size={}.\n", infos->accountName, pPLMap_.size()));
 	return true;
 }
@@ -109,6 +90,20 @@ PendingLoginMgr::PLInfos* PendingLoginMgr::find(std::string& accountName)
 	}
 
 	return NULL;
+}
+
+//-------------------------------------------------------------------------------------
+void PendingLoginMgr::removeNextTick(std::string& accountName)
+{
+	PTINFO_MAP::iterator iter = pPLMap_.find(accountName);
+	if (iter != pPLMap_.end())
+	{
+		PLInfos* infos = iter->second;
+
+		// 下一tick处理时就超时了
+		TimeStamp curr = timestamp();
+		infos->lastProcessTime = curr - OP_TIME_OUT_MAX - 1;
+	}
 }
 
 //-------------------------------------------------------------------------------------

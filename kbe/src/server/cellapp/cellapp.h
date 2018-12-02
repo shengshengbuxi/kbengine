@@ -1,30 +1,12 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 #ifndef KBE_CELLAPP_H
 #define KBE_CELLAPP_H
-	
-// common include	
+
 #include "entity.h"
-#include "spaces.h"
+#include "spacememorys.h"
 #include "cells.h"
+#include "space_viewer.h"
 #include "updatables.h"
 #include "ghost_manager.h"
 #include "witnessed_timeout_handler.h"
@@ -72,7 +54,7 @@ public:
 	bool initializeEnd();
 	void finalise();
 
-	virtual bool canShutdown();
+	virtual ShutdownHandler::CAN_SHUTDOWN_STATE canShutdown();
 	virtual void onShutdown(bool first);
 
 	void destroyObjPool();
@@ -90,13 +72,18 @@ public:
 							COMPONENT_TYPE componentType, COMPONENT_ID componentID, COMPONENT_ORDER globalorderID, COMPONENT_ORDER grouporderID,
 							uint32 intaddr, uint16 intport, uint32 extaddr, uint16 extport, std::string& extaddrEx);
 
+	/**
+		创建了一个entity回调
+	*/
+	virtual Entity* onCreateEntity(PyObject* pyEntity, ScriptDefModule* sm, ENTITY_ID eid);
+
 	/**  
 		创建一个entity 
 	*/
 	static PyObject* __py_createEntity(PyObject* self, PyObject* args);
 
 	/** 
-		想dbmgr请求执行一个数据库命令
+		向dbmgr请求执行一个数据库命令
 	*/
 	static PyObject* __py_executeRawDatabaseCommand(PyObject* self, PyObject* args);
 	void executeRawDatabaseCommand(const char* datas, uint32 size, PyObject* pycallback, ENTITY_ID eid, const std::string& dbInterfaceName);
@@ -122,13 +109,19 @@ public:
 	/** 网络接口
 		baseEntity请求创建在一个新的space中
 	*/
-	void onCreateInNewSpaceFromBaseapp(Network::Channel* pChannel, KBEngine::MemoryStream& s);
+	void onCreateCellEntityInNewSpaceFromBaseapp(Network::Channel* pChannel, KBEngine::MemoryStream& s);
 
 	/** 网络接口
 		baseEntity请求创建在一个新的space中
 	*/
 	void onRestoreSpaceInCellFromBaseapp(Network::Channel* pChannel, KBEngine::MemoryStream& s);
 	
+	/** 网络接口
+	工具请求改变space查看器（含添加和删除功能）
+	如果是请求更新并且服务器上不存在该地址的查看器则自动创建，如果是删除则明确给出删除要求
+	*/
+	void setSpaceViewer(Network::Channel* pChannel, MemoryStream& s);
+
 	/** 网络接口
 		其他APP请求在此灾难恢复
 	*/
@@ -147,9 +140,9 @@ public:
 	void onDestroyCellEntityFromBaseapp(Network::Channel* pChannel, ENTITY_ID eid);
 
 	/** 网络接口
-		entity收到一封mail, 由某个app上的mailbox发起
+		entity收到远程call请求, 由某个app上的entitycall发起
 	*/
-	void onEntityMail(Network::Channel* pChannel, KBEngine::MemoryStream& s);
+	void onEntityCall(Network::Channel* pChannel, KBEngine::MemoryStream& s);
 	
 	/** 网络接口
 		client访问entity的cell方法由baseapp转发
@@ -204,9 +197,9 @@ public:
 	bool removeUpdatable(Updatable* pObject);
 
 	/**
-		hook mailboxcall
+		hook entitycallcall
 	*/
-	RemoteEntityMethod* createMailboxCallEntityRemoteMethod(MethodDescription* pMethodDescription, EntityMailbox* pMailbox);
+	RemoteEntityMethod* createEntityCallCallEntityRemoteMethod(MethodDescription* pMethodDescription, EntityCallAbstract* pEntityCall);
 
 	/** 网络接口
 		某个app请求查看该app
@@ -238,6 +231,7 @@ public:
 	*/
 	void reqTeleportToCellApp(Network::Channel* pChannel, MemoryStream& s);
 	void reqTeleportToCellAppCB(Network::Channel* pChannel, MemoryStream& s);
+	void reqTeleportToCellAppOver(Network::Channel* pChannel, MemoryStream& s);
 
 	/**
 		获取和设置ghost管理器
@@ -245,7 +239,7 @@ public:
 	void pGhostManager(GhostManager* v){ pGhostManager_ = v; }
 	GhostManager* pGhostManager() const{ return pGhostManager_; }
 
-	ArraySize spaceSize() const { return (ArraySize)Spaces::size(); }
+	ArraySize spaceSize() const { return (ArraySize)SpaceMemorys::size(); }
 
 	/** 
 		射线 
@@ -277,6 +271,9 @@ protected:
 	
 	// APP的标志
 	uint32								flags_;
+
+	// 通过工具查看space
+	SpaceViewers						spaceViewers_;
 };
 
 }

@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 
 #include "serverconfig.h"
@@ -33,19 +15,29 @@ along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
 namespace KBEngine{
 KBE_SINGLETON_INIT(ServerConfig);
 
+static bool g_dbmgr_addDefaultAddress = true;
+
 //-------------------------------------------------------------------------------------
 ServerConfig::ServerConfig():
-gameUpdateHertz_(10),
-tick_max_buffered_logs_(4096),
-tick_max_sync_logs_(32),
-interfacesAddr_(),
-shutdown_time_(1.f),
-shutdown_waitTickTime_(1.f),
-callback_timeout_(180.f),
-thread_timeout_(300.f),
-thread_init_create_(1),
-thread_pre_create_(2),
-thread_max_create_(8)
+	gameUpdateHertz_(10),
+	tick_max_buffered_logs_(4096),
+	tick_max_sync_logs_(32),
+	channelCommon_(),
+	bitsPerSecondToClient_(0),
+	interfacesAddr_(),
+	interfacesAddrs_(),
+	interfaces_orders_timeout_(0),
+	shutdown_time_(1.f),
+	shutdown_waitTickTime_(1.f),
+	callback_timeout_(180.f),
+	thread_timeout_(300.f),
+	thread_init_create_(1),
+	thread_pre_create_(2),
+	thread_max_create_(8),
+	emailServerInfo_(),
+	emailAtivationInfo_(),
+	emailResetPasswordInfo_(),
+	emailBindInfo_()
 {
 }
 
@@ -306,6 +298,18 @@ bool ServerConfig::loadConfig(std::string fileName)
 					if(childnode2)
 						Network::g_extSendWindowBytesOverflow = KBE_MAX(0, xml->getValInt(childnode2));
 				}
+
+				childnode1 = xml->enterNode(sendNode, "tickSentBytes");
+				if (childnode1)
+				{
+					TiXmlNode* childnode2 = xml->enterNode(childnode1, "internal");
+					if (childnode2)
+						Network::g_intSentWindowBytesOverflow = KBE_MAX(0, xml->getValInt(childnode2));
+
+					childnode2 = xml->enterNode(childnode1, "external");
+					if (childnode2)
+						Network::g_extSentWindowBytesOverflow = KBE_MAX(0, xml->getValInt(childnode2));
+				}
 			}
 
 			TiXmlNode* recvNode = xml->enterNode(childnode, "receive");
@@ -339,12 +343,88 @@ bool ServerConfig::loadConfig(std::string fileName)
 						Network::g_extReceiveWindowBytesOverflow = KBE_MAX(0, xml->getValInt(childnode2));
 				}
 			}
-		};
+		}
 
 		childnode = xml->enterNode(rootNode, "encrypt_type");
 		if(childnode)
 		{
 			Network::g_channelExternalEncryptType = xml->getValInt(childnode);
+		}
+
+		childnode = xml->enterNode(rootNode, "sslCertificate");
+		if (childnode)
+		{
+			Network::g_sslCertificate = xml->getValStr(childnode);
+		}
+
+		childnode = xml->enterNode(rootNode, "sslPrivateKey");
+		if (childnode)
+		{
+			Network::g_sslPrivateKey = xml->getValStr(childnode);
+		}
+
+		TiXmlNode* rudpChildnode = xml->enterNode(rootNode, "reliableUDP");
+		if(rudpChildnode)
+		{
+			childnode = xml->enterNode(rudpChildnode, "readPacketsQueueSize");
+			if (childnode)
+			{
+				TiXmlNode* childnode1 = xml->enterNode(childnode, "internal");
+				if (childnode1)
+					Network::g_rudp_intReadPacketsQueueSize = KBE_MAX(0, xml->getValInt(childnode1));
+
+				childnode1 = xml->enterNode(childnode, "external");
+				if (childnode1)
+					Network::g_rudp_extReadPacketsQueueSize = KBE_MAX(0, xml->getValInt(childnode1));
+			}
+
+			childnode = xml->enterNode(rudpChildnode, "writePacketsQueueSize");
+			if (childnode)
+			{
+				TiXmlNode* childnode1 = xml->enterNode(childnode, "internal");
+				if (childnode1)
+					Network::g_rudp_intWritePacketsQueueSize = KBE_MAX(0, xml->getValInt(childnode1));
+
+				childnode1 = xml->enterNode(childnode, "external");
+				if (childnode1)
+					Network::g_rudp_extWritePacketsQueueSize = KBE_MAX(0, xml->getValInt(childnode1));
+			}
+
+			childnode = xml->enterNode(rudpChildnode, "tickInterval");
+			if (childnode)
+			{
+				Network::g_rudp_tickInterval = KBE_MAX(0, xml->getValInt(childnode));
+			}
+
+			childnode = xml->enterNode(rudpChildnode, "minRTO");
+			if (childnode)
+			{
+				Network::g_rudp_minRTO = KBE_MAX(0, xml->getValInt(childnode));
+			}
+
+			childnode = xml->enterNode(rudpChildnode, "mtu");
+			if (childnode)
+			{
+				Network::g_rudp_mtu = KBE_MAX(0, xml->getValInt(childnode));
+			}
+
+			childnode = xml->enterNode(rudpChildnode, "missAcksResend");
+			if (childnode)
+			{
+				Network::g_rudp_missAcksResend = KBE_MAX(0, xml->getValInt(childnode));
+			}
+
+			childnode = xml->enterNode(rudpChildnode, "congestionControl");
+			if (childnode)
+			{
+				Network::g_rudp_congestionControl = (xml->getValStr(childnode) == "true");
+			}
+
+			childnode = xml->enterNode(rudpChildnode, "nodelay");
+			if (childnode)
+			{
+				Network::g_rudp_nodelay = (xml->getValStr(childnode) == "true");
+			}
 		}
 	}
 
@@ -430,17 +510,17 @@ bool ServerConfig::loadConfig(std::string fileName)
 		if(node != NULL)
 			strncpy((char*)&_cellAppInfo.entryScriptFile, xml->getValStr(node).c_str(), MAX_NAME);
 		
-		TiXmlNode* aoiNode = xml->enterNode(rootNode, "defaultAoIRadius");
-		if(aoiNode != NULL)
+		TiXmlNode* viewNode = xml->enterNode(rootNode, "defaultViewRadius");
+		if(viewNode != NULL)
 		{
 			node = NULL;
-			node = xml->enterNode(aoiNode, "radius");
+			node = xml->enterNode(viewNode, "radius");
 			if(node != NULL)
-				_cellAppInfo.defaultAoIRadius = float(xml->getValFloat(node));
+				_cellAppInfo.defaultViewRadius = float(xml->getValFloat(node));
 					
-			node = xml->enterNode(aoiNode, "hysteresisArea");
+			node = xml->enterNode(viewNode, "hysteresisArea");
 			if(node != NULL)
-				_cellAppInfo.defaultAoIHysteresisArea = float(xml->getValFloat(node));
+				_cellAppInfo.defaultViewHysteresisArea = float(xml->getValFloat(node));
 		}
 			
 		node = xml->enterNode(rootNode, "ids");
@@ -449,9 +529,9 @@ bool ServerConfig::loadConfig(std::string fileName)
 			TiXmlNode* childnode = xml->enterNode(node, "criticallyLowSize");
 			if(childnode)
 			{
-				_cellAppInfo.criticallyLowSize = xml->getValInt(childnode);
-				if(_cellAppInfo.criticallyLowSize < 100)
-					_cellAppInfo.criticallyLowSize = 100;
+				_cellAppInfo.ids_criticallyLowSize = xml->getValInt(childnode);
+				if (_cellAppInfo.ids_criticallyLowSize < 100)
+					_cellAppInfo.ids_criticallyLowSize = 100;
 			}
 		}
 		
@@ -601,18 +681,31 @@ bool ServerConfig::loadConfig(std::string fileName)
 		if(node != NULL)
 			strncpy((char*)&_baseAppInfo.externalAddress, xml->getValStr(node).c_str(), MAX_NAME);
 
-		node = xml->enterNode(rootNode, "externalPorts_min");
+		node = xml->enterNode(rootNode, "externalTcpPorts_min");
 		if(node != NULL)	
-			_baseAppInfo.externalPorts_min = xml->getValInt(node);
+			_baseAppInfo.externalTcpPorts_min = xml->getValInt(node);
 
-		node = xml->enterNode(rootNode, "externalPorts_max");
+		node = xml->enterNode(rootNode, "externalTcpPorts_max");
 		if(node != NULL)	
-			_baseAppInfo.externalPorts_max = xml->getValInt(node);
+			_baseAppInfo.externalTcpPorts_max = xml->getValInt(node);
 
-		if(_baseAppInfo.externalPorts_min < 0)
-			_baseAppInfo.externalPorts_min = 0;
-		if(_baseAppInfo.externalPorts_max < _baseAppInfo.externalPorts_min)
-			_baseAppInfo.externalPorts_max = _baseAppInfo.externalPorts_min;
+		if(_baseAppInfo.externalTcpPorts_min < 0)
+			_baseAppInfo.externalTcpPorts_min = -1;
+		if(_baseAppInfo.externalTcpPorts_max < _baseAppInfo.externalTcpPorts_min)
+			_baseAppInfo.externalTcpPorts_max = _baseAppInfo.externalTcpPorts_min;
+
+		node = xml->enterNode(rootNode, "externalUdpPorts_min");
+		if (node != NULL)
+			_baseAppInfo.externalUdpPorts_min = xml->getValInt(node);
+
+		node = xml->enterNode(rootNode, "externalUdpPorts_max");
+		if (node != NULL)
+			_baseAppInfo.externalUdpPorts_max = xml->getValInt(node);
+
+		if (_baseAppInfo.externalUdpPorts_min < 0)
+			_baseAppInfo.externalUdpPorts_min = -1;
+		if (_baseAppInfo.externalUdpPorts_max < _baseAppInfo.externalUdpPorts_min)
+			_baseAppInfo.externalUdpPorts_max = _baseAppInfo.externalUdpPorts_min;
 
 		node = xml->enterNode(rootNode, "archivePeriod");
 		if(node != NULL)
@@ -636,9 +729,9 @@ bool ServerConfig::loadConfig(std::string fileName)
 			TiXmlNode* childnode = xml->enterNode(node, "criticallyLowSize");
 			if(childnode)
 			{
-				_baseAppInfo.criticallyLowSize = xml->getValInt(childnode);
-				if(_baseAppInfo.criticallyLowSize < 100)
-					_baseAppInfo.criticallyLowSize = 100;
+				_baseAppInfo.ids_criticallyLowSize = xml->getValInt(childnode);
+				if (_baseAppInfo.ids_criticallyLowSize < 100)
+					_baseAppInfo.ids_criticallyLowSize = 100;
 			}
 		}
 		
@@ -776,35 +869,64 @@ bool ServerConfig::loadConfig(std::string fileName)
 			}
 		}
 
+		node = xml->enterNode(rootNode, "ids");
+		if (node != NULL)
+		{
+			TiXmlNode* childnode = xml->enterNode(node, "increasing_range");
+			if (childnode)
+			{
+				_dbmgrInfo.ids_increasing_range = xml->getValInt(childnode);
+			}
+		}
+
 		node = xml->enterNode(rootNode, "InterfacesServiceAddr");
 		if (node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "host");
+			TiXmlNode* loopNode = node;
+
+			do
+			{
+				if (TiXmlNode::TINYXML_COMMENT == loopNode->Type())
+					continue;
+
+				std::string name = loopNode->Value();
+				name = strutil::kbe_trim(name);
+
+				if (name == "item")
+				{
+					if (loopNode->FirstChild() != NULL)
+					{
+						TiXmlNode* host_node = xml->enterNode(loopNode->FirstChild(), "host");
+						TiXmlNode* port_node = xml->enterNode(loopNode->FirstChild(), "port");
+						if (host_node && port_node)
+						{
+							std::string ip = xml->getValStr(host_node);
+							int port = xml->getValInt(port_node);
+
+							if (port <= 0)
+								port = KBE_INTERFACES_TCP_PORT;
+
+							Network::Address addr(ip, port);
+							interfacesAddrs_.push_back(addr);
+						}
+					}
+				}
+			} while ((loopNode = loopNode->NextSibling()));
+
+			TiXmlNode* childnode = xml->enterNode(node, "addDefaultAddress");
 			if (childnode)
 			{
-				std::string ip = xml->getValStr(childnode);
-				Network::Address addr(ip, ntohs(interfacesAddr_.port));
-				interfacesAddr_ = addr;
-			}
-
-			uint16 port = 0;
-			childnode = xml->enterNode(node, "port");
-			if (childnode)
-			{
-				port = xml->getValInt(childnode);
-
-				if (port <= 0)
-					port = KBE_INTERFACES_TCP_PORT;
-
-				Network::Address addr(inet_ntoa((struct in_addr&)interfacesAddr_.ip), port);
-				interfacesAddr_ = addr;
+				g_dbmgr_addDefaultAddress = xml->getValStr(childnode) == "true";
 			}
 
 			childnode = xml->enterNode(node, "enable");
 			if (childnode)
 			{
-				if(xml->getValStr(childnode) != "true")
-					interfacesAddr_ = Network::Address::NONE;
+				if (xml->getValStr(childnode) != "true")
+				{
+					interfacesAddrs_.clear();
+					g_dbmgr_addDefaultAddress = false;
+				}
 			}
 		}
 
@@ -819,6 +941,9 @@ bool ServerConfig::loadConfig(std::string fileName)
 			{
 				do
 				{
+					if (TiXmlNode::TINYXML_COMMENT == databaseInterfacesNode->Type())
+						continue;
+
 					std::string name = databaseInterfacesNode->Value();
 
 					DBInterfaceInfo dbinfo;
@@ -1031,18 +1156,31 @@ bool ServerConfig::loadConfig(std::string fileName)
 		if(node != NULL)
 			strncpy((char*)&_loginAppInfo.externalAddress, xml->getValStr(node).c_str(), MAX_NAME);
 
-		node = xml->enterNode(rootNode, "externalPorts_min");
+		node = xml->enterNode(rootNode, "externalTcpPorts_min");
 		if(node != NULL)	
-			_loginAppInfo.externalPorts_min = xml->getValInt(node);
+			_loginAppInfo.externalTcpPorts_min = xml->getValInt(node);
 
-		node = xml->enterNode(rootNode, "externalPorts_max");
+		node = xml->enterNode(rootNode, "externalTcpPorts_max");
 		if(node != NULL)	
-			_loginAppInfo.externalPorts_max = xml->getValInt(node);
+			_loginAppInfo.externalTcpPorts_max = xml->getValInt(node);
 
-		if(_loginAppInfo.externalPorts_min < 0)
-			_loginAppInfo.externalPorts_min = 0;
-		if(_loginAppInfo.externalPorts_max < _loginAppInfo.externalPorts_min)
-			_loginAppInfo.externalPorts_max = _loginAppInfo.externalPorts_min;
+		if(_loginAppInfo.externalTcpPorts_min < 0)
+			_loginAppInfo.externalTcpPorts_min = -1;
+		if(_loginAppInfo.externalTcpPorts_max < _loginAppInfo.externalTcpPorts_min)
+			_loginAppInfo.externalTcpPorts_max = _loginAppInfo.externalTcpPorts_min;
+
+		node = xml->enterNode(rootNode, "externalUdpPorts_min");
+		if (node != NULL)
+			_loginAppInfo.externalUdpPorts_min = xml->getValInt(node);
+
+		node = xml->enterNode(rootNode, "externalUdpPorts_max");
+		if (node != NULL)
+			_loginAppInfo.externalUdpPorts_max = xml->getValInt(node);
+
+		if (_loginAppInfo.externalUdpPorts_min < 0)
+			_loginAppInfo.externalUdpPorts_min = -1;
+		if (_loginAppInfo.externalUdpPorts_max < _loginAppInfo.externalUdpPorts_min)
+			_loginAppInfo.externalUdpPorts_max = _loginAppInfo.externalUdpPorts_min;
 
 		node = xml->enterNode(rootNode, "SOMAXCONN");
 		if(node != NULL){
@@ -1105,18 +1243,31 @@ bool ServerConfig::loadConfig(std::string fileName)
 		if(node != NULL)
 			strncpy((char*)&_kbMachineInfo.externalInterface, xml->getValStr(node).c_str(), MAX_NAME);
 
-		node = xml->enterNode(rootNode, "externalPorts_min");
+		node = xml->enterNode(rootNode, "externalTcpPorts_min");
 		if(node != NULL)	
-			_kbMachineInfo.externalPorts_min = xml->getValInt(node);
+			_kbMachineInfo.externalTcpPorts_min = xml->getValInt(node);
 
-		node = xml->enterNode(rootNode, "externalPorts_max");
+		node = xml->enterNode(rootNode, "externalTcpPorts_max");
 		if(node != NULL)	
-			_kbMachineInfo.externalPorts_max = xml->getValInt(node);
+			_kbMachineInfo.externalTcpPorts_max = xml->getValInt(node);
 
-		if(_kbMachineInfo.externalPorts_min < 0)
-			_kbMachineInfo.externalPorts_min = 0;
-		if(_kbMachineInfo.externalPorts_max < _kbMachineInfo.externalPorts_min)
-			_kbMachineInfo.externalPorts_max = _kbMachineInfo.externalPorts_min;
+		if(_kbMachineInfo.externalTcpPorts_min < 0)
+			_kbMachineInfo.externalTcpPorts_min = 0;
+		if(_kbMachineInfo.externalTcpPorts_max < _kbMachineInfo.externalTcpPorts_min)
+			_kbMachineInfo.externalTcpPorts_max = _kbMachineInfo.externalTcpPorts_min;
+
+		node = xml->enterNode(rootNode, "externalUdpPorts_min");
+		if (node != NULL)
+			_kbMachineInfo.externalUdpPorts_min = xml->getValInt(node);
+
+		node = xml->enterNode(rootNode, "externalUdpPorts_max");
+		if (node != NULL)
+			_kbMachineInfo.externalUdpPorts_max = xml->getValInt(node);
+
+		if (_kbMachineInfo.externalUdpPorts_min < 0)
+			_kbMachineInfo.externalUdpPorts_min = 0;
+		if (_kbMachineInfo.externalUdpPorts_max < _kbMachineInfo.externalUdpPorts_min)
+			_kbMachineInfo.externalUdpPorts_max = _kbMachineInfo.externalUdpPorts_min;
 
 		node = xml->enterNode(rootNode, "SOMAXCONN");
 		if(node != NULL){
@@ -1128,6 +1279,9 @@ bool ServerConfig::loadConfig(std::string fileName)
 		{
 			do
 			{
+				if (TiXmlNode::TINYXML_COMMENT == node->Type())
+					continue;
+
 				if(node->FirstChild() != NULL)
 				{
 					std::string c = node->FirstChild()->Value();
@@ -1200,11 +1354,22 @@ bool ServerConfig::loadConfig(std::string fileName)
 			{
 				_botsInfo.bots_account_name_suffix_inc = xml->getValInt(childnode);
 			}
+
+			childnode = xml->enterNode(node, "account_password");
+			if (childnode)
+			{
+				_botsInfo.bots_account_passwd = xml->getValStr(childnode);
+			}
 		}
 
 		node = xml->enterNode(rootNode, "SOMAXCONN");
 		if(node != NULL){
 			_botsInfo.tcp_SOMAXCONN = xml->getValInt(node);
+		}
+
+		node = xml->enterNode(rootNode, "forceInternalLogin");
+		if (node != NULL){
+			_botsInfo.forceInternalLogin = (xml->getValStr(node) == "true");
 		}
 
 		node = xml->enterNode(rootNode, "telnet_service");
@@ -1422,7 +1587,7 @@ void ServerConfig::_updateEmailInfos()
 		std::string out = KBEKey::getSingleton().decrypt(emailServerInfo_.password);
 		if(out.size() == 0)
 		{
-			ERROR_MSG("ServerConfig::loadConfig: email password(email_service.xml) encrypt is error!\n");
+			ERROR_MSG("ServerConfig::loadConfig: email password(email_service.xml) encrypt error!\n");
 		}
 		else
 		{
@@ -1451,58 +1616,80 @@ void ServerConfig::updateExternalAddress(char* buf)
 
 //-------------------------------------------------------------------------------------	
 void ServerConfig::updateInfos(bool isPrint, COMPONENT_TYPE componentType, COMPONENT_ID componentID, 
-							   const Network::Address& internalAddr, const Network::Address& externalAddr)
+							   const Network::Address& internalTcpAddr, const Network::Address& externalTcpAddr, const Network::Address& externalUdpAddr)
 {
 	std::string infostr = "";
 
 	for (size_t i = 0; i < _dbmgrInfo.dbInterfaceInfos.size(); ++i)
 		_dbmgrInfo.dbInterfaceInfos[i].index = i;
 
-	//updateExternalAddress(getBaseApp().externalAddress);
-	//updateExternalAddress(getLoginApp().externalAddress);
+	if (g_dbmgr_addDefaultAddress)
+	{
+		interfacesAddrs_.insert(interfacesAddrs_.begin(), interfacesAddr_);
+	}
+
+	//updateExternalAddress(getBaseApp().externalTcpAddr);
+	//updateExternalAddress(getLoginApp().externalTcpAddr);
 
 	if(componentType == CELLAPP_TYPE)
 	{
 		ENGINE_COMPONENT_INFO info = getCellApp();
-		info.internalAddr = &internalAddr;
-		info.externalAddr = &externalAddr;
+		info.internalTcpAddr = &internalTcpAddr;
+		info.externalTcpAddr = &externalTcpAddr;
+		info.externalUdpAddr = &externalUdpAddr;
 		info.componentID = componentID;
+
+		if (info.ids_criticallyLowSize > getDBMgr().ids_increasing_range / 2)
+		{
+			info.ids_criticallyLowSize = getDBMgr().ids_increasing_range / 2;
+			ERROR_MSG(fmt::format("kbengine[_defs].xml->cellapp->ids->criticallyLowSize > dbmgr->ids->increasing_range / 2, Force adjustment to criticallyLowSize({})\n", 
+				info.ids_criticallyLowSize));
+		}
 
 		if(isPrint)
 		{
 			INFO_MSG("server-configs:\n");
 			INFO_MSG(fmt::format("\tgameUpdateHertz : {}\n", gameUpdateHertz()));
-			INFO_MSG(fmt::format("\tdefaultAoIRadius : {}\n", info.defaultAoIRadius));
-			INFO_MSG(fmt::format("\tdefaultAoIHysteresisArea : {}\n", info.defaultAoIHysteresisArea));
+			INFO_MSG(fmt::format("\tdefaultViewRadius : {}\n", info.defaultViewRadius));
+			INFO_MSG(fmt::format("\tdefaultViewHysteresisArea : {}\n", info.defaultViewHysteresisArea));
 			INFO_MSG(fmt::format("\tentryScriptFile : {}\n", info.entryScriptFile));
-			INFO_MSG(fmt::format("\tinternalAddr : {}\n", internalAddr.c_str()));
-			//INFO_MSG(fmt::format("\texternalAddr : {}\n", externalAddr.c_str()));
+			INFO_MSG(fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
+			//INFO_MSG(fmt::format("\texternalTcpAddr : {}\n", externalTcpAddr.c_str()));
 			INFO_MSG(fmt::format("\tcomponentID : {}\n", info.componentID));
 
 			infostr += "server-configs:\n";
 			infostr += (fmt::format("\tgameUpdateHertz : {}\n", gameUpdateHertz()));
-			infostr += (fmt::format("\tdefaultAoIRadius : {}\n", info.defaultAoIRadius));
-			infostr += (fmt::format("\tdefaultAoIHysteresisArea : {}\n", info.defaultAoIHysteresisArea));
+			infostr += (fmt::format("\tdefaultViewRadius : {}\n", info.defaultViewRadius));
+			infostr += (fmt::format("\tdefaultViewHysteresisArea : {}\n", info.defaultViewHysteresisArea));
 			infostr += (fmt::format("\tentryScriptFile : {}\n", info.entryScriptFile));
-			infostr += (fmt::format("\tinternalAddr : {}\n", internalAddr.c_str()));
-			//infostr += (fmt::format("\texternalAddr : {}\n", externalAddr.c_str()));
+			infostr += (fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
+			//infostr += (fmt::format("\texternalTcpAddr : {}\n", externalTcpAddr.c_str()));
 			infostr += (fmt::format("\tcomponentID : {}\n", info.componentID));
 		}
 	}
 	else if (componentType == BASEAPP_TYPE)
 	{
 		ENGINE_COMPONENT_INFO info = getBaseApp();
-		info.internalAddr = const_cast<Network::Address*>(&internalAddr);
-		info.externalAddr = const_cast<Network::Address*>(&externalAddr);
+		info.internalTcpAddr = const_cast<Network::Address*>(&internalTcpAddr);
+		info.externalTcpAddr = const_cast<Network::Address*>(&externalTcpAddr);
+		info.externalUdpAddr = const_cast<Network::Address*>(&externalUdpAddr);
 		info.componentID = componentID;
+
+		if (info.ids_criticallyLowSize > getDBMgr().ids_increasing_range / 2)
+		{
+			info.ids_criticallyLowSize = getDBMgr().ids_increasing_range / 2;
+			ERROR_MSG(fmt::format("kbengine[_defs].xml->baseapp->ids->criticallyLowSize > dbmgr->ids->increasing_range / 2, Force adjustment to criticallyLowSize({})\n",
+				info.ids_criticallyLowSize));
+		}
 
 		if(isPrint)
 		{
 			INFO_MSG("server-configs:\n");
 			INFO_MSG(fmt::format("\tgameUpdateHertz : {}\n", gameUpdateHertz()));
 			INFO_MSG(fmt::format("\tentryScriptFile : {}\n", info.entryScriptFile));
-			INFO_MSG(fmt::format("\tinternalAddr : {}\n", internalAddr.c_str()));
-			INFO_MSG(fmt::format("\texternalAddr : {}\n", externalAddr.c_str()));
+			INFO_MSG(fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
+			INFO_MSG(fmt::format("\texternalTcpAddr : {}\n", externalTcpAddr.c_str()));
+			INFO_MSG(fmt::format("\texternalUdpAddr : {}\n", externalUdpAddr.c_str()));
 
 			if(strlen(info.externalAddress) > 0)
 			{
@@ -1514,8 +1701,9 @@ void ServerConfig::updateInfos(bool isPrint, COMPONENT_TYPE componentType, COMPO
 			infostr += "server-configs:\n";
 			infostr += (fmt::format("\tgameUpdateHertz : {}\n", gameUpdateHertz()));
 			infostr += (fmt::format("\tentryScriptFile : {}\n", info.entryScriptFile));
-			infostr += (fmt::format("\tinternalAddr : {}\n", internalAddr.c_str()));
-			infostr += (fmt::format("\texternalAddr : {}\n", externalAddr.c_str()));
+			infostr += (fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
+			infostr += (fmt::format("\texternalTcpAddr : {}\n", externalTcpAddr.c_str()));
+			infostr += (fmt::format("\texternalUdpAddr : {}\n", externalUdpAddr.c_str()));
 
 			if(strlen(info.externalAddress) > 0)
 			{
@@ -1530,72 +1718,79 @@ void ServerConfig::updateInfos(bool isPrint, COMPONENT_TYPE componentType, COMPO
 	else if (componentType == BASEAPPMGR_TYPE)
 	{
 		ENGINE_COMPONENT_INFO info = getBaseAppMgr();
-		info.internalAddr = const_cast<Network::Address*>(&internalAddr);
-		info.externalAddr = const_cast<Network::Address*>(&externalAddr);
+		info.internalTcpAddr = const_cast<Network::Address*>(&internalTcpAddr);
+		info.externalTcpAddr = const_cast<Network::Address*>(&externalTcpAddr);
 		info.componentID = componentID;
 
 		if(isPrint)
 		{
 			INFO_MSG("server-configs:\n");
-			INFO_MSG(fmt::format("\tinternalAddr : {}\n", internalAddr.c_str()));
-			//INFO_MSG("\texternalAddr : %s\n", externalAddr.c_str()));
+			INFO_MSG(fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
+			//INFO_MSG("\texternalTcpAddr : %s\n", externalAddr.c_str()));
 			INFO_MSG(fmt::format("\tcomponentID : {}\n", info.componentID));
 
 			infostr += "server-configs:\n";
-			infostr += (fmt::format("\tinternalAddr : {}\n", internalAddr.c_str()));
+			infostr += (fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
 			infostr += (fmt::format("\tcomponentID : {}\n", info.componentID));
 		}
 	}
 	else if (componentType == CELLAPPMGR_TYPE)
 	{
 		ENGINE_COMPONENT_INFO info = getCellAppMgr();
-		info.internalAddr = const_cast<Network::Address*>(&internalAddr);
-		info.externalAddr = const_cast<Network::Address*>(&externalAddr);
+		info.internalTcpAddr = const_cast<Network::Address*>(&internalTcpAddr);
+		info.externalTcpAddr = const_cast<Network::Address*>(&externalTcpAddr);
 		info.componentID = componentID;
 
 		if(isPrint)
 		{
 			INFO_MSG("server-configs:\n");
-			INFO_MSG(fmt::format("\tinternalAddr : {}\n", internalAddr.c_str()));
-			//INFO_MSG("\texternalAddr : %s\n", externalAddr.c_str());
+			INFO_MSG(fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
+			//INFO_MSG("\texternalTcpAddr : %s\n", externalTcpAddr.c_str());
 			INFO_MSG(fmt::format("\tcomponentID : {}\n", info.componentID));
 
 			infostr += "server-configs:\n";
-			infostr += (fmt::format("\tinternalAddr : {}\n", internalAddr.c_str()));
+			infostr += (fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
 			infostr += (fmt::format("\tcomponentID : {}\n", info.componentID));
 		}
 	}
 	else if (componentType == DBMGR_TYPE)
 	{
 		ENGINE_COMPONENT_INFO info = getDBMgr();
-		info.internalAddr = const_cast<Network::Address*>(&internalAddr);
-		info.externalAddr = const_cast<Network::Address*>(&externalAddr);
+		info.internalTcpAddr = const_cast<Network::Address*>(&internalTcpAddr);
+		info.externalTcpAddr = const_cast<Network::Address*>(&externalTcpAddr);
 		info.componentID = componentID;
+
+		if (info.ids_increasing_range < 500)
+		{
+			info.ids_increasing_range = 500;
+			ERROR_MSG(fmt::format("kbengine[_defs].xml-> dbmgr->ids->increasing_range too small, Force adjustment to ids_increasing_range({})\n",
+				info.ids_increasing_range));
+		}
 
 		if(isPrint)
 		{
 			INFO_MSG("server-configs:\n");
-			INFO_MSG(fmt::format("\tinternalAddr : {}\n", internalAddr.c_str()));
-			//INFO_MSG("\texternalAddr : %s\n", externalAddr.c_str()));
+			INFO_MSG(fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
+			//INFO_MSG("\texternalTcpAddr : %s\n", externalTcpAddr.c_str()));
 			INFO_MSG(fmt::format("\tcomponentID : {}\n", info.componentID));
 
 			infostr += "server-configs:\n";
-			infostr += (fmt::format("\tinternalAddr : {}\n", internalAddr.c_str()));
+			infostr += (fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
 			infostr += (fmt::format("\tcomponentID : {}\n", info.componentID));
 		}
 	}
 	else if (componentType == LOGINAPP_TYPE)
 	{
 		ENGINE_COMPONENT_INFO info = getLoginApp();
-		info.internalAddr = const_cast<Network::Address*>(&internalAddr);
-		info.externalAddr = const_cast<Network::Address*>(&externalAddr);
+		info.internalTcpAddr = const_cast<Network::Address*>(&internalTcpAddr);
+		info.externalTcpAddr = const_cast<Network::Address*>(&externalTcpAddr);
 		info.componentID = componentID;
 
 		if(isPrint)
 		{
 			INFO_MSG("server-configs:\n");
-			INFO_MSG(fmt::format("\tinternalAddr : {}\n", internalAddr.c_str()));
-			INFO_MSG(fmt::format("\texternalAddr : {}\n", externalAddr.c_str()));
+			INFO_MSG(fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
+			INFO_MSG(fmt::format("\texternalTcpAddr : {}\n", externalTcpAddr.c_str()));
 			if(strlen(info.externalAddress) > 0)
 			{
 				INFO_MSG(fmt::format("\texternalCustomAddr : {}\n", info.externalAddress));
@@ -1604,8 +1799,8 @@ void ServerConfig::updateInfos(bool isPrint, COMPONENT_TYPE componentType, COMPO
 			INFO_MSG(fmt::format("\tcomponentID : {}\n", info.componentID));
 
 			infostr += "server-configs:\n";
-			infostr += (fmt::format("\tinternalAddr : {}\n", internalAddr.c_str()));
-			infostr += (fmt::format("\texternalAddr : {}\n", externalAddr.c_str()));
+			infostr += (fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
+			infostr += (fmt::format("\texternalTcpAddr : {}\n", externalTcpAddr.c_str()));
 
 			if(strlen(info.externalAddress) > 0)
 			{
@@ -1620,18 +1815,18 @@ void ServerConfig::updateInfos(bool isPrint, COMPONENT_TYPE componentType, COMPO
 	else if (componentType == MACHINE_TYPE)
 	{
 		ENGINE_COMPONENT_INFO info = getKBMachine();
-		info.internalAddr = const_cast<Network::Address*>(&internalAddr);
-		info.externalAddr = const_cast<Network::Address*>(&externalAddr);
+		info.internalTcpAddr = const_cast<Network::Address*>(&internalTcpAddr);
+		info.externalTcpAddr = const_cast<Network::Address*>(&externalTcpAddr);
 		info.componentID = componentID;
 		if(isPrint)
 		{
 			INFO_MSG("server-configs:\n");
-			INFO_MSG(fmt::format("\tinternalAddr : {}\n", internalAddr.c_str()));
-			//INFO_MSG("\texternalAddr : %s\n", externalAddr.c_str()));
+			INFO_MSG(fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
+			//INFO_MSG("\texternalTcpAddr : %s\n", externalTcpAddr.c_str()));
 			INFO_MSG(fmt::format("\tcomponentID : {}\n", info.componentID));
 
 			infostr += "server-configs:\n";
-			infostr += (fmt::format("\tinternalAddr : {}\n", internalAddr.c_str()));
+			infostr += (fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
 			infostr += (fmt::format("\tcomponentID : {}\n", info.componentID));
 		}
 	}

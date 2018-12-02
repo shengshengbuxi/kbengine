@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 #ifndef KBE_KBEMAIN_H
 #define KBE_KBEMAIN_H
@@ -82,8 +64,8 @@ inline void loadConfig()
 {
 	Resmgr::getSingleton().initialize();
 
-	// "../../res/server/kbengine_defs.xml"
-	g_kbeSrvConfig.loadConfig("server/kbengine_defs.xml");
+	// "../../res/server/kbengine_defaults.xml"
+	g_kbeSrvConfig.loadConfig("server/kbengine_defaults.xml");
 
 	// "../../../assets/res/server/kbengine.xml"
 	g_kbeSrvConfig.loadConfig("server/kbengine.xml");
@@ -119,8 +101,9 @@ inline void setEvns()
 
 template <class SERVER_APP>
 int kbeMainT(int argc, char * argv[], COMPONENT_TYPE componentType, 
-			 int32 extlisteningPort_min = -1, int32 extlisteningPort_max = -1, const char * extlisteningInterface = "",
-			 int32 intlisteningPort = 0, const char * intlisteningInterface = "")
+	int32 extlisteningTcpPort_min = -1, int32 extlisteningTcpPort_max = -1, 
+	int32 extlisteningUdpPort_min = -1, int32 extlisteningUdpPort_max = -1, const char * extlisteningInterface = "",
+	int32 intlisteningPort = 0, const char * intlisteningInterface = "")
 {
 	setEvns();
 	startLeakDetection(componentType, g_componentID);
@@ -143,7 +126,7 @@ int kbeMainT(int argc, char * argv[], COMPONENT_TYPE componentType,
 	Network::g_SOMAXCONN = g_kbeSrvConfig.tcp_SOMAXCONN(g_componentType);
 
 	Network::NetworkInterface networkInterface(&dispatcher, 
-		extlisteningPort_min, extlisteningPort_max, extlisteningInterface, 
+		extlisteningTcpPort_min, extlisteningTcpPort_max, extlisteningUdpPort_min, extlisteningUdpPort_max, extlisteningInterface,
 		channelCommon.extReadBufferSize, channelCommon.extWriteBufferSize,
 		(intlisteningPort != -1) ? htons(intlisteningPort) : -1, intlisteningInterface,
 		channelCommon.intReadBufferSize, channelCommon.intWriteBufferSize);
@@ -151,11 +134,13 @@ int kbeMainT(int argc, char * argv[], COMPONENT_TYPE componentType,
 	DebugHelper::getSingleton().pNetworkInterface(&networkInterface);
 
 	g_kbeSrvConfig.updateInfos(true, componentType, g_componentID, 
-			networkInterface.intaddr(), networkInterface.extaddr());
+			networkInterface.intTcpAddr(), networkInterface.extTcpAddr(), networkInterface.extUdpAddr());
 	
 	if(getUserUID() <= 0)
 	{
-		WARNING_MSG(fmt::format("invalid UID({}) <= 0, please check UID for environment!\n", getUserUID()));
+		int getuid = getUserUID();
+		autoFixUserDigestUID();
+		WARNING_MSG(fmt::format("invalid UID({}) <= 0, please check UID for environment! automatically set to {}.\n", getuid, getUserUID()));
 	}
 
 	Components::getSingleton().initialize(&networkInterface, componentType, g_componentID);
@@ -287,6 +272,45 @@ inline void parseMainCommandArgs(int argc, char* argv[])
 
 			continue;
 		}
+
+		findcmd = "--KBE_ROOT=";
+		fi1 = cmd.find(findcmd);
+		if (fi1 != std::string::npos)
+		{
+			cmd.erase(fi1, findcmd.size());
+			if (cmd.size() > 0)
+			{
+				setenv("KBE_ROOT", cmd.c_str(), 1);
+			}
+
+			continue;
+		}
+
+		findcmd = "--KBE_RES_PATH=";
+		fi1 = cmd.find(findcmd);
+		if (fi1 != std::string::npos)
+		{
+			cmd.erase(fi1, findcmd.size());
+			if (cmd.size() > 0)
+			{
+				setenv("KBE_RES_PATH", cmd.c_str(), 1);
+			}
+
+			continue;
+		}
+
+		findcmd = "--KBE_BIN_PATH=";
+		fi1 = cmd.find(findcmd);
+		if (fi1 != std::string::npos)
+		{
+			cmd.erase(fi1, findcmd.size());
+			if (cmd.size() > 0)
+			{
+				setenv("KBE_BIN_PATH", cmd.c_str(), 1);
+			}
+
+			continue;
+		}
 	}
 }
 
@@ -299,7 +323,7 @@ int main(int argc, char* argv[])																						\
 	g_componentID = genUUID64();																						\
 	parseMainCommandArgs(argc, argv);																					\
 	char dumpname[MAX_BUF] = {0};																						\
-	kbe_snprintf(dumpname, MAX_BUF, "%"PRAppID, g_componentID);															\
+	kbe_snprintf(dumpname, MAX_BUF, "%" PRAppID, g_componentID);														\
 	KBEngine::exception::installCrashHandler(1, dumpname);																\
 	int retcode = -1;																									\
 	THREAD_TRY_EXECUTION;																								\

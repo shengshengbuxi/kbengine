@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 
 #ifndef KBE_SERVER_APP_H
@@ -82,9 +64,9 @@ public:
 	~ServerApp();
 
 	virtual bool initialize();
-	virtual bool initializeBegin(){return true;};
+	virtual bool initializeBegin() { return true; }
 	virtual bool inInitialize(){ return true; }
-	virtual bool initializeEnd(){return true;};
+	virtual bool initializeEnd() {return true; }
 	virtual void finalise();
 	virtual bool run();
 	
@@ -104,7 +86,7 @@ public:
 	double gameTimeInSeconds() const;
 	void handleTimers();
 
-	thread::ThreadPool& threadPool(){ return threadPool_; }
+	thread::ThreadPool& threadPool() { return threadPool_; }
 
 	Network::EventDispatcher & dispatcher()				{ return dispatcher_; }
 	Network::NetworkInterface & networkInterface()			{ return networkInterface_; }
@@ -130,8 +112,8 @@ public:
 
 	void shutDown(float shutdowntime = -FLT_MAX);
 
-	COMPONENT_ORDER globalOrder() const{ return startGlobalOrder_; }
-	COMPONENT_ORDER groupOrder() const{ return startGroupOrder_; }
+	COMPONENT_ORDER globalOrder() const { return startGlobalOrder_; }
+	COMPONENT_ORDER groupOrder() const { return startGroupOrder_; }
 
 	/** 网络接口
 		注册一个新激活的baseapp或者cellapp或者dbmgr
@@ -194,7 +176,7 @@ public:
 	*/
 	void startProfile(Network::Channel* pChannel, KBEngine::MemoryStream& s);
 	virtual void startProfile_(Network::Channel* pChannel, std::string profileName, int8 profileType, uint32 timelen);
-
+		
 protected:
 	COMPONENT_TYPE											componentType_;
 	COMPONENT_ID											componentID_;									// 本组件的ID

@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 #include "range_trigger.h"
 #include "coordinate_system.h"
@@ -35,7 +17,8 @@ range_xz_(fabs(xz)),
 range_y_(fabs(y)),
 origin_(origin),
 positiveBoundary_(NULL),
-negativeBoundary_(NULL)
+negativeBoundary_(NULL),
+removing_(false)
 {
 }
 
@@ -57,25 +40,28 @@ bool RangeTrigger::reinstall(CoordinateNode* pCoordinateNode)
 bool RangeTrigger::install()
 {
 	if(positiveBoundary_ == NULL)
-		positiveBoundary_ = new RangeTriggerNode(this, 0, 0);
+		positiveBoundary_ = new RangeTriggerNode(this, 0, 0, true);
 	else
 		positiveBoundary_->range(0.0f, 0.0f);
 
 	if(negativeBoundary_ == NULL)
-		negativeBoundary_ = new RangeTriggerNode(this, 0, 0);
+		negativeBoundary_ = new RangeTriggerNode(this, 0, 0, false);
 	else
 		negativeBoundary_->range(0.0f, 0.0f);
+
+	positiveBoundary_->addFlags(COORDINATE_NODE_FLAG_INSTALLING);
+	negativeBoundary_->addFlags(COORDINATE_NODE_FLAG_INSTALLING);
 
 	origin_->pCoordinateSystem()->insert(positiveBoundary_);
 	origin_->pCoordinateSystem()->insert(negativeBoundary_);
 	
 	/*
-	注意：此处必须是先安装negativeBoundary_再安装positiveBoundary_，如果调换顺序则会导致AOI的BUG，例如：在一个实体enterAoi触发时销毁了进入AOI的实体
-	此时实体销毁时并未触发离开AOI事件，而未触发AOI事件导致其他实体的AOI列表中引用的该销毁的实体是一个无效指针。
+	注意：此处必须是先安装negativeBoundary_再安装positiveBoundary_，如果调换顺序则会导致View的BUG，例如：在一个实体enterView触发时销毁了进入View的实体
+	此时实体销毁时并未触发离开View事件，而未触发View事件导致其他实体的View列表中引用的该销毁的实体是一个无效指针。
 
 	原因如下：
-	由于总是优先安装在positiveBoundary_，而边界在安装过程中导致另一个实体进入AOI了， 然后他在这个过程中可能销毁了， 而另一个边界negativeBoundary_还没有安装， 
-	而节点删除时会设置节点的xx为-FLT_MAX，让其向negativeBoundary_方向离开，所以positiveBoundary_不能检查到这个边界也就不会触发AOI离开事件。
+	由于总是优先安装在positiveBoundary_，而边界在安装过程中导致另一个实体进入View了， 然后他在这个过程中可能销毁了， 而另一个边界negativeBoundary_还没有安装， 
+	而节点删除时会设置节点的xx为-FLT_MAX，让其向negativeBoundary_方向离开，所以positiveBoundary_不能检查到这个边界也就不会触发View离开事件。
 	*/
 	negativeBoundary_->old_xx(-FLT_MAX);
 	negativeBoundary_->old_yy(-FLT_MAX);
@@ -88,6 +74,8 @@ bool RangeTrigger::install()
 	if (!negativeBoundary_)
 		return false;
 
+	negativeBoundary_->removeFlags(COORDINATE_NODE_FLAG_INSTALLING);
+
 	positiveBoundary_->old_xx(FLT_MAX);
 	positiveBoundary_->old_yy(FLT_MAX);
 	positiveBoundary_->old_zz(FLT_MAX);
@@ -95,27 +83,39 @@ bool RangeTrigger::install()
 	positiveBoundary_->range(range_xz_, range_y_);
 	positiveBoundary_->old_range(range_xz_, range_y_);
 	positiveBoundary_->update();
-	return positiveBoundary_ != NULL;
+
+	if (positiveBoundary_)
+	{
+		positiveBoundary_->removeFlags(COORDINATE_NODE_FLAG_INSTALLING);
+		return true;
+	}
+
+	return false;
 }
 
 //-------------------------------------------------------------------------------------
 bool RangeTrigger::uninstall()
 {
+	if (removing_)
+		return false;
+
+	removing_ = true;
 	if(positiveBoundary_ && positiveBoundary_->pCoordinateSystem())
 	{
-		positiveBoundary_->onTriggerUninstall();
 		positiveBoundary_->pCoordinateSystem()->remove(positiveBoundary_);
+		positiveBoundary_->onTriggerUninstall();
 	}
 
 	if(negativeBoundary_ && negativeBoundary_->pCoordinateSystem())
 	{
-		negativeBoundary_->onTriggerUninstall();
 		negativeBoundary_->pCoordinateSystem()->remove(negativeBoundary_);
+		negativeBoundary_->onTriggerUninstall();
 	}
 	
 	// 此处不必release node， 节点的释放统一交给CoordinateSystem
 	positiveBoundary_ = NULL;
 	negativeBoundary_ = NULL;
+	removing_ = false;
 	return true;
 }
 
@@ -165,19 +165,6 @@ void RangeTrigger::onNodePassX(RangeTriggerNode* pRangeTriggerNode, CoordinateNo
 	{
 		this->onLeave(pNode);
 	}
-}
-
-//-------------------------------------------------------------------------------------
-bool RangeTriggerNode::wasInYRange(CoordinateNode * pNode)
-{
-	if(!CoordinateSystem::hasY)
-		return true;
-
-	float originY = old_yy() - old_range_y_;
-
-	volatile float lowerBound = originY - fabs(old_range_y_);
-	volatile float upperBound = originY + fabs(old_range_y_);
-	return (pNode->old_yy() >= lowerBound) && (pNode->old_yy() <= upperBound);
 }
 
 //-------------------------------------------------------------------------------------

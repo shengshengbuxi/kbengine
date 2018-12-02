@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 #include "controllers.h"	
 #include "cellapp.h"	
@@ -88,8 +70,14 @@ bool Controllers::remove(KBEShared_ptr<Controller> pController)
 //-------------------------------------------------------------------------------------
 bool Controllers::remove(uint32 id)
 {
-	objects_.erase(id);
-	return true;
+	CONTROLLERS_MAP::iterator iter = objects_.find(id);
+	if (iter == objects_.end())
+		return true;
+
+	// 做个引用，防止在Controller析构中导致某些情况下在erase未结束的情况下又进入这里执行erase而产生问题
+	KBEShared_ptr< Controller > pController = iter->second;
+	objects_.erase(iter);
+	return pController != NULL;
 }
 
 //-------------------------------------------------------------------------------------

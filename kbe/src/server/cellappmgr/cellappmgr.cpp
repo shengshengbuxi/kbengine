@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 
 #include "cellappmgr.h"
@@ -84,6 +66,7 @@ Cellappmgr::Cellappmgr(Network::EventDispatcher& dispatcher,
 	cellapps_(),
 	cellapp_cids_()
 {
+	KBEngine::Network::MessageHandlers::pMainMessageHandlers = &CellappmgrInterface::messageHandlers;
 }
 
 //-------------------------------------------------------------------------------------
@@ -220,6 +203,7 @@ bool Cellappmgr::initializeEnd()
 //-------------------------------------------------------------------------------------
 void Cellappmgr::finalise()
 {
+	spaceViewers_.finalise();
 	gameTimer_.cancel();
 	forward_anywhere_cellapp_messagebuffer_.clear();
 	forward_cellapp_messagebuffer_.clear();
@@ -236,7 +220,7 @@ void Cellappmgr::forwardMessage(Network::Channel* pChannel, MemoryStream& s)
 	Components::ComponentInfos* cinfos = Components::getSingleton().findComponent(forward_componentID);
 	KBE_ASSERT(cinfos != NULL && cinfos->pChannel != NULL);
 
-	Network::Bundle* pBundle = Network::Bundle::createPoolObject();
+	Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
 	(*pBundle).append((char*)s.data() + s.rpos(), (int)s.length());
 	cinfos->pChannel->send(pBundle);
 	s.done();
@@ -323,7 +307,7 @@ uint32 Cellappmgr::numLoadBalancingApp()
 }
 
 //-------------------------------------------------------------------------------------
-void Cellappmgr::reqCreateInNewSpace(Network::Channel* pChannel, MemoryStream& s) 
+void Cellappmgr::reqCreateCellEntityInNewSpace(Network::Channel* pChannel, MemoryStream& s) 
 {
 	std::string entityType;
 	ENTITY_ID id;
@@ -343,8 +327,8 @@ void Cellappmgr::reqCreateInNewSpace(Network::Channel* pChannel, MemoryStream& s
 
 	static SPACE_ID spaceID = 1;
 
-	Network::Bundle* pBundle = Network::Bundle::createPoolObject();
-	(*pBundle).newMessage(CellappInterface::onCreateInNewSpaceFromBaseapp);
+	Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
+	(*pBundle).newMessage(CellappInterface::onCreateCellEntityInNewSpaceFromBaseapp);
 	(*pBundle) << entityType;
 	(*pBundle) << id;
 	(*pBundle) << spaceID++;
@@ -368,7 +352,7 @@ void Cellappmgr::reqCreateInNewSpace(Network::Channel* pChannel, MemoryStream& s
 		}
 		else if (bestCellappID_ == 0 && numLoadBalancingApp() == 0)
 		{
-			ERROR_MSG(fmt::format("Cellappmgr::reqCreateInNewSpace: Unable to allocate cellapp for load balancing! entityType={}, entityID={}, componentID={}, cellappSize={}.\n",
+			ERROR_MSG(fmt::format("Cellappmgr::reqCreateCellEntityInNewSpace: Unable to allocate cellapp for load balancing! entityType={}, entityID={}, componentID={}, cellappSize={}.\n",
 				entityType, id, componentID, cellappSize));
 		}
 	}
@@ -379,7 +363,7 @@ void Cellappmgr::reqCreateInNewSpace(Network::Channel* pChannel, MemoryStream& s
 
 	if (cinfos == NULL || cinfos->pChannel == NULL || cinfos->state != COMPONENT_STATE_RUN)
 	{
-		WARNING_MSG("Cellappmgr::reqCreateInNewSpace: not found cellapp, message is buffered.\n");
+		WARNING_MSG("Cellappmgr::reqCreateCellEntityInNewSpace: not found cellapp, message is buffered.\n");
 
 		ForwardItem* pFI = new AppForwardItem();
 		pFI->pHandler = NULL;
@@ -398,7 +382,7 @@ void Cellappmgr::reqCreateInNewSpace(Network::Channel* pChannel, MemoryStream& s
 	}
 
 	std::map< COMPONENT_ID, Cellapp >::iterator cellapp_iter = cellapps_.find(bestCellappID_);
-	DEBUG_MSG(fmt::format("Cellappmgr::reqCreateInNewSpace: entityType={}, entityID={}, componentID={}, cellapp(cid={}, load={}, numEntities={}).\n",
+	DEBUG_MSG(fmt::format("Cellappmgr::reqCreateCellEntityInNewSpace: entityType={}, entityID={}, componentID={}, cellapp(cid={}, load={}, numEntities={}).\n",
 		entityType, id, componentID, bestCellappID_, cellapp_iter->second.load(), cellapp_iter->second.numEntities()));
 
 	// 预先将实体数量增加
@@ -423,7 +407,7 @@ void Cellappmgr::reqRestoreSpaceInCell(Network::Channel* pChannel, MemoryStream&
 	s >> spaceID;
 	s >> hasClient;
 
-	Network::Bundle* pBundle = Network::Bundle::createPoolObject();
+	Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
 	(*pBundle).newMessage(CellappInterface::onRestoreSpaceInCellFromBaseapp);
 	(*pBundle) << entityType;
 	(*pBundle) << id;
@@ -542,7 +526,7 @@ void Cellappmgr::addCellappComponentID(COMPONENT_ID cid)
 //-------------------------------------------------------------------------------------
 void Cellappmgr::queryAppsLoads(Network::Channel* pChannel, MemoryStream& s)
 {
-	Network::Bundle* pBundle = Network::Bundle::createPoolObject();
+	Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
 	ConsoleInterface::ConsoleQueryAppsLoadsHandler msgHandler;
 	(*pBundle).newMessage(msgHandler);
 
@@ -559,6 +543,90 @@ void Cellappmgr::queryAppsLoads(Network::Channel* pChannel, MemoryStream& s)
 	}
 
 	pChannel->send(pBundle);
+}
+
+//-------------------------------------------------------------------------------------
+void Cellappmgr::querySpaces(Network::Channel* pChannel, MemoryStream& s)
+{
+	Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
+	ConsoleInterface::ConsoleQuerySpacesHandler msgHandler;
+	(*pBundle).newMessage(msgHandler);
+
+	(*pBundle) << g_componentType;
+	(*pBundle) << g_componentID;
+
+	std::map< COMPONENT_ID, Cellapp >::iterator iter1 = cellapps_.begin();
+	for (; iter1 != cellapps_.end(); ++iter1)
+	{
+		Cellapp& cellappref = iter1->second;
+		Spaces& spaces = cellappref.spaces();
+
+		(*pBundle) << iter1->first;
+		
+		// 如果不强制，则在win64下，它是8字节，而win32下是4字节
+		(*pBundle) << (uint32)spaces.size(); 
+
+		std::map<SPACE_ID, Space>& allSpaces = spaces.spaces();
+		std::map<SPACE_ID, Space>::iterator iter2 = allSpaces.begin();
+		for (; iter2 != allSpaces.end(); ++iter2)
+		{
+			Space& space = iter2->second;
+			(*pBundle) << space.id();
+			(*pBundle) << space.getGeomappingPath();
+			(*pBundle) << space.getScriptModuleName();
+
+			Cells& cells = space.cells();
+			std::map<CELL_ID, Cell>& allCells = cells.cells();
+			(*pBundle) << (uint32)allCells.size(); 
+
+			std::map<CELL_ID, Cell>::iterator iter3 = allCells.begin();
+			for (; iter3 != allCells.end(); ++iter3)
+			{
+				(*pBundle) << iter3->first;
+
+				// 其他信息待分割功能实现后完成
+				// 例如cell大小形状等信息
+			}
+		}
+	}
+
+	pChannel->send(pBundle);
+}
+
+//-------------------------------------------------------------------------------------
+void Cellappmgr::updateSpaceData(Network::Channel* pChannel, MemoryStream& s)
+{
+	COMPONENT_ID componentID;
+	SPACE_ID spaceID;
+	bool delspace = false;
+	std::string geomappingPath;
+	std::string scriptModuleName;
+
+	s >> componentID;
+	s >> spaceID;
+	s >> scriptModuleName;
+	s >> delspace;
+	s >> geomappingPath;
+
+	std::map< COMPONENT_ID, Cellapp >::iterator iter = cellapps_.find(componentID);
+	if (iter == cellapps_.end())
+		return;
+
+	Cellapp& cellappref = iter->second;
+
+	cellappref.spaces().updateSpaceData(spaceID, scriptModuleName, geomappingPath, delspace);
+}
+
+//-------------------------------------------------------------------------------------
+void Cellappmgr::setSpaceViewer(Network::Channel* pChannel, MemoryStream& s)
+{
+	bool del = false;
+	s >> del;
+
+	SPACE_ID spaceID;
+	s >> spaceID;
+
+	spaceViewers_.updateSpaceViewer(pChannel->addr(), spaceID, del);
 }
 
 //-------------------------------------------------------------------------------------

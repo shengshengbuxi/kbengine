@@ -1,13 +1,15 @@
 BIN  = dbmgr
 SRCS =						\
-	buffered_dbtasks			\
+	buffered_dbtasks		\
 	dbmgr					\
-	dbmgr_interface				\
+	dbmgr_interface			\
 	dbtasks					\
-	interfaces_handler			\
+	entity_component		\
+	interfaces_handler		\
 	main					\
 	profile					\
-	sync_app_datas_handler
+	sync_app_datas_handler	\
+	update_dblog_handler
 
 ASMS =
 
@@ -17,7 +19,7 @@ MY_LIBS =		\
 	pyscript	\
 	network		\
 	thread		\
-	db_interface	\
+	db_interface\
 	db_mysql	\
 	db_redis
 

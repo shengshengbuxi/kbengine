@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 #ifndef KBE_KBE_TABLES_H
 #define KBE_KBE_TABLES_H
@@ -69,12 +51,15 @@ public:
 		char ip[MAX_IP];
 		uint16 port;
 		COMPONENT_ID componentID;
+
+		// 由谁记录
+		COMPONENT_ID serverGroupID;
 	};
 
 	KBEEntityLogTable(EntityTables* pEntityTables) :
 	KBETable(pEntityTables)
 	{
-		tableName("kbe_entitylog");
+		tableName(KBE_TABLE_PERFIX "_entitylog");
 	}
 	
 	virtual ~KBEEntityLogTable()
@@ -87,7 +72,47 @@ public:
 	virtual bool queryEntity(DBInterface * pdbi, DBID dbid, EntityLog& entitylog, ENTITY_SCRIPT_UID entityType) = 0;
 
 	virtual bool eraseEntityLog(DBInterface * pdbi, DBID dbid, ENTITY_SCRIPT_UID entityType) = 0;
+	virtual bool eraseBaseappEntityLog(DBInterface * pdbi, COMPONENT_ID componentID) = 0;
 
+protected:
+	
+};
+
+/*
+	kbe系统表
+*/
+class KBEServerLogTable : public KBETable
+{
+public:
+	const static uint32 TIMEOUT = 3600;
+
+	struct ServerLog
+	{
+		uint64 heartbeatTime;
+
+		// 由谁记录
+		COMPONENT_ID serverGroupID;
+	};
+
+	KBEServerLogTable(EntityTables* pEntityTables) :
+	KBETable(pEntityTables)
+	{
+		tableName(KBE_TABLE_PERFIX "_serverlog");
+	}
+	
+	virtual ~KBEServerLogTable()
+	{
+	}
+	
+	virtual bool updateServer(DBInterface * pdbi) = 0;
+
+	virtual bool queryServer(DBInterface * pdbi, ServerLog& serverlog) = 0;
+	virtual std::vector<COMPONENT_ID> queryServers(DBInterface * pdbi) = 0;
+
+	virtual std::vector<COMPONENT_ID> queryTimeOutServers(DBInterface * pdbi) = 0;
+
+	virtual bool clearServers(DBInterface * pdbi, const std::vector<COMPONENT_ID>& cids) = 0;
+	
 protected:
 	
 };
@@ -99,7 +124,7 @@ public:
 	KBETable(pEntityTables),
 	accountDefMemoryStream_()
 	{
-		tableName("kbe_accountinfos");
+		tableName(KBE_TABLE_PERFIX "_accountinfos");
 	}
 	
 	virtual ~KBEAccountTable()
@@ -141,7 +166,7 @@ public:
 	KBEEmailVerificationTable(EntityTables* pEntityTables) :
 	KBETable(pEntityTables)
 	{
-		tableName("kbe_email_verification");
+		tableName(KBE_TABLE_PERFIX "_email_verification");
 	}
 	
 	virtual ~KBEEmailVerificationTable()

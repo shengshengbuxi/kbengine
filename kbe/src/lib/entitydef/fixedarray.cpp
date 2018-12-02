@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 #include "fixedarray.h"
 #include "datatypes.h"
@@ -33,6 +15,7 @@ SCRIPT_METHOD_DECLARE("index",						index,					METH_VARARGS, 0)
 SCRIPT_METHOD_DECLARE("insert",						insert,					METH_VARARGS, 0)
 SCRIPT_METHOD_DECLARE("pop",						pop,					METH_VARARGS, 0)
 SCRIPT_METHOD_DECLARE("remove",						remove,					METH_VARARGS, 0)
+SCRIPT_METHOD_DECLARE("clear",						clear,					METH_VARARGS, 0)
 SCRIPT_METHOD_DECLARE_END()
 
 
@@ -41,45 +24,18 @@ SCRIPT_MEMBER_DECLARE_END()
 
 SCRIPT_GETSET_DECLARE_BEGIN(FixedArray)
 SCRIPT_GETSET_DECLARE_END()
-SCRIPT_INIT(FixedArray, 0, &Sequence::seqMethods, 0, 0, 0)	
+SCRIPT_INIT(FixedArray, 0, &Sequence::seqMethods, &Sequence::seqMapping, 0, 0)
 	
-//-------------------------------------------------------------------------------------
-FixedArray::FixedArray(DataType* dataType, std::string& strInitData):
-Sequence(getScriptType(), false)
-{
-	_dataType = static_cast<FixedArrayType*>(dataType);
-	_dataType->incRef();
-	initialize(strInitData);
-
-	script::PyGC::incTracing("FixedArray");
-
-//	DEBUG_MSG(fmt::format("FixedArray::FixedArray(): {:p}\n", this));
-}
-
-//-------------------------------------------------------------------------------------
-FixedArray::FixedArray(DataType* dataType, PyObject* pyInitData):
-Sequence(getScriptType(), false)
-{
-	_dataType = static_cast<FixedArrayType*>(dataType);
-	_dataType->incRef();
-	initialize(pyInitData);
-
-	script::PyGC::incTracing("FixedArray");
-
-//	DEBUG_MSG(fmt::format("FixedArray::FixedArray(): {:p}\n", this));
-}
-
 //-------------------------------------------------------------------------------------
 FixedArray::FixedArray(DataType* dataType):
 Sequence(getScriptType(), false)
 {
 	_dataType = static_cast<FixedArrayType*>(dataType);
 	_dataType->incRef();
-	initialize("");
 
 	script::PyGC::incTracing("FixedArray");
 
-//	DEBUG_MSG(fmt::format("FixedArray::FixedArray(): {:p}\n", this));
+//	DEBUG_MSG(fmt::format("FixedArray::FixedArray(): {:p}\n", (void*)this));
 }
 
 //-------------------------------------------------------------------------------------
@@ -89,7 +45,7 @@ FixedArray::~FixedArray()
 
 	script::PyGC::decTracing("FixedArray");
 
-//	DEBUG_MSG(fmt::format("FixedArray::~FixedArray(): {:p}\n", this));
+//	DEBUG_MSG(fmt::format("FixedArray::~FixedArray(): {:p}\n", (void*)this));
 }
 
 //-------------------------------------------------------------------------------------
@@ -154,22 +110,37 @@ PyObject* FixedArray::__py_reduce_ex__(PyObject* self, PyObject* protocol)
 PyObject* FixedArray::__unpickle__(PyObject* self, PyObject* args)
 {
 	Py_ssize_t size = PyTuple_Size(args);
-	if(size != 2)
+	if (size != 2)
 	{
-		ERROR_MSG("FixedArray::__unpickle__: args is wrong! (size != 2)");
+		ERROR_MSG("FixedArray::__unpickle__: args is wrong! (size != 2)\n");
 		S_Return;
 	}
-	
+
 	PyObject* pyDatatypeUID = PyTuple_GET_ITEM(args, 0);
 	DATATYPE_UID uid = (DATATYPE_UID)PyLong_AsUnsignedLong(pyDatatypeUID);
 	PyObject* pyList = PyTuple_GET_ITEM(args, 1);
-	if(pyList == NULL)
+	if (pyList == NULL)
 	{
-		ERROR_MSG("FixedArray::__unpickle__: args is wrong!");
+		ERROR_MSG("FixedArray::__unpickle__: args is wrong!\n");
 		S_Return;
 	}
-	
-	return new FixedArray(DataTypes::getDataType(uid), pyList);
+
+	DataType* pDataType = DataTypes::getDataType(uid);
+	if (!pDataType)
+	{
+		ERROR_MSG(fmt::format("FixedArray::__unpickle__: not found datatype(uid={})!\n", uid));
+		S_Return;
+	}
+
+	if (pDataType->type() != DATA_TYPE_FIXEDARRAY)
+	{
+		ERROR_MSG(fmt::format("FixedArray::__unpickle__: datatype(uid={}) is not FixedArray! dataTypeName={}\n", uid, pDataType->getName()));
+		S_Return;
+	}
+
+	FixedArray* pFixedArray = new FixedArray(pDataType);
+	pFixedArray->initialize(pyList);
+	return pFixedArray;
 }
 
 //-------------------------------------------------------------------------------------
@@ -238,27 +209,33 @@ PyObject* FixedArray::__py_index(PyObject* self, PyObject* args, PyObject* kwarg
 		PyErr_SetString(PyExc_ValueError, "FixedArray::index: value not found");
 		return NULL;
 	}
+
 	return PyLong_FromLong(index);
 }
 
 //-------------------------------------------------------------------------------------
 PyObject* FixedArray::__py_insert(PyObject* self, PyObject* args, PyObject* kwargs)
 {
+	const int argsize = (int)PyTuple_Size(args);
+	if (argsize != 2)
+	{
+		PyErr_SetString(PyExc_ValueError, "FixedArray::insert(): takes exactly 2 arguments (array.insert(i, x))");
+		return NULL;
+	}
+
 	int before = PyLong_AsLong(PyTuple_GetItem(args, 0));
 	PyObject* pyobj = PyTuple_GetItem(args, 1);
 	
 	//FixedArray* ary = static_cast<FixedArray*>(self);
 	PyObject* pyTuple = PyTuple_New(1);
-	PyTuple_SET_ITEM(&*pyTuple, 0, pyobj);
 
-	const int argsize = (int)PyTuple_Size(args);
-	if(argsize > 2)
-	{
-		PyErr_SetString(PyExc_ValueError, "FixedArray::insert: args is wrong!");
-		return NULL;
-	}
+	Py_INCREF(pyobj);
+	PyTuple_SET_ITEM(&*pyTuple, 0, pyobj);
 	
-	return PyBool_FromLong(seq_ass_slice(self, before, before, &*pyTuple) == 0);
+	PyObject* ret = PyBool_FromLong(seq_ass_slice(self, before, before, &*pyTuple) == 0);
+	Py_DECREF(pyTuple);
+
+	return ret;
 }
 
 //-------------------------------------------------------------------------------------
@@ -273,8 +250,23 @@ PyObject* FixedArray::__py_pop(PyObject* self, PyObject* args, PyObject* kwargs)
 		return NULL;
 	}
 
-	PyObject* pyItem = PyTuple_GetItem(args, 0);
-	int index = PyLong_AsLong(pyItem);
+	int index = 0;
+
+	if (PyTuple_Size(args) > 0)
+	{
+		PyObject* pyItem = PyTuple_GetItem(args, 0);
+
+		if (pyItem)
+		{
+			index = PyLong_AsLong(pyItem);
+		}
+		else
+		{
+			SCRIPT_ERROR_CHECK();
+			return NULL;
+		}
+	}
+
 	if (index < 0) index += (int)values.size();
 	if (uint32(index) >= values.size())
 	{
@@ -283,11 +275,17 @@ PyObject* FixedArray::__py_pop(PyObject* self, PyObject* args, PyObject* kwargs)
 	}
 
 	PyObject* pyValue = values[index];
-	PyObject* pyTuple = PyTuple_New(0);
-	if (seq_ass_slice(self, index, index + 1, &*pyTuple) != 0)
-		return NULL;
-
 	Py_INCREF(pyValue);
+
+	PyObject* pyTuple = PyTuple_New(0);
+
+	if (seq_ass_slice(self, index, index + 1, &*pyTuple) != 0)
+	{
+		Py_DECREF(pyTuple);
+		return NULL;
+	}
+
+	Py_DECREF(pyTuple);
 	return pyValue;
 }
 
@@ -304,7 +302,24 @@ PyObject* FixedArray::__py_remove(PyObject* self, PyObject* args, PyObject* kwar
 	}
 
 	PyObject* pyTuple = PyTuple_New(0);
-	return PyBool_FromLong(seq_ass_slice(self, index, index + 1, &*pyTuple) == 0);
+	PyObject* ret = PyBool_FromLong(seq_ass_slice(self, index, index + 1, &*pyTuple) == 0);
+	Py_DECREF(pyTuple);
+	return ret;
+}
+
+//-------------------------------------------------------------------------------------
+PyObject* FixedArray::__py_clear(PyObject* self, PyObject* args, PyObject* kwargs)
+{
+	FixedArray* ary = static_cast<FixedArray*>(self);
+
+	std::vector<PyObject*>& values = ary->getValues();
+	for (size_t i = 0; i < values.size(); ++i)
+	{
+		Py_DECREF(values[i]);
+	}
+
+	values.clear();
+	S_Return;
 }
 
 //-------------------------------------------------------------------------------------

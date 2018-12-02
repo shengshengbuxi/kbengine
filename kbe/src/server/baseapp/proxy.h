@@ -1,28 +1,10 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 
 #ifndef KBE_PROXY_H
 #define KBE_PROXY_H
 	
-#include "base.h"
+#include "entity.h"
 #include "data_downloads.h"
 #include "common/common.h"
 #include "helper/debug_helper.h"
@@ -43,10 +25,10 @@ class ProxyForwarder;
 #define LOG_ON_ACCEPT  1
 #define LOG_ON_WAIT_FOR_DESTROY 2
 
-class Proxy : public Base
+class Proxy : public Entity
 {
 	/** 子类化将一些py操作填充进派生类 */
-	BASE_SCRIPT_HREADER(Proxy, Base)	
+	BASE_SCRIPT_HREADER(Proxy, Entity)
 
 public:
 	Proxy(ENTITY_ID id, const ScriptDefModule* pScriptModule);
@@ -62,7 +44,7 @@ public:
 		向witness客户端推送一条消息
 	*/
 	bool sendToClient(const Network::MessageHandler& msgHandler, Network::Bundle* pBundle);
-	bool sendToClient(Network::Bundle* pBundle);
+	bool sendToClient(Network::Bundle* pBundle, bool immediately = false);
 	bool sendToClient(bool expectData = true);
 
 	/** 
@@ -91,13 +73,13 @@ public:
 	/** 
 		实体是否可用
 	*/
-	INLINE bool entitiesEnabled() const;
-	DECLARE_PY_GET_MOTHOD(pyGetEntitiesEnabled);
+	INLINE bool clientEnabled() const;
+	DECLARE_PY_GET_MOTHOD(pyGetClientEnabled);
 
 	/**
 		这个entity被激活了, 在客户端初始化好对应的entity后， 这个方法被调用
 	*/
-	void onEntitiesEnabled(void);
+	void onClientEnabled(void);
 	
 	/**
 		一个数据下载任务完成
@@ -133,10 +115,19 @@ public:
 	DECLARE_PY_MOTHOD_ARG0(pyGetClientType);
 
 	/**
+		断开客户端连接
+	*/
+	DECLARE_PY_MOTHOD_ARG0(pyDisconnect);
+
+	/**
 		获取前端附带数据
 	*/
-	INLINE const std::string& getClientDatas();
-	INLINE void setClientDatas(const std::string& datas);
+	INLINE const std::string& getLoginDatas();
+	INLINE void setLoginDatas(const std::string& datas);
+	
+	INLINE const std::string& getCreateDatas();
+	INLINE void setCreateDatas(const std::string& datas);
+
 	DECLARE_PY_MOTHOD_ARG0(pyGetClientDatas);
 
 	/**
@@ -187,7 +178,7 @@ protected:
 	Network::Address addr_;
 	DataDownloads dataDownloads_;
 
-	bool entitiesEnabled_;
+	bool clientEnabled_;
 
 	// 限制客户端每秒所能使用的带宽
 	int32 bandwidthPerSecond_;
@@ -198,7 +189,12 @@ protected:
 	ProxyForwarder* pProxyForwarder_;
 
 	COMPONENT_CLIENT_TYPE clientComponentType_;
-	std::string clientDatas_;
+
+	// 登陆时附带的datas数据（不存档）
+	std::string loginDatas_;
+
+	// 注册时附带的datas数据（永久存档）
+	std::string createDatas_;
 };
 
 }

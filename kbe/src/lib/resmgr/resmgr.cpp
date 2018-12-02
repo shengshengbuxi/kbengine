@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 #include "resmgr.h"
 #include "helper/watcher.h"
@@ -58,7 +40,7 @@ Resmgr::~Resmgr()
 //-------------------------------------------------------------------------------------
 bool Resmgr::initializeWatcher()
 {
-	WATCH_OBJECT("syspaths/KBE_ROOT", kb_env_.root);
+	WATCH_OBJECT("syspaths/KBE_ROOT", kb_env_.root_path);
 	WATCH_OBJECT("syspaths/KBE_RES_PATH", kb_env_.res_path);
 	WATCH_OBJECT("syspaths/KBE_BIN_PATH", kb_env_.bin_path);
 	return true;
@@ -75,16 +57,16 @@ void Resmgr::autoSetPaths()
 	std::string s = path;
 	size_t pos1;
 
-	pos1 = s.find("\\kbe\\bin\\");
-	if(pos1 == std::string::npos)
-		pos1 = s.find("/kbe/bin/");
+	strutil::kbe_replace(s, "\\", "/");
+	strutil::kbe_replace(s, "//", "/");
+	pos1 = s.find("/kbe/bin/");
 
 	if(pos1 == std::string::npos)
 		return;
 
 	s = s.substr(0, pos1 + 1);
-	kb_env_.root = s;
-	kb_env_.res_path = kb_env_.root + "kbe/res/;" + kb_env_.root + "/assets/;" + kb_env_.root + "/assets/scripts/;" + kb_env_.root + "/assets/res/";
+	kb_env_.root_path = s;
+	kb_env_.res_path = kb_env_.root_path + "kbe/res/;" + kb_env_.root_path + "/assets/;" + kb_env_.root_path + "/assets/scripts/;" + kb_env_.root_path + "/assets/res/";
 }
 
 //-------------------------------------------------------------------------------------
@@ -92,14 +74,14 @@ void Resmgr::updatePaths()
 {
 	char ch;
 	
-	if(kb_env_.root.size() > 0)
+	if (kb_env_.root_path.size() > 0)
 	{
-		ch =  kb_env_.root.at(kb_env_.root.size() - 1);
+		ch = kb_env_.root_path.at(kb_env_.root_path.size() - 1);
 		if(ch != '/' && ch != '\\')
-			kb_env_.root += "/";
+			kb_env_.root_path += "/";
 
-		strutil::kbe_replace(kb_env_.root, "\\", "/");
-		strutil::kbe_replace(kb_env_.root, "//", "/");
+		strutil::kbe_replace(kb_env_.root_path, "\\", "/");
+		strutil::kbe_replace(kb_env_.root_path, "//", "/");
 	}
 
 	if(kb_env_.bin_path.size() > 0)
@@ -155,7 +137,7 @@ bool Resmgr::initialize()
 	//	return true;
 
 	// 获取引擎环境配置
-	kb_env_.root			= getenv("KBE_ROOT") == NULL ? "" : getenv("KBE_ROOT");
+	kb_env_.root_path		= getenv("KBE_ROOT") == NULL ? "" : getenv("KBE_ROOT");
 	kb_env_.res_path		= getenv("KBE_RES_PATH") == NULL ? "" : getenv("KBE_RES_PATH"); 
 	kb_env_.bin_path		= getenv("KBE_BIN_PATH") == NULL ? "" : getenv("KBE_BIN_PATH"); 
 
@@ -164,17 +146,21 @@ bool Resmgr::initialize()
 	//kb_env_.bin_path		= "/home/kbengine/kbe/bin/server/"; 
 	updatePaths();
 
-	if(kb_env_.root == "" || kb_env_.res_path == "")
+	if (kb_env_.root_path == "" || kb_env_.res_path == "")
 		autoSetPaths();
 
 	updatePaths();
+
 	if(getPySysResPath() == "" || getPyUserResPath() == "" || getPyUserScriptsPath() == "")
 	{
-		printf("[ERROR] Resmgr::initialize: not set environment, (KBE_ROOT=%s, KBE_RES_PATH=%s, KBE_BIN_PATH=%s) invalid!\n", 
-			kb_env_.root.c_str(), kb_env_.res_path.c_str(), kb_env_.bin_path.c_str());
+		if (UNKNOWN_COMPONENT_TYPE != g_componentType && g_componentType != TOOL_TYPE)
+		{
+			printf("[ERROR] Resmgr::initialize: not set environment, (KBE_ROOT=%s, KBE_RES_PATH=%s, KBE_BIN_PATH=%s) invalid!\n",
+				kb_env_.root_path.c_str(), kb_env_.res_path.c_str(), kb_env_.bin_path.c_str());
 #if KBE_PLATFORM == PLATFORM_WIN32
-		::MessageBox(0, L"Resmgr::initialize: not set environment, (KBE_ROOT, KBE_RES_PATH, KBE_BIN_PATH) invalid!\n", L"ERROR", MB_ICONERROR);
+			::MessageBox(0, L"Resmgr::initialize: not set environment, (KBE_ROOT, KBE_RES_PATH, KBE_BIN_PATH) invalid!\n", L"ERROR", MB_ICONERROR);
 #endif
+		}
 	}
 
 	isInit_ = true;
@@ -186,12 +172,12 @@ bool Resmgr::initialize()
 //-------------------------------------------------------------------------------------
 void Resmgr::print(void)
 {
-	INFO_MSG(fmt::format("Resmgr::initialize: KBE_ROOT={0}\n", kb_env_.root));
+	INFO_MSG(fmt::format("Resmgr::initialize: KBE_ROOT={0}\n", kb_env_.root_path));
 	INFO_MSG(fmt::format("Resmgr::initialize: KBE_RES_PATH={0}\n", kb_env_.res_path));
 	INFO_MSG(fmt::format("Resmgr::initialize: KBE_BIN_PATH={0}\n", kb_env_.bin_path));
 
 #if KBE_PLATFORM == PLATFORM_WIN32
-	printf("%s", fmt::format("KBE_ROOT = {0}\n", kb_env_.root).c_str());
+	printf("%s", fmt::format("KBE_ROOT = {0}\n", kb_env_.root_path).c_str());
 	printf("%s", fmt::format("KBE_RES_PATH = {0}\n", kb_env_.res_path).c_str());
 	printf("%s", fmt::format("KBE_BIN_PATH = {0}\n", kb_env_.bin_path).c_str());
 	printf("\n");
@@ -216,10 +202,8 @@ std::string Resmgr::matchRes(const char* res)
 		strutil::kbe_replace(fpath, "\\", "/");
 		strutil::kbe_replace(fpath, "//", "/");
 
-		FILE * f = fopen (fpath.c_str(), "r");
-		if(f != NULL)
+		if (access(fpath.c_str(), 0) == 0)
 		{
-			fclose(f);
 			return fpath;
 		}
 	}
@@ -239,10 +223,8 @@ bool Resmgr::hasRes(const std::string& res)
 		strutil::kbe_replace(fpath, "\\", "/");
 		strutil::kbe_replace(fpath, "//", "/");
 
-		FILE * f = fopen (fpath.c_str(), "r");
-		if(f != NULL)
+		if (access(fpath.c_str(), 0) == 0)
 		{
-			fclose(f);
 			return true;
 		}
 	}
@@ -458,9 +440,9 @@ std::string Resmgr::getPySysResPath()
 
 	if(respath == "")
 	{
-		respath = matchRes("server/kbengine_defs.xml");
+		respath = matchRes("server/kbengine_defaults.xml");
 		std::vector<std::string> tmpvec;
-		tmpvec = KBEngine::strutil::kbe_splits(respath, "server/kbengine_defs.xml");
+		KBEngine::strutil::kbe_splits(respath, "server/kbengine_defaults.xml", tmpvec);
 
 		if(tmpvec.size() > 1)
 		{
@@ -485,7 +467,7 @@ std::string Resmgr::getPyUserResPath()
 	{
 		respath = matchRes("server/kbengine.xml");
 		std::vector<std::string> tmpvec;
-		tmpvec = KBEngine::strutil::kbe_splits(respath, "server/kbengine.xml");
+		KBEngine::strutil::kbe_splits(respath, "server/kbengine.xml", tmpvec);
 
 		if(tmpvec.size() > 1)
 		{
@@ -522,7 +504,7 @@ std::string Resmgr::getPyUserScriptsPath()
 
 
 		std::vector<std::string> tmpvec;
-		tmpvec = KBEngine::strutil::kbe_splits(path, entities_xml);
+		KBEngine::strutil::kbe_splits(path, entities_xml, tmpvec);
 		if(tmpvec.size() > 1)
 		{
 			path = tmpvec[0];
@@ -536,6 +518,21 @@ std::string Resmgr::getPyUserScriptsPath()
 			else if(respaths_.size() > 0)
 				path = respaths_[0];
 		}
+	}
+
+	return path;
+}
+
+//-------------------------------------------------------------------------------------
+std::string Resmgr::getPyUserAssetsPath()
+{
+	static std::string path = "";
+
+	if (path == "")
+	{
+		path = getPyUserScriptsPath();
+		strutil::kbe_replace(path, "/scripts", "");
+		strutil::kbe_replace(path, "\\scripts", "");
 	}
 
 	return path;

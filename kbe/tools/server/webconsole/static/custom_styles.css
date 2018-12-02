@@ -245,6 +245,12 @@ a:hover{
 .statistics ll{
   background-image:url(images/left/statistics.png);
 }
+.watcher ll{
+  background-image:url(images/left/watcher.png);
+}
+.spaceviewer ll{
+  background-image:url(images/left/spaceviewer.png);
+}
 
 
 .tablesaw .tablesaw-sortable-head .tablesaw-sortable-btn{
@@ -325,5 +331,17 @@ a:hover{
   border: 1px solid rgb(51,122,183);
   background-color: white;
 }
+.user-manger table{
+  min-width: 100%;
+}
+.user-manger td{
+  max-width: 400px;
+  word-break:break-all;
+}
 
-
+.div-status{
+  filter:progid:DXImageTransform.Microsoft.Shadow(color=#909090,direction=120,strength=3);/*ie*/
+  -moz-box-shadow: 2px 2px 10px #909090;/*firefox*/
+  -webkit-box-shadow: 2px 2px 10px #909090;/*safari或chrome*/
+  box-shadow:2px 2px 10px #909090;/*opera或ie9*/
+}

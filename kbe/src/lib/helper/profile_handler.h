@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 #ifndef KBE_PROFILE_HANDLER_H
 #define KBE_PROFILE_HANDLER_H
@@ -49,6 +31,7 @@ public:
 	virtual void sendStream(MemoryStream* s) = 0;
 
 	static KBEUnordered_map<std::string, KBEShared_ptr< ProfileHandler > > profiles;
+
 protected:
 	virtual void handleTimeout(TimerHandle handle, void * arg);
 
@@ -74,6 +57,7 @@ public:
 	void timeout();
 	void sendStream(MemoryStream* s);
 	bool process();
+
 private:
 	struct ProfileVal
 	{
@@ -118,8 +102,10 @@ public:
 
 	void onTriggerEvent(const EventHistoryStats& eventHistory, const EventHistoryStats::Stats& stats, 
 		uint32 size);
+
 	static void triggerEvent(const EventHistoryStats& eventHistory, const EventHistoryStats::Stats& stats, 
 		uint32 size);
+
 private:
 	struct ProfileVal
 	{
@@ -160,6 +146,7 @@ public:
 
 	virtual void onSendMessage(const Network::MessageHandler& msgHandler, int size);
 	virtual void onRecvMessage(const Network::MessageHandler& msgHandler, int size);
+
 private:
 	struct ProfileVal
 	{

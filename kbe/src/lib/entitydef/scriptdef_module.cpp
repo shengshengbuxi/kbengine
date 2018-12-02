@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 
 #include "scriptdef_module.h"
@@ -24,7 +6,7 @@ along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
 #include "datatypes.h"
 #include "common.h"
 #include "common/smartpointer.h"
-#include "entitydef/entity_mailbox.h"
+#include "entitydef/entity_call.h"
 #include "resmgr/resmgr.h"
 #include "pyscript/script.h"
 #include "server/serverconfig.h"
@@ -66,7 +48,13 @@ hasClient_(false),
 pVolatileinfo_(new VolatileInfo()),
 name_(name),
 usePropertyDescrAlias_(false),
-useMethodDescrAlias_(false)
+useMethodDescrAlias_(false),
+useComponentDescrAlias_(false),
+componentDescr_uidmap_(),
+componentDescr_(),
+componentPropertyDescr_(),
+persistent_(true),
+isComponentModule_(false)
 {
 	EntityDef::md5().append((void*)name.c_str(), (int)name.size());
 }
@@ -126,27 +114,8 @@ void ScriptDefModule::onLoaded(void)
 	if(EntityDef::entitydefAliasID())
 	{
 		int aliasID = ENTITY_BASE_PROPERTY_ALIASID_MAX;
-		PROPERTYDESCRIPTION_MAP::iterator iter1 = cellPropertyDescr_.begin();
-		for(; iter1 != cellPropertyDescr_.end(); ++iter1)
-		{
-			if(iter1->second->hasClient())
-			{
-				propertyDescr_aliasmap_[aliasID] = iter1->second;
-				iter1->second->aliasID(aliasID++);
-			}
-		}
 
-		iter1 = basePropertyDescr_.begin();
-		for(; iter1 != basePropertyDescr_.end(); ++iter1)
-		{
-			if(iter1->second->hasClient())
-			{
-				propertyDescr_aliasmap_[aliasID] = iter1->second;
-				iter1->second->aliasID(aliasID++);
-			}
-		}
-
-		iter1 = clientPropertyDescr_.begin();
+		PROPERTYDESCRIPTION_MAP::iterator iter1 = clientPropertyDescr_.begin();
 		for(; iter1 != clientPropertyDescr_.end(); ++iter1)
 		{
 			if(iter1->second->hasClient())
@@ -158,24 +127,6 @@ void ScriptDefModule::onLoaded(void)
 		
 		if(aliasID > 255)
 		{
-			iter1 = cellPropertyDescr_.begin();
-			for(; iter1 != cellPropertyDescr_.end(); ++iter1)
-			{
-				if(iter1->second->hasClient())
-				{
-					iter1->second->aliasID(-1);
-				}
-			}
-
-			iter1 = basePropertyDescr_.begin();
-			for(; iter1 != basePropertyDescr_.end(); ++iter1)
-			{
-				if(iter1->second->hasClient())
-				{
-					iter1->second->aliasID(-1);
-				}
-			}
-
 			iter1 = clientPropertyDescr_.begin();
 			for(; iter1 != clientPropertyDescr_.end(); ++iter1)
 			{
@@ -192,7 +143,8 @@ void ScriptDefModule::onLoaded(void)
 			usePropertyDescrAlias_ = true;
 		}
 
-		aliasID = 0;
+		// 不能为0，0表示不可用，至少是1
+		aliasID = 1;
 
 		METHODDESCRIPTION_MAP::iterator iter2 = methodClientDescr_.begin();
 		for(; iter2 != methodClientDescr_.end(); ++iter2)
@@ -213,6 +165,25 @@ void ScriptDefModule::onLoaded(void)
 		else
 		{
 			useMethodDescrAlias_ = true;
+		}
+
+		// 组件是否使用aliasID
+		if (componentDescr_.size() <= 255)
+		{
+			useComponentDescrAlias_ = true;
+
+			COMPONENTDESCRIPTION_MAP::iterator iter3 = componentDescr_.begin();
+			for (; iter3 != componentDescr_.end(); ++iter3)
+			{
+				componentDescrVec_.push_back(iter3->second);
+			}
+		}
+
+		COMPONENTDESCRIPTION_MAP::iterator comp_iter =	componentDescr_.begin();
+		for (; comp_iter != componentDescr_.end(); ++comp_iter)
+		{
+			// 组件内的属性和方法计算aliasID
+			comp_iter->second->onLoaded();
 		}
 	}
 
@@ -329,6 +300,35 @@ PyObject* ScriptDefModule::getInitDict(void)
 //-------------------------------------------------------------------------------------
 void ScriptDefModule::autoMatchCompOwn()
 {
+	if (isComponentModule())
+	{
+		std::string fmodule = "scripts/base/components/" + name_ + ".py";
+		std::string fmodule_pyc = fmodule + "c";
+		if (Resmgr::getSingleton().matchRes(fmodule) != fmodule ||
+			Resmgr::getSingleton().matchRes(fmodule_pyc) != fmodule_pyc)
+		{
+			setBase(true);
+		}
+
+		fmodule = "scripts/cell/components/" + name_ + ".py";
+		fmodule_pyc = fmodule + "c";
+		if (Resmgr::getSingleton().matchRes(fmodule) != fmodule ||
+			Resmgr::getSingleton().matchRes(fmodule_pyc) != fmodule_pyc)
+		{
+			setCell(true);
+		}
+
+		if (!hasClient())
+		{
+			// 如果是组件， 并且服务器上没有脚本或者exposed方法不需要产生代码
+			if ((hasBase() && getBaseExposedMethodDescriptions().size() > 0) ||
+				(hasCell() && getCellExposedMethodDescriptions().size() > 0))
+				setClient(true);
+		}
+
+		return;
+	}
+
 	/*
 		entity存在某部分(cell, base, client)的判定规则
 
@@ -401,7 +401,19 @@ void ScriptDefModule::autoMatchCompOwn()
 	if(Resmgr::getSingleton().matchRes(fmodule) != fmodule ||
 		Resmgr::getSingleton().matchRes(fmodule_pyc) != fmodule_pyc)
 	{
-		setClient(true);
+		if (assertionHasClient < 0)
+		{
+			// 如果用户不存在明确声明并设置为没有对应实体部分
+			// 这样做的原因是允许用户在def文件定义这部分的内容(因为interface的存在，interface中可能会存在客户端属性或者方法)
+			// 但如果脚本不存在仍然认为用户当前不需要该部分
+			// http://www.kbengine.org/cn/docs/configuration/entities.html 
+			setClient(true);
+		}
+		else
+		{
+			// 用户明确声明并进行了设定
+			setClient(assertionHasClient == 1);
+		}
 	}
 	else
 	{
@@ -432,7 +444,19 @@ void ScriptDefModule::autoMatchCompOwn()
 	if(Resmgr::getSingleton().matchRes(fmodule) != fmodule ||
 		Resmgr::getSingleton().matchRes(fmodule_pyc) != fmodule_pyc)
 	{
-		setBase(true);
+		if (assertionHasBase < 0)
+		{
+			// 如果用户不存在明确声明并设置为没有对应实体部分
+			// 这样做的原因是允许用户在def文件定义这部分的内容(因为interface的存在，interface中可能会存在base属性或者方法)
+			// 但如果脚本不存在仍然认为用户当前不需要该部分
+			// http://www.kbengine.org/cn/docs/configuration/entities.html 
+			setBase(true);
+		}
+		else
+		{
+			// 用户明确声明并进行了设定
+			setBase(assertionHasBase == 1);
+		}
 	}
 	else
 	{
@@ -456,7 +480,19 @@ void ScriptDefModule::autoMatchCompOwn()
 	if(Resmgr::getSingleton().matchRes(fmodule) != fmodule ||
 		Resmgr::getSingleton().matchRes(fmodule_pyc) != fmodule_pyc)
 	{
-		setCell(true);
+		if (assertionHasCell < 0)
+		{
+			// 如果用户不存在明确声明并设置为没有对应实体部分
+			// 这样做的原因是允许用户在def文件定义这部分的内容(因为interface的存在，interface中可能会存在cell属性或者方法)
+			// 但如果脚本不存在仍然认为用户当前不需要该部分
+			// http://www.kbengine.org/cn/docs/configuration/entities.html 
+			setCell(true);
+		}
+		else
+		{
+			// 用户明确声明并进行了设定
+			setCell(assertionHasCell == 1);
+		}
 	}
 	else
 	{
@@ -479,8 +515,27 @@ void ScriptDefModule::autoMatchCompOwn()
 //-------------------------------------------------------------------------------------
 bool ScriptDefModule::addPropertyDescription(const char* attrName, 
 										  PropertyDescription* propertyDescription, 
-										  COMPONENT_TYPE componentType)
+										  COMPONENT_TYPE componentType, bool ignoreConflict)
 {
+	if(!ignoreConflict && hasMethodName(attrName))
+	{
+		ERROR_MSG(fmt::format("ScriptDefModule::addPropertyDescription: There is a method[{}] name conflict! componentType={}.\n",
+			attrName, componentType));
+		
+		return false;
+	}
+	
+	if (!ignoreConflict && hasComponentName(attrName))
+	{
+		ERROR_MSG(fmt::format("ScriptDefModule::addPropertyDescription: There is a component[{}] name conflict!\n",
+			attrName));
+
+		return false;
+	}
+
+	bool isEntityComponent = propertyDescription->getDataType() && 
+		std::string("ENTITY_COMPONENT") == propertyDescription->getDataType()->getName();
+
 	PropertyDescription* f_propertyDescription = NULL;
 	PROPERTYDESCRIPTION_MAP*  propertyDescr;
 	PROPERTYDESCRIPTION_UIDMAP*  propertyDescr_uidmap;
@@ -525,6 +580,8 @@ bool ScriptDefModule::addPropertyDescription(const char* attrName,
 	(*propertyDescr_uidmap)[propertyDescription->getUType()] = propertyDescription;
 	propertyDescription->incRef();
 
+	if(isEntityComponent)
+		componentPropertyDescr_[attrName] = propertyDescription;
 
 	// 判断是否是存储属性， 是就存储到persistentPropertyDescr_
 	if(propertyDescription->isPersistent())
@@ -783,6 +840,22 @@ MethodDescription* ScriptDefModule::findAliasMethodDescription(ENTITY_DEF_ALIASI
 bool ScriptDefModule::addCellMethodDescription(const char* attrName, 
 											   MethodDescription* methodDescription)
 {
+	if(hasPropertyName(attrName))
+	{
+		ERROR_MSG(fmt::format("ScriptDefModule::addCellMethodDescription: There is a property[{}] name conflict!\n",
+			attrName));
+		
+		return false;
+	}
+	
+	if (hasComponentName(attrName))
+	{
+		ERROR_MSG(fmt::format("ScriptDefModule::addCellMethodDescription: There is a component[{}] name conflict!\n",
+			attrName));
+
+		return false;
+	}
+
 	MethodDescription* f_methodDescription = findCellMethodDescription(attrName);
 	if(f_methodDescription)
 	{
@@ -809,6 +882,7 @@ MethodDescription* ScriptDefModule::findBaseMethodDescription(const char* attrNa
 		//ERROR_MSG("ScriptDefModule::findBaseMethodDescription: [%s] not found!\n", attrName);
 		return NULL;
 	}
+
 	return iter->second;
 }
 
@@ -821,6 +895,7 @@ MethodDescription* ScriptDefModule::findBaseMethodDescription(ENTITY_METHOD_UID 
 		//ERROR_MSG("ScriptDefModule::findBaseMethodDescription: [%ld] not found!\n", utype);
 		return NULL;
 	}
+
 	return iter->second;
 }
 
@@ -828,6 +903,22 @@ MethodDescription* ScriptDefModule::findBaseMethodDescription(ENTITY_METHOD_UID 
 bool ScriptDefModule::addBaseMethodDescription(const char* attrName, 
 											   MethodDescription* methodDescription)
 {
+	if(hasPropertyName(attrName))
+	{
+		ERROR_MSG(fmt::format("ScriptDefModule::addBaseMethodDescription: There is a property[{}] name conflict!\n",
+			attrName));
+		
+		return false;
+	}
+	
+	if (hasComponentName(attrName))
+	{
+		ERROR_MSG(fmt::format("ScriptDefModule::addBaseMethodDescription: There is a component[{}] name conflict!\n",
+			attrName));
+
+		return false;
+	}
+
 	MethodDescription* f_methodDescription = findBaseMethodDescription(attrName);
 	if(f_methodDescription)
 	{
@@ -856,6 +947,7 @@ MethodDescription* ScriptDefModule::findClientMethodDescription(const char* attr
 		//ERROR_MSG("ScriptDefModule::findClientMethodDescription: [%s] not found!\n", attrName);
 		return NULL;
 	}
+
 	return iter->second;
 }
 
@@ -868,6 +960,7 @@ MethodDescription* ScriptDefModule::findClientMethodDescription(ENTITY_METHOD_UI
 		//ERROR_MSG("ScriptDefModule::findClientMethodDescription: [%ld] not found!\n", utype);
 		return NULL;
 	}
+
 	return iter->second;
 }
 
@@ -875,6 +968,22 @@ MethodDescription* ScriptDefModule::findClientMethodDescription(ENTITY_METHOD_UI
 bool ScriptDefModule::addClientMethodDescription(const char* attrName, 
 												 MethodDescription* methodDescription)
 {
+	if(hasPropertyName(attrName))
+	{
+		ERROR_MSG(fmt::format("ScriptDefModule::addClientMethodDescription: There is a property[{}] name conflict!\n",
+			attrName));
+		
+		return false;
+	}
+	
+	if (hasComponentName(attrName))
+	{
+		ERROR_MSG(fmt::format("ScriptDefModule::addClientMethodDescription: There is a component[{}] name conflict!\n",
+			attrName));
+
+		return false;
+	}
+
 	MethodDescription* f_methodDescription = findClientMethodDescription(attrName);
 	if(f_methodDescription)
 	{
@@ -909,6 +1018,93 @@ ScriptDefModule::PROPERTYDESCRIPTION_MAP& ScriptDefModule::getPropertyDescrs()
 	};
 	
 	return *lpPropertyDescrs;	
+}
+
+//-------------------------------------------------------------------------------------
+bool ScriptDefModule::hasPropertyName(const std::string& name)
+{
+	return findPropertyDescription(name.c_str(), CELLAPP_TYPE) ||
+		findPropertyDescription(name.c_str(), BASEAPP_TYPE) ||
+		findPropertyDescription(name.c_str(), CLIENT_TYPE); 
+}
+
+//-------------------------------------------------------------------------------------
+bool ScriptDefModule::hasMethodName(const std::string& name)
+{
+	return findMethodDescription(name.c_str(), CELLAPP_TYPE) ||
+		findMethodDescription(name.c_str(), BASEAPP_TYPE) ||
+		findMethodDescription(name.c_str(), CLIENT_TYPE);
+}
+
+//-------------------------------------------------------------------------------------
+bool ScriptDefModule::hasComponentName(const std::string& name)
+{
+	return findComponentDescription(name.c_str());
+}
+
+//-------------------------------------------------------------------------------------
+bool ScriptDefModule::hasName(const std::string& name)
+{
+	return hasPropertyName(name) || hasMethodName(name) || hasComponentName(name);
+}
+
+//-------------------------------------------------------------------------------------
+bool ScriptDefModule::addComponentDescription(const char* compName,
+	ScriptDefModule* compDescription)
+{
+	componentDescr_[compName] = compDescription;
+	componentDescr_uidmap_[compDescription->getUType()] = compDescription;
+	return true;
+}
+
+//-------------------------------------------------------------------------------------
+ScriptDefModule* ScriptDefModule::findComponentDescription(const char* compName)
+{
+	COMPONENTDESCRIPTION_MAP::iterator iter = componentDescr_.find(compName);
+	if (iter == componentDescr_.end())
+	{
+		//ERROR_MSG("ScriptDefModule::findComponentDescription: [{}] not found!\n", compName);
+		return NULL;
+	}
+
+	return iter->second;
+}
+
+//-------------------------------------------------------------------------------------
+ScriptDefModule* ScriptDefModule::findComponentDescription(ENTITY_PROPERTY_UID utype)
+{
+	COMPONENTDESCRIPTION_UIDMAP::iterator iter = componentDescr_uidmap_.find(utype);
+	if (iter == componentDescr_uidmap_.end())
+	{
+		//ERROR_MSG("ScriptDefModule::findComponentDescription: [%ld] not found!\n", utype);
+		return NULL;
+	}
+
+	return iter->second;
+}
+
+//-------------------------------------------------------------------------------------
+ScriptDefModule* ScriptDefModule::findComponentDescription(ENTITY_COMPONENT_ALIASID aliasID)
+{
+	if (componentDescrVec_.size() <= aliasID)
+	{
+		//ERROR_MSG("ScriptDefModule::findComponentDescription: [%s] not found!\n", aliasID);
+		return NULL;
+	}
+
+	return componentDescrVec_[aliasID];
+}
+
+//-------------------------------------------------------------------------------------
+PropertyDescription* ScriptDefModule::findComponentPropertyDescription(const char* attrName)
+{
+	COMPONENTPROPERTYDESCRIPTION_MAP::iterator iter = componentPropertyDescr_.find(attrName);
+	if (iter == componentPropertyDescr_.end())
+	{
+		//ERROR_MSG("ScriptDefModule::findComponentPropertyDescription: [%s] not found!\n", attrName);
+		return NULL;
+	}
+	return iter->second;
 }
 
 //-------------------------------------------------------------------------------------

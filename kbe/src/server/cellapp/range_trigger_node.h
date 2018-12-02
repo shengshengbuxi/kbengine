@@ -1,37 +1,19 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 #ifndef KBE_RANGE_TRIGGER_NODE_H
 #define KBE_RANGE_TRIGGER_NODE_H
 
+#include "range_trigger.h"
 #include "coordinate_node.h"
 #include "math/math.h"
 
 namespace KBEngine{
 
-class RangeTrigger;
 
 class RangeTriggerNode : public CoordinateNode
 {
 public:
-	RangeTriggerNode(RangeTrigger* pRangeTrigger, float xz, float y);
+	RangeTriggerNode(RangeTrigger* pRangeTrigger, float xz, float y, bool positiveBoundary);
 	virtual ~RangeTriggerNode();
 
 	INLINE void range(float xz, float y);
@@ -58,7 +40,8 @@ public:
 	bool wasInYRange(CoordinateNode * pNode);
 	INLINE bool wasInZRange(CoordinateNode * pNode);
 
-	virtual void resetOld(){ 
+	virtual void resetOld()
+	{ 
 		CoordinateNode::resetOld();
 		old_range_xz_ = range_xz_;
 		old_range_y_ = range_y_;

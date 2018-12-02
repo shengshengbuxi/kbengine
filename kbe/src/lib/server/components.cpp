@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 
 #include "components.h"
@@ -342,14 +324,14 @@ void Components::removeComponentByChannel(Network::Channel * pChannel, bool isSh
 				//SAFE_RELEASE((*iter).pExtAddr);
 				// (*iter).pChannel->decRef();
 
-				if(!isShutingdown)
+				if (!isShutingdown && g_componentType != LOGGER_TYPE && g_componentType != INTERFACES_TYPE)
 				{
-					ERROR_MSG(fmt::format("Components::removeComponentByChannel: {} : {}, Abnormal exit.\n",
-						COMPONENT_NAME_EX(componentType), (*iter).cid));
+					ERROR_MSG(fmt::format("Components::removeComponentByChannel: {} : {}, Abnormal exit! {}\n",
+						COMPONENT_NAME_EX(componentType), (*iter).cid, pChannel->condemnReason()));
 
 #if KBE_PLATFORM == PLATFORM_WIN32
-					printf("[ERROR]: %s.\n", (fmt::format("Components::removeComponentByChannel: {} : {}, Abnormal exit!\n",
-						COMPONENT_NAME_EX(componentType), (*iter).cid)).c_str());
+					printf("[ERROR]: %s.\n", (fmt::format("Components::removeComponentByChannel: {} : {}, Abnormal exit! {}\n",
+						COMPONENT_NAME_EX(componentType), (*iter).cid, pChannel->condemnReason())).c_str());
 #endif
 				}
 				else
@@ -389,7 +371,7 @@ int Components::connectComponent(COMPONENT_TYPE componentType, int32 uid, COMPON
 		return -1;
 	}
 
-	Network::EndPoint * pEndpoint = Network::EndPoint::createPoolObject();
+	Network::EndPoint * pEndpoint = Network::EndPoint::createPoolObject(OBJECTPOOL_POINT);
 	pEndpoint->socket(SOCK_STREAM);
 	if (!pEndpoint->good())
 	{
@@ -407,7 +389,7 @@ int Components::connectComponent(COMPONENT_TYPE componentType, int32 uid, COMPON
 
 	if(ret == 0)
 	{
-		Network::Channel* pChannel = Network::Channel::createPoolObject();
+		Network::Channel* pChannel = Network::Channel::createPoolObject(OBJECTPOOL_POINT);
 		bool ret = pChannel->initialize(*_pNetworkInterface, pEndpoint, Network::Channel::INTERNAL);
 		if(!ret)
 		{
@@ -442,7 +424,7 @@ int Components::connectComponent(COMPONENT_TYPE componentType, int32 uid, COMPON
 		}
 		else
 		{
-			Network::Bundle* pBundle = Network::Bundle::createPoolObject();
+			Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
 			if(componentType == BASEAPPMGR_TYPE)
 			{
 				(*pBundle).newMessage(BaseappmgrInterface::onRegisterNewApp);
@@ -450,8 +432,8 @@ int Components::connectComponent(COMPONENT_TYPE componentType, int32 uid, COMPON
 				BaseappmgrInterface::onRegisterNewAppArgs11::staticAddToBundle((*pBundle), getUserUID(), getUsername(), 
 					componentType_, componentID_, 
 					g_componentGlobalOrder, g_componentGroupOrder,
-					_pNetworkInterface->intaddr().ip, _pNetworkInterface->intaddr().port,
-					_pNetworkInterface->extaddr().ip, _pNetworkInterface->extaddr().port, g_kbeSrvConfig.getConfig().externalAddress);
+					_pNetworkInterface->intTcpAddr().ip, _pNetworkInterface->intTcpAddr().port,
+					_pNetworkInterface->extTcpAddr().ip, _pNetworkInterface->extTcpAddr().port, g_kbeSrvConfig.getConfig().externalAddress);
 			}
 			else if(componentType == CELLAPPMGR_TYPE)
 			{
@@ -460,8 +442,8 @@ int Components::connectComponent(COMPONENT_TYPE componentType, int32 uid, COMPON
 				CellappmgrInterface::onRegisterNewAppArgs11::staticAddToBundle((*pBundle), getUserUID(), getUsername(), 
 					componentType_, componentID_, 
 					g_componentGlobalOrder, g_componentGroupOrder,
-					_pNetworkInterface->intaddr().ip, _pNetworkInterface->intaddr().port,
-					_pNetworkInterface->extaddr().ip, _pNetworkInterface->extaddr().port, g_kbeSrvConfig.getConfig().externalAddress);
+					_pNetworkInterface->intTcpAddr().ip, _pNetworkInterface->intTcpAddr().port,
+					_pNetworkInterface->extTcpAddr().ip, _pNetworkInterface->extTcpAddr().port, g_kbeSrvConfig.getConfig().externalAddress);
 			}
 			else if(componentType == CELLAPP_TYPE)
 			{
@@ -470,8 +452,8 @@ int Components::connectComponent(COMPONENT_TYPE componentType, int32 uid, COMPON
 				CellappInterface::onRegisterNewAppArgs11::staticAddToBundle((*pBundle), getUserUID(), getUsername(), 
 					componentType_, componentID_, 
 					g_componentGlobalOrder, g_componentGroupOrder,
-						_pNetworkInterface->intaddr().ip, _pNetworkInterface->intaddr().port,
-					_pNetworkInterface->extaddr().ip, _pNetworkInterface->extaddr().port, g_kbeSrvConfig.getConfig().externalAddress);
+						_pNetworkInterface->intTcpAddr().ip, _pNetworkInterface->intTcpAddr().port,
+					_pNetworkInterface->extTcpAddr().ip, _pNetworkInterface->extTcpAddr().port, g_kbeSrvConfig.getConfig().externalAddress);
 			}
 			else if(componentType == BASEAPP_TYPE)
 			{
@@ -480,8 +462,8 @@ int Components::connectComponent(COMPONENT_TYPE componentType, int32 uid, COMPON
 				BaseappInterface::onRegisterNewAppArgs11::staticAddToBundle((*pBundle), getUserUID(), getUsername(), 
 					componentType_, componentID_, 
 					g_componentGlobalOrder, g_componentGroupOrder,
-					_pNetworkInterface->intaddr().ip, _pNetworkInterface->intaddr().port,
-					_pNetworkInterface->extaddr().ip, _pNetworkInterface->extaddr().port, g_kbeSrvConfig.getConfig().externalAddress);
+					_pNetworkInterface->intTcpAddr().ip, _pNetworkInterface->intTcpAddr().port,
+					_pNetworkInterface->extTcpAddr().ip, _pNetworkInterface->extTcpAddr().port, g_kbeSrvConfig.getConfig().externalAddress);
 			}
 			else if(componentType == DBMGR_TYPE)
 			{
@@ -490,8 +472,8 @@ int Components::connectComponent(COMPONENT_TYPE componentType, int32 uid, COMPON
 				DbmgrInterface::onRegisterNewAppArgs11::staticAddToBundle((*pBundle), getUserUID(), getUsername(), 
 					componentType_, componentID_, 
 					g_componentGlobalOrder, g_componentGroupOrder,
-					_pNetworkInterface->intaddr().ip, _pNetworkInterface->intaddr().port,
-					_pNetworkInterface->extaddr().ip, _pNetworkInterface->extaddr().port, g_kbeSrvConfig.getConfig().externalAddress);
+					_pNetworkInterface->intTcpAddr().ip, _pNetworkInterface->intTcpAddr().port,
+					_pNetworkInterface->extTcpAddr().ip, _pNetworkInterface->extTcpAddr().port, g_kbeSrvConfig.getConfig().externalAddress);
 			}
 			else if(componentType == LOGGER_TYPE)
 			{
@@ -500,8 +482,8 @@ int Components::connectComponent(COMPONENT_TYPE componentType, int32 uid, COMPON
 				LoggerInterface::onRegisterNewAppArgs11::staticAddToBundle((*pBundle), getUserUID(), getUsername(), 
 					componentType_, componentID_, 
 					g_componentGlobalOrder, g_componentGroupOrder,
-					_pNetworkInterface->intaddr().ip, _pNetworkInterface->intaddr().port,
-					_pNetworkInterface->extaddr().ip, _pNetworkInterface->extaddr().port, g_kbeSrvConfig.getConfig().externalAddress);
+					_pNetworkInterface->intTcpAddr().ip, _pNetworkInterface->intTcpAddr().port,
+					_pNetworkInterface->extTcpAddr().ip, _pNetworkInterface->extTcpAddr().port, g_kbeSrvConfig.getConfig().externalAddress);
 			}
 			else
 			{
@@ -692,8 +674,8 @@ Components::ComponentInfos* Components::findLocalComponent(uint32 pid)
 //-------------------------------------------------------------------------------------		
 bool Components::isLocalComponent(const Components::ComponentInfos* info)
 {
-	return _pNetworkInterface->intaddr().ip == info->pIntAddr->ip ||
-			_pNetworkInterface->extaddr().ip == info->pIntAddr->ip;
+	return _pNetworkInterface->intTcpAddr().ip == info->pIntAddr->ip ||
+			_pNetworkInterface->extTcpAddr().ip == info->pIntAddr->ip;
 }
 
 //-------------------------------------------------------------------------------------		
@@ -774,7 +756,7 @@ bool Components::updateComponentInfos(const Components::ComponentInfos* info)
 	
 	epListen.setnodelay(true);
 
-	Network::Bundle* pBundle = Network::Bundle::createPoolObject();
+	Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
 
 	// 由于COMMON_NETWORK_MESSAGE不包含client， 如果是bots， 我们需要单独处理
 	if(info->componentType != BOTS_TYPE)
@@ -1028,9 +1010,11 @@ void Components::onChannelDeregister(Network::Channel * pChannel, bool isShuting
 //-------------------------------------------------------------------------------------
 bool Components::findLogger()
 {
-	if(g_componentType == LOGGER_TYPE || g_componentType == MACHINE_TYPE ||
-		componentType_ == INTERFACES_TYPE)
+	if (g_componentType == LOGGER_TYPE || g_componentType == MACHINE_TYPE || g_componentType == TOOL_TYPE ||
+		g_componentType == CONSOLE_TYPE || g_componentType == CLIENT_TYPE || g_componentType == BOTS_TYPE ||
+		g_componentType == WATCHER_TYPE || componentType_ == INTERFACES_TYPE)
 	{
+		DebugHelper::getSingleton().onNoLogger();
 		return true;
 	}
 	
@@ -1057,8 +1041,8 @@ bool Components::findLogger()
 		COMPONENT_TYPE findComponentType = LOGGER_TYPE;
 		bhandler.newMessage(MachineInterface::onFindInterfaceAddr);
 		MachineInterface::onFindInterfaceAddrArgs7::staticAddToBundle(bhandler, getUserUID(), getUsername(), 
-			g_componentType, g_componentID, findComponentType, pNetworkInterface()->intaddr().ip, bhandler.epListen().addr().port);
-
+			g_componentType, g_componentID, findComponentType, pNetworkInterface()->intTcpAddr().ip, bhandler.epListen().addr().port);
+		
 		ENGINE_COMPONENT_INFO cinfos = ServerConfig::getSingleton().getKBMachine();
 		std::vector< std::string >::iterator machine_addresses_iter = cinfos.machine_addresses.begin();
 		for(; machine_addresses_iter != cinfos.machine_addresses.end(); ++machine_addresses_iter)
@@ -1129,7 +1113,7 @@ RESTART_RECV:
 				{
 					if(connectComponent(static_cast<COMPONENT_TYPE>(findComponentType), getUserUID(), 0, false) != 0)
 					{
-						//ERROR_MSG(fmt::format("Components::findLogger: register self to {} is error!\n",
+						//ERROR_MSG(fmt::format("Components::findLogger: register self to {} error!\n",
 						//COMPONENT_NAME_EX((COMPONENT_TYPE)findComponentType)));
 						//dispatcher().breakProcessing();
 						KBEngine::sleep(200);
@@ -1179,8 +1163,9 @@ bool Components::findComponents()
 			}
 			else
 			{
-				std::string s = fmt::format("Components::findComponents: find {}({})...\n",
-					COMPONENT_NAME_EX((COMPONENT_TYPE)findComponentType), ++count);
+				std::string s = fmt::format("Components::findComponents: find {}({})...\ndelay time is too long, please check the {} logs!\n",
+					COMPONENT_NAME_EX((COMPONENT_TYPE)findComponentType), ++count, COMPONENT_NAME_EX((COMPONENT_TYPE)findComponentType));
+
 				WARNING_MSG(s);
 
 #if KBE_PLATFORM == PLATFORM_WIN32
@@ -1209,8 +1194,8 @@ bool Components::findComponents()
 
 			bhandler.newMessage(MachineInterface::onFindInterfaceAddr);
 			MachineInterface::onFindInterfaceAddrArgs7::staticAddToBundle(bhandler, getUserUID(), getUsername(), 
-				componentType_, componentID_, findComponentType, pNetworkInterface()->intaddr().ip, bhandler.epListen().addr().port);
-
+				componentType_, componentID_, findComponentType, pNetworkInterface()->intTcpAddr().ip, bhandler.epListen().addr().port);
+			
 			ENGINE_COMPONENT_INFO cinfos = ServerConfig::getSingleton().getKBMachine();
 			std::vector< std::string >::iterator machine_addresses_iter = cinfos.machine_addresses.begin();
 			for(; machine_addresses_iter != cinfos.machine_addresses.end(); ++machine_addresses_iter)
@@ -1285,7 +1270,7 @@ RESTART_RECV:
 						findComponentTypes_[findIdx_] = -1;
 						if(connectComponent(static_cast<COMPONENT_TYPE>(findComponentType), getUserUID(), 0) != 0)
 						{
-							ERROR_MSG(fmt::format("Components::findComponents: register self to {} is error!\n",
+							ERROR_MSG(fmt::format("Components::findComponents: register self to {} error!\n",
 							COMPONENT_NAME_EX((COMPONENT_TYPE)findComponentType)));
 							findIdx_++;
 							//dispatcher().breakProcessing();
@@ -1368,7 +1353,7 @@ RESTART_RECV:
 
 			if(connectComponent(static_cast<COMPONENT_TYPE>(findComponentType), getUserUID(), 0) != 0)
 			{
-				ERROR_MSG(fmt::format("Components::findComponents: register self to {} is error!\n",
+				ERROR_MSG(fmt::format("Components::findComponents: register self to {} error!\n",
 				COMPONENT_NAME_EX((COMPONENT_TYPE)findComponentType)));
 				//dispatcher().breakProcessing();
 				return false;
@@ -1395,6 +1380,64 @@ void Components::onFoundAllComponents()
 }
 
 //-------------------------------------------------------------------------------------
+void Components::broadcastSelf()
+{
+	int cidex = 0;
+	int errcount = 0;
+
+	while (cidex++ < 2)
+	{
+		if (dispatcher().hasBreakProcessing() || dispatcher().waitingBreakProcessing())
+			return;
+
+		srand(KBEngine::getSystemTime());
+		uint16 nport = KBE_PORT_START + (rand() % 1000);
+
+		// 向局域网内广播UDP包，提交自己的身份
+		Network::BundleBroadcast bhandler(*pNetworkInterface(), nport);
+
+		if (!bhandler.good())
+		{
+			if (errcount++ > 255)
+			{
+				ERROR_MSG(fmt::format("Components::broadcastSelf(): BundleBroadcast error! count > {}\n", (errcount - 1)));
+				dispatcher().breakProcessing();
+				return;
+			}
+
+			// 如果失败则继续广播
+			--cidex;
+			KBEngine::sleep(10);
+			continue;
+		}
+
+		bhandler.newMessage(MachineInterface::onBroadcastInterface);
+		MachineInterface::onBroadcastInterfaceArgs25::staticAddToBundle(bhandler, getUserUID(), getUsername(),
+			componentType_, componentID_, cidex, g_componentGlobalOrder, g_componentGroupOrder, g_genuuid_sections,
+			pNetworkInterface()->intTcpAddr().ip, pNetworkInterface()->intTcpAddr().port,
+			pNetworkInterface()->extTcpAddr().ip, pNetworkInterface()->extTcpAddr().port, g_kbeSrvConfig.getConfig().externalAddress, getProcessPID(),
+			SystemInfo::getSingleton().getCPUPerByPID(), 0.f, (uint32)SystemInfo::getSingleton().getMemUsedByPID(), 0, 0, extraData1_, extraData2_, extraData3_, extraData4_,
+			pNetworkInterface()->intTcpAddr().ip, bhandler.epListen().addr().port);
+
+		ENGINE_COMPONENT_INFO cinfos = ServerConfig::getSingleton().getKBMachine();
+		std::vector< std::string >::iterator machine_addresses_iter = cinfos.machine_addresses.begin();
+		for (; machine_addresses_iter != cinfos.machine_addresses.end(); ++machine_addresses_iter)
+			bhandler.addBroadCastAddress((*machine_addresses_iter));
+
+		bhandler.broadcast();
+
+		int32 timeout = 100000;
+		MachineInterface::onBroadcastInterfaceArgs25 args;
+
+		if (bhandler.receive(&args, 0, timeout, false))
+		{
+		}
+
+		bhandler.close();
+	}
+}
+
+//-------------------------------------------------------------------------------------
 bool Components::process()
 {
 	if(componentType_ == MACHINE_TYPE)
@@ -1406,6 +1449,7 @@ bool Components::process()
 	if(state_ == 0)
 	{
 		uint64 cidex = 0;
+		uint32 errcount = 0;
 
 		DEBUG_MSG("Components::process(): Request for the process of identity...\n");
 
@@ -1420,16 +1464,28 @@ bool Components::process()
 			// 向局域网内广播UDP包，提交自己的身份
 			Network::BundleBroadcast bhandler(*pNetworkInterface(), nport);
 
-			if(!bhandler.good())
+			if (!bhandler.good())
+			{
+				if (errcount++ > 255)
+				{
+					ERROR_MSG(fmt::format("Components::process(): BundleBroadcast error! count > {}\n", (errcount - 1)));
+					dispatcher().breakProcessing();
+					return false;
+				}
+
+				// 如果失败则继续广播
+				--cidex;
+				KBEngine::sleep(10);
 				continue;
+			}
 
 			bhandler.newMessage(MachineInterface::onBroadcastInterface);
 			MachineInterface::onBroadcastInterfaceArgs25::staticAddToBundle(bhandler, getUserUID(), getUsername(), 
 				componentType_, componentID_, cidex, g_componentGlobalOrder, g_componentGroupOrder, g_genuuid_sections,
-				pNetworkInterface()->intaddr().ip, pNetworkInterface()->intaddr().port,
-				pNetworkInterface()->extaddr().ip, pNetworkInterface()->extaddr().port, g_kbeSrvConfig.getConfig().externalAddress, getProcessPID(),
+				pNetworkInterface()->intTcpAddr().ip, pNetworkInterface()->intTcpAddr().port,
+				pNetworkInterface()->extTcpAddr().ip, pNetworkInterface()->extTcpAddr().port, g_kbeSrvConfig.getConfig().externalAddress, getProcessPID(),
 				SystemInfo::getSingleton().getCPUPerByPID(), 0.f, (uint32)SystemInfo::getSingleton().getMemUsedByPID(), 0, 0, extraData1_, extraData2_, extraData3_, extraData4_, 
-				pNetworkInterface()->intaddr().ip, bhandler.epListen().addr().port);
+				pNetworkInterface()->intTcpAddr().ip, bhandler.epListen().addr().port);
 			
 			ENGINE_COMPONENT_INFO cinfos = ServerConfig::getSingleton().getKBMachine();
 			std::vector< std::string >::iterator machine_addresses_iter = cinfos.machine_addresses.begin();

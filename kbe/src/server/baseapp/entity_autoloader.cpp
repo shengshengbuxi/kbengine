@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 #include "baseapp.h"
 #include "entity_autoloader.h"
@@ -24,6 +6,7 @@ along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
 #include "network/bundle.h"
 #include "network/channel.h"
 #include "entitydef/entitydef.h"
+#include "server/serverconfig.h"
 
 #include "../../server/dbmgr/dbmgr_interface.h"
 
@@ -119,7 +102,7 @@ void EntityAutoLoader::onEntityAutoLoadCBFromDBMgr(Network::Channel* pChannel, M
 		}
 		else
 		{
-			Baseapp::getSingleton().createBaseAnywhereFromDBID(EntityDef::findScriptModule(entityType)->getName(), dbid, NULL, 
+			Baseapp::getSingleton().createEntityAnywhereFromDBID(EntityDef::findScriptModule(entityType)->getName(), dbid, NULL, 
 				g_kbeSrvConfig.dbInterfaceIndex2dbInterfaceName(dbInterfaceIndex));
 		}
 	}
@@ -136,16 +119,26 @@ bool EntityAutoLoader::process()
 	{
 		if ((*entityTypes_.begin()).size() > 0)
 		{
-			Network::Bundle* pBundle = Network::Bundle::createPoolObject();
+			Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
 
 			if (start_ == 0 && end_ == 0)
 				end_ = LOAD_ENTITY_SIZE;
 
 			uint16 dbInterfaceIndex = (uint16)(g_kbeSrvConfig.getDBMgr().dbInterfaceInfos.size() - entityTypes_.size());
-			(*pBundle).newMessage(DbmgrInterface::entityAutoLoad);
-			(*pBundle) << dbInterfaceIndex << g_componentID << (*(*entityTypes_.begin()).begin()) << start_ << end_;
-			pChannel->send(pBundle);
-			querying_ = true;
+
+			if (!g_kbeSrvConfig.isPureDBInterfaceName(g_kbeSrvConfig.dbInterfaceIndex2dbInterfaceName(dbInterfaceIndex)))
+			{
+				(*pBundle).newMessage(DbmgrInterface::entityAutoLoad);
+				(*pBundle) << dbInterfaceIndex << g_componentID << (*(*entityTypes_.begin()).begin()) << start_ << end_;
+				pChannel->send(pBundle);
+				querying_ = true;
+			}
+			else
+			{
+				start_ = 0;
+				end_ = 0;
+				(*entityTypes_.begin()).erase((*entityTypes_.begin()).begin());
+			}
 		}
 		else
 		{

@@ -1,28 +1,11 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 
 #ifndef KBE_CELLAPPMGR_H
 #define KBE_CELLAPPMGR_H
 	
 #include "cellapp.h"
+#include "space_viewer.h"
 #include "server/kbemain.h"
 #include "server/serverapp.h"
 #include "server/idallocate.h"
@@ -70,7 +53,7 @@ public:
 	/** 网络接口
 		baseEntity请求创建在一个新的space中
 	*/
-	void reqCreateInNewSpace(Network::Channel* pChannel, MemoryStream& s);
+	void reqCreateCellEntityInNewSpace(Network::Channel* pChannel, MemoryStream& s);
 
 	/** 网络接口
 		baseEntity请求创建在一个新的space中
@@ -114,6 +97,23 @@ public:
 	*/
 	void queryAppsLoads(Network::Channel* pChannel, MemoryStream& s);
 
+	/** 网络接口
+	查询所有相关进程space信息
+	*/
+	void querySpaces(Network::Channel* pChannel, MemoryStream& s);
+
+	/** 网络接口
+	更新相关进程space信息，注意：此spaceData并非API文档中描述的spaceData
+	是指space的一些信息
+	*/
+	void updateSpaceData(Network::Channel* pChannel, MemoryStream& s);
+
+	/** 网络接口
+	工具请求改变space查看器（含添加和删除功能）
+	如果是请求更新并且服务器上不存在该地址的查看器则自动创建，如果是删除则明确给出删除要求
+	*/
+	void setSpaceViewer(Network::Channel* pChannel, MemoryStream& s);
+
 protected:
 	TimerHandle							gameTimer_;
 	ForwardAnywhere_MessageBuffer		forward_anywhere_cellapp_messagebuffer_;
@@ -123,6 +123,9 @@ protected:
 
 	std::map< COMPONENT_ID, Cellapp >	cellapps_;
 	std::vector<COMPONENT_ID>			cellapp_cids_;
+
+	// 通过工具查看space
+	SpaceViewers						spaceViewers_;
 };
 
 } 

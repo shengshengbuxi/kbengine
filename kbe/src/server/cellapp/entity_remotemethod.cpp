@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 #include "cellapp.h"
 #include "witness.h"
@@ -41,8 +23,8 @@ SCRIPT_INIT(EntityRemoteMethod, tp_call, 0, 0, 0, 0)
 
 //-------------------------------------------------------------------------------------
 EntityRemoteMethod::EntityRemoteMethod(MethodDescription* methodDescription, 
-						EntityMailboxAbstract* mailbox):
-RemoteEntityMethod(methodDescription, mailbox, getScriptType())
+						EntityCallAbstract* entityCall):
+RemoteEntityMethod(methodDescription, entityCall, getScriptType())
 {
 }
 
@@ -57,18 +39,18 @@ PyObject* EntityRemoteMethod::tp_call(PyObject* self, PyObject* args,
 {	
 	EntityRemoteMethod* rmethod = static_cast<EntityRemoteMethod*>(self);
 	MethodDescription* methodDescription = rmethod->getDescription();
-	EntityMailboxAbstract* mailbox = rmethod->getMailbox();
+	EntityCallAbstract* entityCall = rmethod->getEntityCall();
 
-	if(!mailbox->isClient())
+	if(!entityCall->isClient())
 	{
 		return RemoteEntityMethod::tp_call(self, args, kwds);
 	}
 
-	Entity* pEntity = Cellapp::getSingleton().findEntity(mailbox->id());
+	Entity* pEntity = Cellapp::getSingleton().findEntity(entityCall->id());
 	if(pEntity == NULL || pEntity->pWitness() == NULL)
 	{
 		//WARNING_MSG(fmt::format("EntityRemoteMethod::callClientMethod: not found entity({}).\n", 
-		//	mailbox->id()));
+		//	entityCall->id()));
 
 		return RemoteEntityMethod::tp_call(self, args, kwds);
 	}
@@ -86,10 +68,22 @@ PyObject* EntityRemoteMethod::tp_call(PyObject* self, PyObject* args,
 	if(methodDescription->checkArgs(args))
 	{
 		Network::Bundle* pBundle = pChannel->createSendBundle();
-		mailbox->newMail((*pBundle));
+		entityCall->newCall((*pBundle));
 
-		MemoryStream* mstream = MemoryStream::createPoolObject();
-		methodDescription->addToStream(mstream, args);
+		MemoryStream* mstream = MemoryStream::createPoolObject(OBJECTPOOL_POINT);
+
+		try
+		{
+			methodDescription->addToStream(mstream, args);
+		}
+		catch (MemoryStreamWriteOverflow & err)
+		{
+			ERROR_MSG(fmt::format("EntityRemoteMethod::tp_call: {}::{} {}, error={}!\n",
+				pEntity->scriptName(), methodDescription->getName(), pEntity->id(), err.what()));
+
+			MemoryStream::reclaimPoolObject(mstream);
+			S_Return;
+		}
 
 		if(mstream->wpos() > 0)
 			(*pBundle).append(mstream->data(), (int)mstream->wpos());

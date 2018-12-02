@@ -249,6 +249,9 @@ def components_run( request ):
 		componentType = int( POST.get("componentType", "0") )
 		targetMachine = POST.get("targetMachine", "").strip()
 		runNumber = int( POST.get("runNumber", "0") )
+		kbe_root = request.session["kbe_root"]
+		kbe_res_path = request.session["kbe_res_path"]
+		kbe_bin_path = request.session["kbe_bin_path"]
 		
 		if componentType not in Define.VALID_COMPONENT_TYPE_FOR_RUN or \
 			not machinesmgr.hasMachine( targetMachine ) or \
@@ -259,7 +262,7 @@ def components_run( request ):
 				cid = machinesmgr.makeCID( componentType )
 				gus = machinesmgr.makeGUS( componentType )
 				print("cid: %s, gus: %s" % (cid,gus))
-				components.startServer( componentType, cid, gus, targetMachine )
+				components.startServer( componentType, cid, gus, targetMachine, kbe_root, kbe_res_path, kbe_bin_path )
 
 			time.sleep( 2 )
 			return HttpResponseRedirect( "/wc/components/manage" )
@@ -311,6 +314,24 @@ def components_shutdown( request ):
 		"shutType": "all_ct"
  	}
 	return render( request, "WebConsole/components_shutdown.html", context )
+
+@login_check
+def components_kill( request, ct, cid ):
+	"""
+	杀死一个组件进程
+	"""
+	ct = int(ct)
+	cid = int(cid)
+	
+	components = Machines.Machines( request.session["sys_uid"], request.session["sys_user"] )
+
+	components.killServer( ct, componentID = cid, trycount = 0 )
+	context = {
+		"shutType": "kill_cid",
+		"ct" : ct,
+		"cid": cid
+ 	}
+	return render( request, "WebConsole/components_kill.html", context )
 
 @login_check
 def components_save_layout( request ):
@@ -432,7 +453,9 @@ def components_load_layout( request ):
 			Define.LOGGER_TYPE,
 			
 		] )
-	
+	kbe_root = request.session["kbe_root"]
+	kbe_res_path = request.session["kbe_res_path"]
+	kbe_bin_path = request.session["kbe_bin_path"]
 	try:
 		id = int( request.GET["id"] )
 	except:
@@ -453,7 +476,6 @@ def components_load_layout( request ):
 	components_ct  = [0,] * len(Define.COMPONENT_NAME)
 	components_cid = [0,] * len(Define.COMPONENT_NAME)
 	components_gus = [0,] * len(Define.COMPONENT_NAME)
-
 	ly = ServerLayout.objects.get(pk = id)
 	layoutData = json.loads( ly.config )
 	for ct in VALID_CT:
@@ -471,7 +493,7 @@ def components_load_layout( request ):
 				gus = machinesmgr.makeGUS(ct)
 			components_gus[ct] = gus
 			t2c[ct] += 1
-			components.startServer( ct, cid, gus, comp["ip"], 0 )
+			components.startServer( ct, cid, gus, comp["ip"], kbe_root, kbe_res_path, kbe_bin_path, 0 )
 
 	context = {
 		"run_counter"    : str(t2c),

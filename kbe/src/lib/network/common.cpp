@@ -1,25 +1,9 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 
 #include "common.h"
+#include "common/ssl.h"
+#include "network/http_utility.h"
 #include "network/channel.h"
 #include "network/bundle.h"
 #include "network/tcp_packet.h"
@@ -41,6 +25,21 @@ int8 g_channelExternalEncryptType = 0;
 
 uint32 g_SOMAXCONN = 5;
 
+// UDP参数
+uint32						g_rudp_intWritePacketsQueueSize = 65535;
+uint32						g_rudp_intReadPacketsQueueSize = 65535;
+uint32						g_rudp_extWritePacketsQueueSize = 65535;
+uint32						g_rudp_extReadPacketsQueueSize = 65535;
+uint32						g_rudp_tickInterval = 10;
+uint32						g_rudp_minRTO = 10;
+uint32						g_rudp_missAcksResend = 1;
+uint32						g_rudp_mtu = 0;
+bool						g_rudp_congestionControl = false;
+bool						g_rudp_nodelay = true;
+
+const char*					UDP_HELLO = "62a559f3fa7748bc22f8e0766019d498";
+const char*					UDP_HELLO_ACK = "1432ad7c829170a76dd31982c3501eca";
+
 // network stats
 uint64						g_numPacketsSent = 0;
 uint64						g_numPacketsReceived = 0;
@@ -58,12 +57,18 @@ uint32						g_intSendWindowMessagesOverflow = 65535;
 uint32						g_extSendWindowMessagesOverflow = 256;
 uint32						g_intSendWindowBytesOverflow = 0;
 uint32						g_extSendWindowBytesOverflow = 65535;
+uint32						g_intSentWindowBytesOverflow = 0;
+uint32						g_extSentWindowBytesOverflow = 0;
 
 // 通道发送超时重试
 uint32						g_intReSendInterval = 10;
 uint32						g_intReSendRetries = 0;
 uint32						g_extReSendInterval = 10;
 uint32						g_extReSendRetries = 3;
+
+// Certificate file required for HTTPS/WSS/SSL communication
+std::string					g_sslCertificate = "";
+std::string					g_sslPrivateKey = "";
 
 bool initializeWatcher()
 {
@@ -94,8 +99,16 @@ void destroyObjPool()
 	UDPPacketReceiver::destroyObjPool();
 }
 
+bool initialize()
+{
+	return KB_SSL::initialize() && Http::initialize();
+}
+
 void finalise(void)
 {
+	Http::finalise();
+	KB_SSL::finalise();
+
 #ifdef ENABLE_WATCHERS
 	WatcherPaths::finalise();
 #endif

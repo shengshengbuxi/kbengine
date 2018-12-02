@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 
 #ifndef KBE_DATA_TYPE_H
@@ -46,7 +28,8 @@ namespace KBEngine{
 }
 
 class RefCountable;
-
+class ScriptDefModule;
+class PropertyDescription;
 
 class DataType : public RefCountable
 {
@@ -171,7 +154,7 @@ inline PyObject* IntType<uint8>::parseDefaultStr(std::string defaultVal)
 	if (PyErr_Occurred()) 
 	{
 		PyErr_Clear();
-		PyErr_Format(PyExc_TypeError, "UINT8Type::parseDefaultStr: defaultVal(%s) is error! val=[%s]", 
+		PyErr_Format(PyExc_TypeError, "UINT8Type::parseDefaultStr: defaultVal(%s) error! val=[%s]", 
 			pyval != NULL ? pyval->ob_type->tp_name : "NULL", defaultVal.c_str());
 
 		PyErr_PrintEx(0);
@@ -200,7 +183,7 @@ inline PyObject* IntType<uint16>::parseDefaultStr(std::string defaultVal)
 	if (PyErr_Occurred()) 
 	{
 		PyErr_Clear();
-		PyErr_Format(PyExc_TypeError, "UINT16Type::parseDefaultStr: defaultVal(%s) is error! val=[%s]", 
+		PyErr_Format(PyExc_TypeError, "UINT16Type::parseDefaultStr: defaultVal(%s) error! val=[%s]", 
 			pyval != NULL ? pyval->ob_type->tp_name : "NULL", defaultVal.c_str());
 
 		PyErr_PrintEx(0);
@@ -229,7 +212,7 @@ inline PyObject* IntType<uint32>::parseDefaultStr(std::string defaultVal)
 	if (PyErr_Occurred()) 
 	{
 		PyErr_Clear();
-		PyErr_Format(PyExc_TypeError, "UINT32Type::parseDefaultStr: defaultVal(%s) is error! val=[%s]", 
+		PyErr_Format(PyExc_TypeError, "UINT32Type::parseDefaultStr: defaultVal(%s) error! val=[%s]", 
 			pyval != NULL ? pyval->ob_type->tp_name : "NULL", defaultVal.c_str());
 
 		PyErr_PrintEx(0);
@@ -258,7 +241,7 @@ inline PyObject* IntType<int8>::parseDefaultStr(std::string defaultVal)
 	if (PyErr_Occurred()) 
 	{
 		PyErr_Clear();
-		PyErr_Format(PyExc_TypeError, "INT8Type::parseDefaultStr: defaultVal(%s) is error! val=[%s]", 
+		PyErr_Format(PyExc_TypeError, "INT8Type::parseDefaultStr: defaultVal(%s) error! val=[%s]", 
 			pyval != NULL ? pyval->ob_type->tp_name : "NULL", defaultVal.c_str());
 
 		PyErr_PrintEx(0);
@@ -287,7 +270,7 @@ inline PyObject* IntType<int16>::parseDefaultStr(std::string defaultVal)
 	if (PyErr_Occurred()) 
 	{
 		PyErr_Clear();
-		PyErr_Format(PyExc_TypeError, "INT16Type::parseDefaultStr: defaultVal(%s) is error! val=[%s]", 
+		PyErr_Format(PyExc_TypeError, "INT16Type::parseDefaultStr: defaultVal(%s) error! val=[%s]", 
 			pyval != NULL ? pyval->ob_type->tp_name : "NULL", defaultVal.c_str());
 
 		PyErr_PrintEx(0);
@@ -316,7 +299,7 @@ inline PyObject* IntType<int32>::parseDefaultStr(std::string defaultVal)
 	if (PyErr_Occurred()) 
 	{
 		PyErr_Clear();
-		PyErr_Format(PyExc_TypeError, "INT32Type::parseDefaultStr: defaultVal(%s) is error! val=[%s]", 
+		PyErr_Format(PyExc_TypeError, "INT32Type::parseDefaultStr: defaultVal(%s) error! val=[%s]", 
 			pyval != NULL ? pyval->ob_type->tp_name : "NULL", defaultVal.c_str());
 
 		PyErr_PrintEx(0);
@@ -430,11 +413,11 @@ public:
 	virtual DATATYPE type() const{ return DATA_TYPE_DIGIT; }
 };
 
-class VectorType : public DataType
+class Vector2Type : public DataType
 {
 public:	
-	VectorType(uint32 elemCount, DATATYPE_UID did = 0);
-	virtual ~VectorType();	
+	Vector2Type(DATATYPE_UID did = 0);
+	virtual ~Vector2Type();	
 
 	bool isSameType(PyObject* pyValue);
 
@@ -444,12 +427,56 @@ public:
 
 	PyObject* parseDefaultStr(std::string defaultVal);
 
-	const char* getName(void) const{ return name_.c_str();}
+	const char* getName(void) const{ return "VECTOR2";}
 
-	virtual DATATYPE type() const{ return DATA_TYPE_VECTOR; }
+	virtual DATATYPE type() const{ return DATA_TYPE_VECTOR2; }
+
 protected:
-	std::string name_;
-	ArraySize elemCount_;
+
+};
+
+class Vector3Type : public DataType
+{
+public:
+	Vector3Type(DATATYPE_UID did = 0);
+	virtual ~Vector3Type();
+
+	bool isSameType(PyObject* pyValue);
+
+	void addToStream(MemoryStream* mstream, PyObject* pyValue);
+
+	PyObject* createFromStream(MemoryStream* mstream);
+
+	PyObject* parseDefaultStr(std::string defaultVal);
+
+	const char* getName(void) const{ return "VECTOR3"; }
+
+	virtual DATATYPE type() const{ return DATA_TYPE_VECTOR3; }
+
+protected:
+
+};
+
+class Vector4Type : public DataType
+{
+public:
+	Vector4Type(DATATYPE_UID did = 0);
+	virtual ~Vector4Type();
+
+	bool isSameType(PyObject* pyValue);
+
+	void addToStream(MemoryStream* mstream, PyObject* pyValue);
+
+	PyObject* createFromStream(MemoryStream* mstream);
+
+	PyObject* parseDefaultStr(std::string defaultVal);
+
+	const char* getName(void) const{ return "VECTOR4"; }
+
+	virtual DATATYPE type() const{ return DATA_TYPE_VECTOR4; }
+
+protected:
+
 };
 
 class StringType : public DataType
@@ -519,6 +546,7 @@ public:
 	virtual ~PyDictType();	
 
 	bool isSameType(PyObject* pyValue);
+	virtual PyObject* createFromStream(MemoryStream* mstream);
 
 	PyObject* parseDefaultStr(std::string defaultVal);
 
@@ -535,6 +563,7 @@ public:
 	virtual ~PyTupleType();	
 
 	bool isSameType(PyObject* pyValue);
+	virtual PyObject* createFromStream(MemoryStream* mstream);
 
 	PyObject* parseDefaultStr(std::string defaultVal);
 
@@ -551,6 +580,7 @@ public:
 	virtual ~PyListType();	
 
 	bool isSameType(PyObject* pyValue);
+	virtual PyObject* createFromStream(MemoryStream* mstream);
 
 	PyObject* parseDefaultStr(std::string defaultVal);
 
@@ -579,12 +609,12 @@ public:
 	virtual DATATYPE type() const{ return DATA_TYPE_BLOB; }
 };
 
-class MailboxType : public DataType
+class EntityCallType : public DataType
 {
 protected:
 public:	
-	MailboxType(DATATYPE_UID did = 0);
-	virtual ~MailboxType();	
+	EntityCallType(DATATYPE_UID did = 0);
+	virtual ~EntityCallType();	
 
 	bool isSameType(PyObject* pyValue);
 
@@ -594,9 +624,9 @@ public:
 
 	PyObject* parseDefaultStr(std::string defaultVal);
 
-	const char* getName(void) const{ return "MAILBOX";}
+	const char* getName(void) const{ return "ENTITYCALL";}
 
-	virtual DATATYPE type() const{ return DATA_TYPE_MAILBOX; }
+	virtual DATATYPE type() const{ return DATA_TYPE_ENTITYCALL; }
 };
 
 class FixedArrayType : public DataType
@@ -618,7 +648,7 @@ public:
 
 	PyObject* parseDefaultStr(std::string defaultVal);
 
-	bool initialize(XML* xml, TiXmlNode* node);
+	bool initialize(XML* xml, TiXmlNode* node, const std::string& parentName);
 
 	const char* getName(void) const{ return "ARRAY";}
 
@@ -631,6 +661,7 @@ public:
 	virtual PyObject* createNewFromObj(PyObject* pyobj);
 
 	virtual DATATYPE type() const{ return DATA_TYPE_FIXEDARRAY; }
+
 protected:
 	DataType*			dataType_;		// 这个数组所处理的类别
 };
@@ -672,7 +703,7 @@ public:
 	PyObject* createFromStreamEx(MemoryStream* mstream, bool onlyPersistents);
 
 	PyObject* parseDefaultStr(std::string defaultVal);
-	bool initialize(XML* xml, TiXmlNode* node);
+	bool initialize(XML* xml, TiXmlNode* node, std::string& parentName);
 	
 	/**	
 		当传入的这个pyobj并不是当前类型时则按照当前类型创建出一个obj
@@ -725,6 +756,44 @@ protected:
 	std::string						moduleName_;		
 };
 
+class EntityComponentType : public DataType
+{
+protected:
+public:
+	EntityComponentType(ScriptDefModule* pScriptDefModule, DATATYPE_UID did = 0);
+	virtual ~EntityComponentType();
+
+	bool isSameType(PyObject* pyValue);
+	bool isSamePersistentType(PyObject* pyValue);
+	bool isSameCellDataType(PyObject* pyValue);
+
+	void addToStream(MemoryStream* mstream, PyObject* pyValue);
+	void addPersistentToStream(MemoryStream* mstream, PyObject* pyValue);
+	void addPersistentToStream(MemoryStream* mstream);
+	void addPersistentToStreamTemplates(ScriptDefModule* pScriptModule, MemoryStream* mstream);
+	void addCellDataToStream(MemoryStream* mstream, uint32 flags, PyObject* pyValue, 
+		ENTITY_ID ownerID, PropertyDescription* parentPropertyDescription, COMPONENT_TYPE sendtoComponentType, bool checkValue);
+
+	PyObject* createFromStream(MemoryStream* mstream);
+	PyObject* createFromPersistentStream(ScriptDefModule* pScriptDefModule, MemoryStream* mstream);
+
+	PyObject* createCellData();
+	PyObject* createCellDataFromPersistentStream(MemoryStream* mstream);
+	PyObject* createCellDataFromStream(MemoryStream* mstream);
+
+	PyObject* parseDefaultStr(std::string defaultVal);
+
+	const char* getName(void) const { return "ENTITY_COMPONENT"; }
+
+	virtual DATATYPE type() const { return DATA_TYPE_ENTITY_COMPONENT; }
+
+	ScriptDefModule* pScriptDefModule() {
+		return pScriptDefModule_;
+	}
+
+protected:
+	ScriptDefModule* pScriptDefModule_;
+};
 
 template class IntType<uint8>;
 template class IntType<uint16>;
@@ -804,7 +873,7 @@ void IntType<SPECIFY_TYPE>::addToStream(MemoryStream* mstream,
 		if(PyErr_Occurred())
 		{
 			PyErr_Clear();
-			PyErr_Format(PyExc_TypeError, "IntType::addToStream: pyValue(%s) is error!", 
+			PyErr_Format(PyExc_TypeError, "IntType::addToStream: pyValue(%s) error!", 
 				(pyValue == NULL) ? "NULL": pyValue->ob_type->tp_name);
 
 			PyErr_PrintEx(0);

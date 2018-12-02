@@ -1,22 +1,4 @@
-/*
-This source file is part of KBEngine
-For the latest info, see http://www.kbengine.org/
-
-Copyright (c) 2008-2016 KBEngine.
-
-KBEngine is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-KBEngine is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
- 
-You should have received a copy of the GNU Lesser General Public License
-along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
-*/
+// Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
 
 #include "clientapp.h"
@@ -29,7 +11,8 @@ along with KBEngine.  If not, see <http://www.gnu.org/licenses/>.
 #include "network/tcp_packet_sender.h"
 #include "network/tcp_packet_receiver.h"
 #include "thread/threadpool.h"
-#include "entitydef/entity_mailbox.h"
+#include "entitydef/entity_call.h"
+#include "entitydef/entity_component.h"
 #include "entitydef/entitydef.h"
 #include "server/components.h"
 #include "server/serverconfig.h"
@@ -71,12 +54,11 @@ threadPool_(),
 entryScript_(),
 state_(C_STATE_INIT)
 {
-	networkInterface_.pExtensionData(this);
 	networkInterface_.pChannelTimeOutHandler(this);
 	networkInterface_.pChannelDeregisterHandler(this);
 
-	// 初始化mailbox模块获取channel函数地址
-	EntityMailbox::setFindChannelFunc(std::tr1::bind(&ClientApp::findChannelByMailbox, this, 
+	// 初始化entityCall模块获取channel函数地址
+	EntityCallAbstract::setFindChannelFunc(std::tr1::bind(&ClientApp::findChannelByEntityCall, this,
 		std::tr1::placeholders::_1));
 
 	KBEngine::Network::MessageHandlers::pMainMessageHandlers = &ClientInterface::messageHandlers;
@@ -87,7 +69,7 @@ state_(C_STATE_INIT)
 //-------------------------------------------------------------------------------------
 ClientApp::~ClientApp()
 {
-	EntityMailbox::resetCallHooks();
+	EntityCallAbstract::resetCallHooks();
 	SAFE_RELEASE(pBlowfishFilter_);
 }
 
@@ -215,7 +197,8 @@ bool ClientApp::installEntityDef()
 	APPEND_SCRIPT_MODULE_METHOD(getScript().getModule(),	getWatcher,			__py_getWatcher,								METH_VARARGS,	0)
 	APPEND_SCRIPT_MODULE_METHOD(getScript().getModule(),	getWatcherDir,		__py_getWatcherDir,								METH_VARARGS,	0)
 	APPEND_SCRIPT_MODULE_METHOD(getScript().getModule(),	disconnect,			__py_disconnect,								METH_VARARGS,	0)
-	
+	APPEND_SCRIPT_MODULE_METHOD(getScript().getModule(),	kbassert,			__py_assert,									METH_VARARGS,	0)
+
 	// 获得资源全路径
 	APPEND_SCRIPT_MODULE_METHOD(getScript().getModule(),	getResFullPath,		__py_getResFullPath,							METH_VARARGS,	0)
 
@@ -250,6 +233,7 @@ bool ClientApp::uninstallPyScript()
 bool ClientApp::installPyModules()
 {
 	registerScript(client::Entity::getScriptType());
+	registerScript(EntityComponent::getScriptType());
 	onInstallPyModules();
 
 	// 注册设置脚本输出类型
@@ -286,7 +270,15 @@ bool ClientApp::installPyModules()
 	if(entryScriptFileName != NULL)
 	{
 		entryScript_ = PyImport_Import(entryScriptFileName);
-		SCRIPT_ERROR_CHECK();
+
+		if (PyErr_Occurred())
+		{
+			INFO_MSG(fmt::format("EntityApp::installPyModules: importing scripts/client/{}.py...\n",
+				g_kbeConfig.entryScriptFile()));
+
+			PyErr_PrintEx(0);
+		}
+
 		S_RELEASE(entryScriptFileName);
 
 		if(entryScript_.get() == NULL)
@@ -404,7 +396,7 @@ void ClientApp::handleGameTick()
 				if(ret)
 				{
 					// 先握手然后等helloCB之后再进行登录
-					Network::Bundle* pBundle = Network::Bundle::createPoolObject();
+					Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
 					(*pBundle).newMessage(BaseappInterface::hello);
 					(*pBundle) << KBEVersion::versionString();
 					(*pBundle) << KBEVersion::scriptVersionString();
@@ -516,30 +508,22 @@ PyObject* ClientApp::__py_fireEvent(PyObject* self, PyObject* args)
 		return NULL;
 	}
 
-	wchar_t* PyUnicode_AsWideCharStringRet0 = PyUnicode_AsWideCharString(pyname, NULL);
-	char* name = strutil::wchar2char(PyUnicode_AsWideCharStringRet0);
-	PyMem_Free(PyUnicode_AsWideCharStringRet0);
-
 	EventData_Script eventdata;
-	eventdata.name = name;
-	free(name);
+	eventdata.name = PyUnicode_AsUTF8AndSize(pyname, NULL);
 
 	if(PyTuple_Size(args) - 1 > 0)
 	{
 		PyObject* pyitem = PyTuple_GetItem(args, 1);
 
-		PyUnicode_AsWideCharStringRet0 = PyUnicode_AsWideCharString(pyitem, NULL);
-		if(PyUnicode_AsWideCharStringRet0 == NULL)
+		char* datas = PyUnicode_AsUTF8AndSize(pyitem, NULL);
+		if (datas == NULL)
 		{
 			PyErr_Format(PyExc_AssertionError, "ClientApp::fireEvent(%s): arg2 not is str!\n", eventdata.name.c_str());
 			PyErr_PrintEx(0);
 			return NULL;
 		}
 
-		char* datas = strutil::wchar2char(PyUnicode_AsWideCharStringRet0);
-		PyMem_Free(PyUnicode_AsWideCharStringRet0);
 		eventdata.datas = datas;
-		free(datas);
 	}
 
 	ClientApp::getSingleton().fireEvent(&eventdata);
@@ -552,7 +536,7 @@ PyObject* ClientApp::__py_setScriptLogType(PyObject* self, PyObject* args)
 	int argCount = (int)PyTuple_Size(args);
 	if(argCount != 1)
 	{
-		PyErr_Format(PyExc_TypeError, "KBEngine::scriptLogType(): args is error!");
+		PyErr_Format(PyExc_TypeError, "KBEngine::scriptLogType(): args error!");
 		PyErr_PrintEx(0);
 		S_Return;
 	}
@@ -561,7 +545,7 @@ PyObject* ClientApp::__py_setScriptLogType(PyObject* self, PyObject* args)
 
 	if(PyArg_ParseTuple(args, "i", &type) == -1)
 	{
-		PyErr_Format(PyExc_TypeError, "KBEngine::scriptLogType(): args is error!");
+		PyErr_Format(PyExc_TypeError, "KBEngine::scriptLogType(): args error!");
 		PyErr_PrintEx(0);
 	}
 
@@ -585,8 +569,9 @@ void ClientApp::onChannelDeregister(Network::Channel * pChannel)
 void ClientApp::onChannelTimeOut(Network::Channel * pChannel)
 {
 	INFO_MSG(fmt::format("ClientApp::onChannelTimeOut: "
-		"Channel {} timed out.\n", pChannel->c_str()));
+		"Channel {} timeout!\n", pChannel->c_str()));
 
+	pChannel->condemn("timedout");
 	networkInterface_.deregisterChannel(pChannel);
 	pChannel->destroy();
 	Network::Channel::reclaimPoolObject(pChannel);
@@ -661,7 +646,7 @@ bool ClientApp::login(std::string accountName, std::string passwd, std::string d
 	if(ret)
 	{
 		// 先握手然后等helloCB之后再进行登录
-		Network::Bundle* pBundle = Network::Bundle::createPoolObject();
+		Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
 		(*pBundle).newMessage(LoginappInterface::hello);
 		(*pBundle) << KBEVersion::versionString();
 		(*pBundle) << KBEVersion::scriptVersionString();
@@ -742,16 +727,16 @@ void ClientApp::onLoginBaseappFailed(Network::Channel * pChannel, SERVER_ERROR_C
 }
 
 //-------------------------------------------------------------------------------------	
-void ClientApp::onReLoginBaseappFailed(Network::Channel * pChannel, SERVER_ERROR_CODE failedcode)
+void ClientApp::onReloginBaseappFailed(Network::Channel * pChannel, SERVER_ERROR_CODE failedcode)
 {
-	ClientObjectBase::onReLoginBaseappFailed(pChannel, failedcode);
+	ClientObjectBase::onReloginBaseappFailed(pChannel, failedcode);
 	canReset_ = true;
 }
 
 //-------------------------------------------------------------------------------------	
-void ClientApp::onReLoginBaseappSuccessfully(Network::Channel * pChannel, MemoryStream& s)
+void ClientApp::onReloginBaseappSuccessfully(Network::Channel * pChannel, MemoryStream& s)
 {
-	ClientObjectBase::onReLoginBaseappSuccessfully(pChannel, s);
+	ClientObjectBase::onReloginBaseappSuccessfully(pChannel, s);
 }
 
 //-------------------------------------------------------------------------------------	
@@ -765,7 +750,7 @@ PyObject* ClientApp::__py_getResFullPath(PyObject* self, PyObject* args)
 	int argCount = PyTuple_Size(args);
 	if (argCount != 1)
 	{
-		PyErr_Format(PyExc_TypeError, "KBEngine::getResFullPath(): args is error!");
+		PyErr_Format(PyExc_TypeError, "KBEngine::getResFullPath(): args error!");
 		PyErr_PrintEx(0);
 		S_Return;
 	}
@@ -774,7 +759,7 @@ PyObject* ClientApp::__py_getResFullPath(PyObject* self, PyObject* args)
 
 	if (PyArg_ParseTuple(args, "s", &respath) == -1)
 	{
-		PyErr_Format(PyExc_TypeError, "KBEngine::getResFullPath(): args is error!");
+		PyErr_Format(PyExc_TypeError, "KBEngine::getResFullPath(): args error!");
 		PyErr_PrintEx(0);
 		S_Return;
 	}
@@ -792,7 +777,7 @@ PyObject* ClientApp::__py_hasRes(PyObject* self, PyObject* args)
 	int argCount = PyTuple_Size(args);
 	if (argCount != 1)
 	{
-		PyErr_Format(PyExc_TypeError, "KBEngine::hasRes(): args is error!");
+		PyErr_Format(PyExc_TypeError, "KBEngine::hasRes(): args error!");
 		PyErr_PrintEx(0);
 		S_Return;
 	}
@@ -801,7 +786,7 @@ PyObject* ClientApp::__py_hasRes(PyObject* self, PyObject* args)
 
 	if (PyArg_ParseTuple(args, "s", &respath) == -1)
 	{
-		PyErr_Format(PyExc_TypeError, "KBEngine::hasRes(): args is error!");
+		PyErr_Format(PyExc_TypeError, "KBEngine::hasRes(): args error!");
 		PyErr_PrintEx(0);
 		S_Return;
 	}
@@ -815,7 +800,7 @@ PyObject* ClientApp::__py_kbeOpen(PyObject* self, PyObject* args)
 	int argCount = PyTuple_Size(args);
 	if (argCount != 2)
 	{
-		PyErr_Format(PyExc_TypeError, "KBEngine::open(): args is error!");
+		PyErr_Format(PyExc_TypeError, "KBEngine::open(): args error!");
 		PyErr_PrintEx(0);
 		S_Return;
 	}
@@ -825,7 +810,7 @@ PyObject* ClientApp::__py_kbeOpen(PyObject* self, PyObject* args)
 
 	if (PyArg_ParseTuple(args, "s|s", &respath, &fargs) == -1)
 	{
-		PyErr_Format(PyExc_TypeError, "KBEngine::open(): args is error!");
+		PyErr_Format(PyExc_TypeError, "KBEngine::open(): args error!");
 		PyErr_PrintEx(0);
 		S_Return;
 	}
@@ -856,7 +841,7 @@ PyObject* ClientApp::__py_matchPath(PyObject* self, PyObject* args)
 	int argCount = PyTuple_Size(args);
 	if (argCount != 1)
 	{
-		PyErr_Format(PyExc_TypeError, "KBEngine::matchPath(): args is error!");
+		PyErr_Format(PyExc_TypeError, "KBEngine::matchPath(): args error!");
 		PyErr_PrintEx(0);
 		S_Return;
 	}
@@ -865,7 +850,7 @@ PyObject* ClientApp::__py_matchPath(PyObject* self, PyObject* args)
 
 	if (PyArg_ParseTuple(args, "s", &respath) == -1)
 	{
-		PyErr_Format(PyExc_TypeError, "KBEngine::matchPath(): args is error!");
+		PyErr_Format(PyExc_TypeError, "KBEngine::matchPath(): args error!");
 		PyErr_PrintEx(0);
 		S_Return;
 	}
@@ -880,7 +865,7 @@ PyObject* ClientApp::__py_listPathRes(PyObject* self, PyObject* args)
 	int argCount = PyTuple_Size(args);
 	if (argCount < 1 || argCount > 2)
 	{
-		PyErr_Format(PyExc_TypeError, "KBEngine::listPathRes(): args[path, pathargs=\'*.*\'] is error!");
+		PyErr_Format(PyExc_TypeError, "KBEngine::listPathRes(): args[path, pathargs=\'*.*\'] error!");
 		PyErr_PrintEx(0);
 		S_Return;
 	}
@@ -893,7 +878,7 @@ PyObject* ClientApp::__py_listPathRes(PyObject* self, PyObject* args)
 	{
 		if (PyArg_ParseTuple(args, "O", &pathobj) == -1)
 		{
-			PyErr_Format(PyExc_TypeError, "KBEngine::listPathRes(): args[path] is error!");
+			PyErr_Format(PyExc_TypeError, "KBEngine::listPathRes(): args[path] error!");
 			PyErr_PrintEx(0);
 			S_Return;
 		}
@@ -902,7 +887,7 @@ PyObject* ClientApp::__py_listPathRes(PyObject* self, PyObject* args)
 	{
 		if (PyArg_ParseTuple(args, "O|O", &pathobj, &path_argsobj) == -1)
 		{
-			PyErr_Format(PyExc_TypeError, "KBEngine::listPathRes(): args[path, pathargs=\'*.*\'] is error!");
+			PyErr_Format(PyExc_TypeError, "KBEngine::listPathRes(): args[path, pathargs=\'*.*\'] error!");
 			PyErr_PrintEx(0);
 			S_Return;
 		}
@@ -925,7 +910,7 @@ PyObject* ClientApp::__py_listPathRes(PyObject* self, PyObject* args)
 					PyObject* pyobj = PySequence_GetItem(path_argsobj, i);
 					if (!PyUnicode_Check(pyobj))
 					{
-						PyErr_Format(PyExc_TypeError, "KBEngine::listPathRes(): args[path, pathargs=\'*.*\'] is error!");
+						PyErr_Format(PyExc_TypeError, "KBEngine::listPathRes(): args[path, pathargs=\'*.*\'] error!");
 						PyErr_PrintEx(0);
 						S_Return;
 					}
@@ -939,7 +924,7 @@ PyObject* ClientApp::__py_listPathRes(PyObject* self, PyObject* args)
 			}
 			else
 			{
-				PyErr_Format(PyExc_TypeError, "KBEngine::listPathRes(): args[pathargs] is error!");
+				PyErr_Format(PyExc_TypeError, "KBEngine::listPathRes(): args[pathargs] error!");
 				PyErr_PrintEx(0);
 				S_Return;
 			}
@@ -948,7 +933,7 @@ PyObject* ClientApp::__py_listPathRes(PyObject* self, PyObject* args)
 
 	if (!PyUnicode_Check(pathobj))
 	{
-		PyErr_Format(PyExc_TypeError, "KBEngine::listPathRes(): args[path] is error!");
+		PyErr_Format(PyExc_TypeError, "KBEngine::listPathRes(): args[path] error!");
 		PyErr_PrintEx(0);
 		S_Return;
 	}
