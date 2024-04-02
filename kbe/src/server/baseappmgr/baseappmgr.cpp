@@ -110,8 +110,8 @@ void Baseappmgr::handleTimeout(TimerHandle handle, void * arg)
 //-------------------------------------------------------------------------------------
 void Baseappmgr::handleGameTick()
 {
-	 //time_t t = ::time(NULL);
-	 //DEBUG_MSG("Baseappmgr::handleGameTick[%"PRTime"]:%u\n", t, time_);
+	//time_t t = ::time(NULL);
+	//DEBUG_MSG(fmt::format("Baseappmgr::handleGameTick[{}]:{}\n", t, g_kbetime));
 	
 	++g_kbetime;
 	threadPool_.onMainThreadTick();
@@ -267,6 +267,10 @@ void Baseappmgr::updateBaseapp(Network::Channel* pChannel, COMPONENT_ID componen
 	baseapp.numProxices(numProxices);
 	baseapp.numEntitys(numEntitys);
 	baseapp.flags(flags);
+
+	Components::ComponentInfos* cinfos = Components::getSingleton().findComponent(componentID);
+	if (cinfos)
+		cinfos->appFlags = flags;
 	
 	updateBestBaseapp();
 }
@@ -448,12 +452,16 @@ void Baseappmgr::reqCreateEntityAnywhereFromDBIDQueryBestBaseappID(Network::Chan
 			baseapps_.size()));
 	}
 
-	Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
-	(*pBundle).newMessage(BaseappInterface::onGetCreateEntityAnywhereFromDBIDBestBaseappID);
+	if (cinfos)
+	{
+		Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
+		(*pBundle).newMessage(BaseappInterface::onGetCreateEntityAnywhereFromDBIDBestBaseappID);
 
-	(*pBundle) << bestBaseappID_;
-	(*pBundle).append((char*)s.data() + s.rpos(), (int)s.length());
-	cinfos->pChannel->send(pBundle);
+		(*pBundle) << bestBaseappID_;
+		(*pBundle).append((char*)s.data() + s.rpos(), (int)s.length());
+		cinfos->pChannel->send(pBundle);
+	}
+
 	s.done();
 }
 

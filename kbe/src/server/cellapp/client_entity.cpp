@@ -62,7 +62,7 @@ PyObject* ClientEntityComponent::onScriptGetAttribute(PyObject* attr)
 	{
 		PyErr_Format(PyExc_AssertionError, "Entity::ClientEntityComponent: srcEntityID(%d) not found!\n",
 			pClientEntity_->srcEntityID());
-		PyErr_PrintEx(0);
+
 		return 0;
 	}
 
@@ -70,7 +70,7 @@ PyObject* ClientEntityComponent::onScriptGetAttribute(PyObject* attr)
 	{
 		PyErr_Format(PyExc_AssertionError, "Entity::ClientEntityComponent: srcEntityID(%d) is destroyed!\n",
 			pClientEntity_->srcEntityID());
-		PyErr_PrintEx(0);
+
 		return 0;
 	}
 
@@ -78,7 +78,7 @@ PyObject* ClientEntityComponent::onScriptGetAttribute(PyObject* attr)
 	{
 		PyErr_Format(PyExc_AssertionError, "%s::ClientEntityComponent: no client, srcEntityID(%d).\n",
 			srcEntity->scriptName(), srcEntity->id());
-		PyErr_PrintEx(0);
+
 		return 0;
 	}
 
@@ -90,11 +90,11 @@ PyObject* ClientEntityComponent::onScriptGetAttribute(PyObject* attr)
 	{
 		PyErr_Format(PyExc_AssertionError, "%s::ClientEntityComponent: not found entity(%d), srcEntityID(%d).\n",
 			srcEntity->scriptName(), pClientEntity_->clientEntityID(), srcEntity->id());
-		PyErr_PrintEx(0);
+
 		return 0;
 	}
 
-	char* ccattr = PyUnicode_AsUTF8AndSize(attr, NULL);
+	const char* ccattr = PyUnicode_AsUTF8AndSize(attr, NULL);
 
 	ScriptDefModule* pScriptDefModule = pComponentScriptDefModule();
 	MethodDescription* pMethodDescription = pScriptDefModule->findClientMethodDescription(ccattr);
@@ -161,7 +161,7 @@ PyObject* ClientEntity::onScriptGetAttribute(PyObject* attr)
 	{
 		PyErr_Format(PyExc_AssertionError, "Entity::clientEntity: srcEntityID(%d) not found!\n",		
 			 srcEntityID_);		
-		PyErr_PrintEx(0);
+
 		return 0;
 	}
 
@@ -169,7 +169,7 @@ PyObject* ClientEntity::onScriptGetAttribute(PyObject* attr)
 	{
 		PyErr_Format(PyExc_AssertionError, "Entity::clientEntity: srcEntityID(%d) is destroyed!\n",		
 			srcEntityID_);		
-		PyErr_PrintEx(0);
+
 		return 0;
 	}
 
@@ -177,7 +177,7 @@ PyObject* ClientEntity::onScriptGetAttribute(PyObject* attr)
 	{
 		PyErr_Format(PyExc_AssertionError, "%s::clientEntity: no client, srcEntityID(%d).\n",		
 			srcEntity->scriptName(), srcEntity->id());		
-		PyErr_PrintEx(0);
+
 		return 0;
 	}
 
@@ -189,11 +189,11 @@ PyObject* ClientEntity::onScriptGetAttribute(PyObject* attr)
 	{
 		PyErr_Format(PyExc_AssertionError, "%s::clientEntity: not found entity(%d), srcEntityID(%d).\n",		
 			srcEntity->scriptName(), clientEntityID_, srcEntity->id());		
-		PyErr_PrintEx(0);
+
 		return 0;
 	}
 
-	char* ccattr = PyUnicode_AsUTF8AndSize(attr, NULL);
+	const char* ccattr = PyUnicode_AsUTF8AndSize(attr, NULL);
 
 	MethodDescription* pMethodDescription = const_cast<ScriptDefModule*>(e->pScriptModule())->findClientMethodDescription(ccattr);
 

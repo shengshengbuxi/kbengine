@@ -233,6 +233,11 @@ __RECONNECT:
 				ERROR_MSG(fmt::format("DBInterfaceMysql::attach: mysql_errno={}, mysql_error={}\n",
 					mysql_errno(pMysql_), mysql_error(pMysql_)));
 
+				if (mysql_errno(pMysql_) == 2059)
+				{
+					ERROR_MSG(fmt::format("DBInterfaceMysql::attach: Does not support caching_sha2_password, https://github.com/kbengine/kbengine/issues/625\n"));
+				}
+
 				detach();
 				return false;
 			}
@@ -759,6 +764,21 @@ bool DBInterfaceMysql::processException(std::exception & e)
 	}
 
 	return retry;
+}
+
+//-------------------------------------------------------------------------------------
+const char* DBInterfaceMysql::getAutoIncrementInit()
+{
+	DBInterfaceInfo* pDBInfo = g_kbeSrvConfig.dbInterface(name());
+	if (!pDBInfo)
+	{
+		ERROR_MSG(fmt::format("DBInterfaceMysql::getAutoIncrementInit: not found dbInterface({})\n",
+			name()));
+
+		return NULL;
+	}
+
+	return pDBInfo->db_autoIncrementInit;
 }
 
 //-------------------------------------------------------------------------------------

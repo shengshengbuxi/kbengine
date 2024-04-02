@@ -37,7 +37,7 @@ public:
 	db_numConnections_(1),
 	lastquery_()
 	{
-		strncpy(name_, name, MAX_NAME);
+		strncpy(name_, name, MAX_NAME - 1);
 		int dbIndex = g_kbeSrvConfig.dbInterfaceName2dbInterfaceIndex(this->name());
 		KBE_ASSERT(dbIndex >= 0);
 		dbIndex_ = dbIndex;
@@ -138,6 +138,11 @@ public:
 		获取最后一次查询的sql语句
 	*/
 	virtual const std::string& lastquery() const{ return lastquery_; }
+
+	/**
+		获得自增起始id
+	*/
+	virtual  const char* getAutoIncrementInit() { return NULL; }
 
 protected:
 	char name_[MAX_BUF];									// 数据库接口的名称

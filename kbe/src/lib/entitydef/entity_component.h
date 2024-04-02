@@ -82,39 +82,7 @@ class EntityComponent : public script::ScriptObject
 	BASE_SCRIPT_HREADER(EntityComponent, ScriptObject)
 public:
 	EntityComponent(ENTITY_ID ownerID, ScriptDefModule* pComponentDescrs, COMPONENT_TYPE assignmentToComponentType/*属性所属实体的哪一部分，cell或者base?*/);
-	
 	~EntityComponent();
-
-	class EntityComponentUnbind : public TimerHandler
-	{
-	public:
-		EntityComponentUnbind(PyObject* pEntity, ScriptDefModule* pEntityScriptDescrs):
-			pEntity_(pEntity),
-			pEntityScriptDescrs_(pEntityScriptDescrs)
-		{
-			Py_INCREF(pEntity_);
-		}
-
-		~EntityComponentUnbind()
-		{
-			Py_DECREF(pEntity_);
-		}
-
-	protected:
-		virtual void handleTimeout(TimerHandle handle, void * arg)
-		{
-			handle.cancel();
-			EntityComponent::onEntityUnbind(pEntity_, pEntityScriptDescrs_, this);
-		}
-
-		virtual void onRelease(TimerHandle handle, void  * pUser) {
-		}
-
-	protected:
-		PyObject* pEntity_;
-		ScriptDefModule* pEntityScriptDescrs_;
-
-	};
 
 	/** 
 		获取entityID 
@@ -128,14 +96,20 @@ public:
 
 	DECLARE_PY_GET_MOTHOD(pyIsDestroyed);
 
+	void destroyed() {
+		ownerID_ = 0;
+	}
+
 	bool isDestroyed() const {
 		return ownerID() == 0;
 	}
 
 	DECLARE_PY_GET_MOTHOD(pyGetOwner);
 
+	DECLARE_PY_GET_MOTHOD(pyGetClassName);
+
 	DECLARE_PY_MOTHOD_ARG3(pyAddTimer, float, float, int32);
-	DECLARE_PY_MOTHOD_ARG1(pyDelTimer, ScriptID);
+	DECLARE_PY_MOTHOD_ARG1(pyDelTimer, PyObject_ptr);
 
 	/** 
 		获得描述 
@@ -217,8 +191,7 @@ public:
 	static void onEntityDestroy(PyObject* pEntity, ScriptDefModule* pEntityScriptDescrs, bool callScript, bool beforeDestroy);
 	void onOwnerDestroyBegin(PyObject* pEntity, ScriptDefModule* pEntityScriptDescrs, bool callScript);
 	void onOwnerDestroyEnd(PyObject* pEntity, ScriptDefModule* pEntityScriptDescrs, bool callScript);
-	static void onEntityUnbind(PyObject* pEntity, ScriptDefModule* pEntityScriptDescrs, EntityComponentUnbind* pEntityComponentUnbind);
-	void onOwnerUnbind(PyObject* pEntity, ScriptDefModule* pEntityScriptDescrs);
+	void onOwnerDestroyClear(PyObject* pEntity, ScriptDefModule* pEntityScriptDescrs);
 
 	PropertyDescription* pPropertyDescription() const {
 		return pPropertyDescription_;

@@ -203,17 +203,23 @@ INLINE int EndPoint::quitMulticastGroup(u_int32_t networkAddr)
 INLINE int EndPoint::close()
 {
 	destroySSL();
+	address_ = Address::NONE;
 
-	if (socket_ == -1)
-	{
+#if KBE_PLATFORM == PLATFORM_WIN32
+	const KBESOCKET invalidSocket = INVALID_SOCKET;
+#else
+	const KBESOCKET invalidSocket = -1;
+#endif
+
+	if (socket_ == invalidSocket)
 		return 0;
-	}
 
 	// UDP模式下， socket是服务器listen的fd
 	// socket为引用模式
 	if (isRefSocket_)
 	{
-		this->setFileDescriptor(-1);
+		this->setFileDescriptor(invalidSocket);
+		isRefSocket_ = false;
 		return 0;
 	}
 
@@ -225,7 +231,7 @@ INLINE int EndPoint::close()
 
 	if (ret == 0)
 	{
-		this->setFileDescriptor(-1);
+		this->setFileDescriptor(invalidSocket);
 	}
 
 	return ret;
@@ -439,7 +445,7 @@ INLINE int EndPoint::getInterfaceFlags(char * name, int & flags)
 {
 	struct ifreq	request;
 
-	strncpy(request.ifr_name, name, IFNAMSIZ);
+	strncpy(request.ifr_name, name, IFNAMSIZ - 1);
 	if (ioctl(socket_, SIOCGIFFLAGS, &request) != 0)
 	{
 		return -1;
@@ -453,7 +459,7 @@ INLINE int EndPoint::getInterfaceAddress(const char * name, u_int32_t & address)
 {
 	struct ifreq	request;
 
-	strncpy(request.ifr_name, name, IFNAMSIZ);
+	strncpy(request.ifr_name, name, IFNAMSIZ - 1);
 	if (ioctl(socket_, SIOCGIFADDR, &request) != 0)
 	{
 		return -1;
@@ -474,7 +480,7 @@ INLINE int EndPoint::getInterfaceNetmask(const char * name,
 	u_int32_t & netmask)
 {
 	struct ifreq request;
-	strncpy(request.ifr_name, name, IFNAMSIZ);
+	strncpy(request.ifr_name, name, IFNAMSIZ - 1);
 
 	if (ioctl(socket_, SIOCGIFNETMASK, &request) != 0)
 	{

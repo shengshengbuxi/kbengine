@@ -185,9 +185,7 @@ ShutdownHandler::CAN_SHUTDOWN_STATE Logger::canShutdown()
 			bool isReady = (pyResult == Py_True);
 			Py_DECREF(pyResult);
 
-			if (isReady)
-				return ShutdownHandler::CAN_SHUTDOWN_STATE_USER_TRUE;
-			else
+			if (!isReady)
 				return ShutdownHandler::CAN_SHUTDOWN_STATE_USER_FALSE;
 		}
 		else
@@ -305,7 +303,7 @@ void Logger::writeLog(Network::Channel* pChannel, KBEngine::MemoryStream& s)
 			if (PyUnicode_Check(pyResult))
 			{
 				Py_ssize_t size = 0;
-				char* data = PyUnicode_AsUTF8AndSize(pyResult, &size);
+				const char* data = PyUnicode_AsUTF8AndSize(pyResult, &size);
 
 				if (size > 0)
 				{
@@ -329,6 +327,14 @@ void Logger::writeLog(Network::Channel* pChannel, KBEngine::MemoryStream& s)
 	if (pLogItem->persistent)
 	{
 		DebugHelper::getSingleton().changeLogger(COMPONENT_NAME_EX(pLogItem->componentType));
+
+		if (!DebugHelper::getSingleton().canLog(pLogItem->logtype))
+		{
+			DebugHelper::getSingleton().changeLogger("default");
+			delete pLogItem;
+			return;
+		}
+		 
 		PRINT_MSG(sLog);
 		DebugHelper::getSingleton().changeLogger("default");
 	}

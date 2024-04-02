@@ -4,6 +4,9 @@
 
 #include "KBECommon.h"
 
+namespace KBEngine
+{
+
 class MemoryStream;
 class NetworkInterfaceBase;
 class Message;
@@ -30,6 +33,8 @@ public:
 	void send(NetworkInterfaceBase* pNetworkInterface);
 
 	void checkStream(uint32 v);
+
+	void clear();
 
 public:
 	Bundle &operator<<(uint8 value);
@@ -143,3 +148,5 @@ protected:
 	Message* pMsgtype_;
 	int curMsgStreamIndex_;
 };
+
+}

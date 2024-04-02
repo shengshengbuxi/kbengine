@@ -3,10 +3,18 @@
 
 .. module:: tkinter.tix
    :synopsis: Tk Extension Widgets for Tkinter
+
 .. sectionauthor:: Mike Clarkson <mikeclarkson@users.sourceforge.net>
 
+**Source code:** :source:`Lib/tkinter/tix.py`
 
 .. index:: single: Tix
+
+.. deprecated:: 3.6
+   This Tk extension is unmaintained and should not be used in new code.  Use
+   :mod:`tkinter.ttk` instead.
+
+--------------
 
 The :mod:`tkinter.tix` (Tk Interface Extension) module provides an additional
 rich set of widgets. Although the standard Tk library has many useful widgets,
@@ -67,17 +75,6 @@ the following::
    from tkinter import tix
    root = tix.Tk()
    root.tk.eval('package require Tix')
-
-If this fails, you have a Tk installation problem which must be resolved before
-proceeding. Use the environment variable :envvar:`TIX_LIBRARY` to point to the
-installed Tix library directory, and make sure you have the dynamic
-object library (:file:`tix8183.dll` or :file:`libtix8183.so`) in  the same
-directory that contains your Tk dynamic object library (:file:`tk8183.dll` or
-:file:`libtk8183.so`). The directory with the dynamic object library should also
-have a file called :file:`pkgIndex.tcl` (case sensitive), which contains the
-line::
-
-   package ifneeded Tix 8.1 [list load "[file join $dir tix8183.dll]" Tix]
 
 
 Tix Widgets
@@ -142,7 +139,7 @@ Basic Widgets
 
    The `LabelEntry
    <http://tix.sourceforge.net/dist/current/man/html/TixCmd/tixLabelEntry.htm>`_
-   widget packages an entry widget and a label into one mega widget. It can be used
+   widget packages an entry widget and a label into one mega widget. It can
    be used to simplify the creation of "entry-form" type of interface.
 
 .. Python Demo of:
@@ -267,7 +264,7 @@ File Selectors
 
    The `ExFileSelectBox
    <http://tix.sourceforge.net/dist/current/man/html/TixCmd/tixExFileSelectBox.htm>`_
-   widget is usually embedded in a tixExFileSelectDialog widget. It provides an
+   widget is usually embedded in a tixExFileSelectDialog widget. It provides a
    convenient method for the user to select files. The style of the
    :class:`ExFileSelectBox` widget is very similar to the standard file dialog on
    MS Windows 3.1.

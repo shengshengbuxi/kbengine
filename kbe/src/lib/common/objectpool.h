@@ -134,38 +134,6 @@ public:
 	}
 
 	/** 
-		强制创建一个指定类型的对象。 如果缓冲里已经创建则返回现有的，否则
-		创建一个新的， 这个对象必须是继承自T的。
-	*/
-	template<typename T1>
-	T* createObject(const std::string& logPoint)
-	{
-		pMutex_->lockMutex();
-
-		while(true)
-		{
-			if(obj_count_ > 0)
-			{
-				T* t = static_cast<T1*>(*objects_.begin());
-				objects_.pop_front();
-				--obj_count_;
-				incLogPoint(logPoint);
-				t->poolObjectCreatePoint(logPoint);
-				t->onEabledPoolObject();
-				t->isEnabledPoolObject(true);
-				pMutex_->unlockMutex();
-				return t;
-			}
-
-			assignObjs();
-		}
-
-		pMutex_->unlockMutex();
-
-		return NULL;
-	}
-
-	/** 
 		创建一个对象。 如果缓冲里已经创建则返回现有的，否则
 		创建一个新的。
 	*/

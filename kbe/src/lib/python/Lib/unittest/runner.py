@@ -126,7 +126,13 @@ class TextTestRunner(object):
     resultclass = TextTestResult
 
     def __init__(self, stream=None, descriptions=True, verbosity=1,
-                 failfast=False, buffer=False, resultclass=None, warnings=None):
+                 failfast=False, buffer=False, resultclass=None, warnings=None,
+                 *, tb_locals=False):
+        """Construct a TextTestRunner.
+
+        Subclasses should accept **kwargs to ensure compatibility as the
+        interface changes.
+        """
         if stream is None:
             stream = sys.stderr
         self.stream = _WritelnDecorator(stream)
@@ -134,6 +140,7 @@ class TextTestRunner(object):
         self.verbosity = verbosity
         self.failfast = failfast
         self.buffer = buffer
+        self.tb_locals = tb_locals
         self.warnings = warnings
         if resultclass is not None:
             self.resultclass = resultclass
@@ -147,6 +154,7 @@ class TextTestRunner(object):
         registerResult(result)
         result.failfast = self.failfast
         result.buffer = self.buffer
+        result.tb_locals = self.tb_locals
         with warnings.catch_warnings():
             if self.warnings:
                 # if self.warnings is set, use it to filter all the warnings
@@ -159,8 +167,8 @@ class TextTestRunner(object):
                 if self.warnings in ['default', 'always']:
                     warnings.filterwarnings('module',
                             category=DeprecationWarning,
-                            message='Please use assert\w+ instead.')
-            startTime = time.time()
+                            message=r'Please use assert\w+ instead.')
+            startTime = time.perf_counter()
             startTestRun = getattr(result, 'startTestRun', None)
             if startTestRun is not None:
                 startTestRun()
@@ -170,7 +178,7 @@ class TextTestRunner(object):
                 stopTestRun = getattr(result, 'stopTestRun', None)
                 if stopTestRun is not None:
                     stopTestRun()
-            stopTime = time.time()
+            stopTime = time.perf_counter()
         timeTaken = stopTime - startTime
         result.printErrors()
         if hasattr(result, 'separator2'):

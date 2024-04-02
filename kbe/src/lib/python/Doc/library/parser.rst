@@ -3,9 +3,9 @@
 
 .. module:: parser
    :synopsis: Access parse trees for Python source code.
+
 .. moduleauthor:: Fred L. Drake, Jr. <fdrake@acm.org>
 .. sectionauthor:: Fred L. Drake, Jr. <fdrake@acm.org>
-
 
 .. Copyright 1995 Virginia Polytechnic Institute and State University and Fred
    L. Drake, Jr.  This copyright notice must be distributed on all copies, but
@@ -15,6 +15,8 @@
    elements in a distributed package in any way.
 
 .. index:: single: parsing; Python source code
+
+--------------
 
 The :mod:`parser` module provides an interface to Python's internal parser and
 byte-code compiler.  The primary purpose for this interface is to allow Python
@@ -61,7 +63,7 @@ of the production as recognized in the input string: these are always sequences
 which have the same form as the parent.  An important aspect of this structure
 which should be noted is that keywords used to identify the parent node type,
 such as the keyword :keyword:`if` in an :const:`if_stmt`, are included in the
-node tree without any special treatment.  For example, the :keyword:`if` keyword
+node tree without any special treatment.  For example, the :keyword:`!if` keyword
 is represented by the tuple ``(1, 'if')``, where ``1`` is the numeric value
 associated with all :const:`NAME` tokens, including variable and function names
 defined by the user.  In an alternate form returned when line number information

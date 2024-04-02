@@ -10,6 +10,8 @@
 #include "Property.h"
 #include "KBDebug.h"
 
+namespace KBEngine
+{
 
 Entity::Entity():
 	id_(0),
@@ -52,6 +54,7 @@ void Entity::enterWorld()
 	inWorld_ = true;
 
 	onEnterWorld();
+	onComponentsEnterworld();
 
 	UKBEventData_onEnterWorld* pEventData = NewObject<UKBEventData_onEnterWorld>();
 	pEventData->entityID = id();
@@ -76,6 +79,7 @@ void Entity::leaveWorld()
 	inWorld_ = false;
 
 	onLeaveWorld();
+	onComponentsLeaveworld();
 
 	UKBEventData_onLeaveWorld* pEventData = NewObject<UKBEventData_onLeaveWorld>();
 	pEventData->entityID = id();
@@ -175,4 +179,6 @@ void Entity::onDirectionChanged(const FVector& oldValue)
 		pEventData->entityID = id();
 		KBENGINE_EVENT_FIRE(KBEventTypes::set_direction, pEventData);
 	}
+}
+
 }

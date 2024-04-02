@@ -61,6 +61,7 @@ namespace KBEngine {
 																																		\
 			pCurrPacket_##ACTIONNAME->insert(currMsgLengthPos_##ACTIONNAME + NETWORK_MESSAGE_LENGTH_SIZE, 								\
 											(uint8*)&ex_msg_length, NETWORK_MESSAGE_LENGTH1_SIZE);										\
+			SENDBUNDLE->currMsgLength(SENDBUNDLE->currMsgLength() + NETWORK_MESSAGE_LENGTH1_SIZE);										\
 		}																																\
 		else																															\
 		{																																\
@@ -209,6 +210,9 @@ uint16 datatype2id(std::string datatype);
 /** c/c++数据类别转换成原生类别UINT16 ... */
 std::string datatype2nativetype(std::string datatype);
 std::string datatype2nativetype(uint16 datatype);
+
+int getMacMD5();
+int getMD5(std::string data);
 
 }
 

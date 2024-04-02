@@ -487,11 +487,11 @@ void Channel::startInactivityDetection( float period, float checkPeriod )
 	stopInactivityDetection();
 
 	// 如果周期为负数则不检查
-	if (period > 0.001f)
+	if (period > 0.1f)
 	{
 		checkPeriod = std::max(1.f, checkPeriod);
 
-		int icheckPeriod = int(checkPeriod * 1000000);
+		int64 icheckPeriod = int64(checkPeriod * 1000000);
 		if (icheckPeriod <= 0)
 		{
 			ERROR_MSG(fmt::format("Channel::startInactivityDetection: checkPeriod overflowed, close checker! period={}, checkPeriod={}\n", period, checkPeriod));
@@ -628,13 +628,13 @@ void Channel::delayedSend()
 //-------------------------------------------------------------------------------------
 const char * Channel::c_str() const
 {
-	static char dodgyString[ MAX_BUF ] = {"None"};
-	char tdodgyString[ MAX_BUF ] = {0};
+	static char dodgyString[MAX_BUF * 2] = { "None" };
+	char tdodgyString[MAX_BUF] = { 0 };
 
-	if(pEndPoint_ && !pEndPoint_->addr().isNone())
+	if (pEndPoint_ && !pEndPoint_->addr().isNone())
 		pEndPoint_->addr().writeToString(tdodgyString, MAX_BUF);
 
-	kbe_snprintf(dodgyString, MAX_BUF, "%s/%d/%d/%d", tdodgyString, id_, 
+	kbe_snprintf(dodgyString, MAX_BUF * 2, "%s/%d/%d/%d", tdodgyString, id_,
 		this->condemn(), this->isDestroyed());
 
 	return dodgyString;
@@ -663,6 +663,7 @@ void Channel::handleTimeout(TimerHandle, void * arg)
 			{
 				this->networkInterface().onChannelTimeOut(this);
 			}
+
 			break;
 		}
 		case KCP_UPDATE:

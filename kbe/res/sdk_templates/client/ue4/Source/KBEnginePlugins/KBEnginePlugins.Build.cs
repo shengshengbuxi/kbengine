@@ -10,19 +10,11 @@ public class KBEnginePlugins : ModuleRules
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-        string CryptoPPPath = Target.UEThirdPartySourceDirectory + "CryptoPP/5.6.5/lib/";
-        string[] PrivateModules = new string[] { "CoreUObject", "Engine", "Slate", "SlateCore", "Networking", "Sockets" };
+        bEnableUndefinedIdentifierWarnings = false;
 
-        if (Directory.Exists(CryptoPPPath))
-        {
-            List<string> PrivateModuleList = new List<string>(PrivateModules);
-            PrivateModuleList.Add("CryptoPP");
-            PrivateModules = PrivateModuleList.ToArray();
-        }
-        else
-        {
-            PublicDefinitions.Add("KBENGINE_NO_CRYPTO");
-        }
+        string[] PrivateModules = new string[] { "Slate", "SlateCore", "Networking", "Sockets", "OpenSSL" };
+        string[] PublicModules = new string[] { "Core", "CoreUObject", "Engine"};
+        List<string> PublicModulesList = new List<string>(PublicModules);
 
         PublicIncludePaths.AddRange(
 			new string[] {
@@ -37,14 +29,14 @@ public class KBEnginePlugins : ModuleRules
 				"KBEnginePlugins/Scripts",
 			}
 			);
-		
-		PublicDependencyModuleNames.AddRange(
-			new string[]
-			{
-				"Core",
-				// ... add other public dependencies that you statically link with here ...
-			}
-            );
+
+        if (Target.bBuildEditor)
+        {
+            PublicModulesList.Add("UnrealEd");
+        }
+
+        PublicModules = PublicModulesList.ToArray();
+        PublicDependencyModuleNames.AddRange(PublicModules);
 
         PrivateDependencyModuleNames.AddRange(PrivateModules);
 
@@ -53,6 +45,6 @@ public class KBEnginePlugins : ModuleRules
             {
 				// ... add any modules that your module loads dynamically here ...
 			}
-            );
+        );
     }
 }

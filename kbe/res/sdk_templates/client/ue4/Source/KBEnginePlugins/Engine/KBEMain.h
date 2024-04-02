@@ -1,9 +1,12 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
 #include "KBECommon.h"
 #include "KBEvent.h"
+#include "ClientSDKUpdater.h"
+#include "ClientSDKUpdateUI.h"
+#include "ShowPromptMessageUI.h"
 #include "Components/ActorComponent.h"
 #include "KBEMain.generated.h"
 
@@ -48,23 +51,38 @@ public:
 	// Called every frame
 	virtual void TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction ) override;
 
-	UFUNCTION(BlueprintCallable, Category = "KBEngine")
-	FString getClientVersion();
+
+	void installEvents();
+	void deregisterEvents();
+
+	void onVersionNotMatch(const UKBEventData* pEventData);
+	void onScriptVersionNotMatch(const UKBEventData* pEventData);
+
+	bool isUpdateSDK();
+	void downloadSDKFromServer();
+	void onDownloadSDK(const UKBEventData* pEventData);
+	void onImportClientSDKSuccessfully(const UKBEventData* pEventData);
+
+	void handVersionNotMatch();
+	void showPromptMessageOfCompile();
 
 	UFUNCTION(BlueprintCallable, Category = "KBEngine")
-	FString getClientScriptVersion();
+	static FString getClientVersion();
 
 	UFUNCTION(BlueprintCallable, Category = "KBEngine")
-	FString getServerVersion();
+	static FString getClientScriptVersion();
 
 	UFUNCTION(BlueprintCallable, Category = "KBEngine")
-	FString getServerScriptVersion();
+	static FString getServerVersion();
+
+	UFUNCTION(BlueprintCallable, Category = "KBEngine")
+	static FString getServerScriptVersion();
 
 	/*
 		客户端属于KBE框架中的一个功能组件，这里获取将固定返回client
 	*/
 	UFUNCTION(BlueprintCallable, Category = "KBEngine")
-	FString getComponentName();
+	static FString getComponentName();
 
 	/**
 		在程序关闭时需要主动调用, 彻底销毁KBEngine
@@ -119,4 +137,15 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = KBEngine)
 	int UDP_RECV_BUFFER_MAX;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = KBEngine)
+	bool automaticallyUpdateSDK;
+
+	KBEngine::ClientSDKUpdater* pUpdaterObj;
+
+	static bool hasUpdateSDK;
+	
+	TSharedPtr<class SClientSDKUpdateUI> ClientSDKUpdateUI;
+	TSharedPtr<class SShowPromptMessageUI> ShowPromptMessageUI;
+
 };

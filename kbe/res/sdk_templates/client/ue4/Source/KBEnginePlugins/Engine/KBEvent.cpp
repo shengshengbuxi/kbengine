@@ -16,6 +16,7 @@ KBEvent::~KBEvent()
 
 void KBEvent::clear()
 {
+	events_.Empty();
 	clearFiredEvents();
 }
 
@@ -140,7 +141,7 @@ void KBEvent::removeFiredEvent(void* objPtr, const FString& eventName /*= TEXT("
 		bool found = false;
 		for (auto item : firedEvents_)
 		{
-			bool ret = eventName.Len() == 0 && funcName.Len() == 0 || item->eventName == eventName && (funcName.Len() == 0 || item->evt.funcName == funcName);
+			bool ret = (eventName.Len() == 0 && funcName.Len() == 0) || (item->eventName == eventName && (funcName.Len() == 0 || item->evt.funcName == funcName));
 			if (ret && item->evt.objPtr == objPtr)
 			{
 				firedEvents_.Remove(item);

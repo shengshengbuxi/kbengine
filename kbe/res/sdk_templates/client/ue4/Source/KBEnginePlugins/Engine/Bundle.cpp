@@ -4,6 +4,12 @@
 #include "Messages.h"
 #include "NetworkInterfaceBase.h"
 #include "KBDebug.h"
+#include "ObjectPool.h"
+
+namespace KBEngine
+{
+
+static ObjectPool<Bundle> _g_bundlePool;
 
 Bundle::Bundle():
 	pCurrPacket_(NULL),
@@ -18,18 +24,29 @@ Bundle::Bundle():
 
 Bundle::~Bundle()
 {
-	MemoryStream::reclaimObject(pCurrPacket_);
-	pCurrPacket_ = NULL;
+	if (pCurrPacket_)
+	{
+		delete pCurrPacket_;
+		pCurrPacket_ = NULL;
+	}
+
+	for (int i = 0; i < streams_.Num(); ++i)
+	{
+		delete streams_[i];
+	}
+
+	streams_.Empty();
 }
 
 Bundle* Bundle::createObject()
 {
-	return new Bundle();
+	return _g_bundlePool.createObject();
 }
 
 void Bundle::reclaimObject(Bundle* obj)
 {
-	delete obj;
+	obj->clear();
+	_g_bundlePool.reclaimObject(obj);
 }
 
 void Bundle::newMessage(Message* pMsg)
@@ -87,17 +104,6 @@ void Bundle::send(NetworkInterfaceBase* pNetworkInterface)
 		ERROR_MSG("Bundle::send(): networkInterface invalid!");
 	}
 
-	// 把不用的MemoryStream放回缓冲池，以减少垃圾回收的消耗
-	for (int i = 0; i < streams_.Num(); ++i)
-	{
-		MemoryStream::reclaimObject(streams_[i]);
-	}
-
-	streams_.Empty();
-
-	if(pCurrPacket_)
-		pCurrPacket_->clear(true);
-
 	// 我们认为，发送完成，就视为这个bundle不再使用了，
 	// 所以我们会把它放回对象池，以减少垃圾回收带来的消耗，
 	// 如果需要继续使用，应该重新Bundle.createObject()，
@@ -133,6 +139,28 @@ void Bundle::checkStream(uint32 v)
 	}
 
 	messageLength_ += v;
+}
+
+void Bundle::clear()
+{
+	// 把不用的MemoryStream放回缓冲池，以减少垃圾回收的消耗
+	for (int i = 0; i < streams_.Num(); ++i)
+	{
+		if(pCurrPacket_ != streams_[i])
+			MemoryStream::reclaimObject(streams_[i]);
+	}
+	
+	streams_.Empty();
+
+	if (pCurrPacket_)
+		pCurrPacket_->clear(false);
+	else
+		pCurrPacket_ = MemoryStream::createObject();
+
+	numMessage_ = 0;
+	messageLength_ = 0;
+	pMsgtype_ = NULL;
+	curMsgStreamIndex_ = 0;
 }
 
 Bundle &Bundle::operator<<(uint8 value)
@@ -267,4 +295,6 @@ void Bundle::writeVector4(const FVector4& v)
 {
 	checkStream(16);
 	(*pCurrPacket_).writeVector4(v);
+}
+
 }

@@ -7,6 +7,7 @@ import time
 from _thread import start_new_thread, TIMEOUT_MAX
 import threading
 import unittest
+import weakref
 
 from test import support
 
@@ -30,6 +31,9 @@ class Bunch(object):
         self.started = []
         self.finished = []
         self._can_exit = not wait_before_exit
+        self.wait_thread = support.wait_threads_exit()
+        self.wait_thread.__enter__()
+
         def task():
             tid = threading.get_ident()
             self.started.append(tid)
@@ -39,8 +43,13 @@ class Bunch(object):
                 self.finished.append(tid)
                 while not self._can_exit:
                     _wait()
-        for i in range(n):
-            start_new_thread(task, ())
+
+        try:
+            for i in range(n):
+                start_new_thread(task, ())
+        except:
+            self._can_exit = True
+            raise
 
     def wait_for_started(self):
         while len(self.started) < self.n:
@@ -49,6 +58,8 @@ class Bunch(object):
     def wait_for_finished(self):
         while len(self.finished) < self.n:
             _wait()
+        # Wait for threads exit
+        self.wait_thread.__exit__(None, None, None)
 
     def do_finish(self):
         self._can_exit = True
@@ -63,7 +74,7 @@ class BaseTestCase(unittest.TestCase):
         support.reap_children()
 
     def assertTimeout(self, actual, expected):
-        # The waiting and/or time.time() can be imprecise, which
+        # The waiting and/or time.monotonic() can be imprecise, which
         # is why comparing to the expected value would sometimes fail
         # (especially under Windows).
         self.assertGreaterEqual(actual, expected * 0.6)
@@ -82,7 +93,13 @@ class BaseLockTests(BaseTestCase):
 
     def test_repr(self):
         lock = self.locktype()
-        repr(lock)
+        self.assertRegex(repr(lock), "<unlocked .* object (.*)?at .*>")
+        del lock
+
+    def test_locked_repr(self):
+        lock = self.locktype()
+        lock.acquire()
+        self.assertRegex(repr(lock), "<locked .* object (.*)?at .*>")
         del lock
 
     def test_acquire_destroy(self):
@@ -173,20 +190,31 @@ class BaseLockTests(BaseTestCase):
         # TIMEOUT_MAX is ok
         lock.acquire(timeout=TIMEOUT_MAX)
         lock.release()
-        t1 = time.time()
+        t1 = time.monotonic()
         self.assertTrue(lock.acquire(timeout=5))
-        t2 = time.time()
+        t2 = time.monotonic()
         # Just a sanity test that it didn't actually wait for the timeout.
         self.assertLess(t2 - t1, 5)
         results = []
         def f():
-            t1 = time.time()
+            t1 = time.monotonic()
             results.append(lock.acquire(timeout=0.5))
-            t2 = time.time()
+            t2 = time.monotonic()
             results.append(t2 - t1)
         Bunch(f, 1).wait_for_finished()
         self.assertFalse(results[0])
         self.assertTimeout(results[1], 0.5)
+
+    def test_weakref_exists(self):
+        lock = self.locktype()
+        ref = weakref.ref(lock)
+        self.assertIsNotNone(ref())
+
+    def test_weakref_deleted(self):
+        lock = self.locktype()
+        ref = weakref.ref(lock)
+        del lock
+        self.assertIsNone(ref())
 
 
 class LockTests(BaseLockTests):
@@ -198,20 +226,23 @@ class LockTests(BaseLockTests):
         # Lock needs to be released before re-acquiring.
         lock = self.locktype()
         phase = []
+
         def f():
             lock.acquire()
             phase.append(None)
             lock.acquire()
             phase.append(None)
-        start_new_thread(f, ())
-        while len(phase) == 0:
+
+        with support.wait_threads_exit():
+            start_new_thread(f, ())
+            while len(phase) == 0:
+                _wait()
             _wait()
-        _wait()
-        self.assertEqual(len(phase), 1)
-        lock.release()
-        while len(phase) == 1:
-            _wait()
-        self.assertEqual(len(phase), 2)
+            self.assertEqual(len(phase), 1)
+            lock.release()
+            while len(phase) == 1:
+                _wait()
+            self.assertEqual(len(phase), 2)
 
     def test_different_thread(self):
         # Lock can be released from a different thread.
@@ -282,6 +313,7 @@ class RLockTests(BaseLockTests):
             self.assertRaises(RuntimeError, lock.release)
         finally:
             b.do_finish()
+        b.wait_for_finished()
 
     def test__is_owned(self):
         lock = self.locktype()
@@ -350,9 +382,9 @@ class EventTests(BaseTestCase):
         N = 5
         def f():
             results1.append(evt.wait(0.0))
-            t1 = time.time()
+            t1 = time.monotonic()
             r = evt.wait(0.5)
-            t2 = time.time()
+            t2 = time.monotonic()
             results2.append((r, t2 - t1))
         Bunch(f, N).wait_for_finished()
         self.assertEqual(results1, [False] * N)
@@ -373,16 +405,26 @@ class EventTests(BaseTestCase):
         # cleared before the waiting thread is woken up.
         evt = self.eventtype()
         results = []
+        timeout = 0.250
         N = 5
         def f():
-            results.append(evt.wait(1))
+            results.append(evt.wait(timeout * 4))
         b = Bunch(f, N)
         b.wait_for_started()
-        time.sleep(0.5)
+        time.sleep(timeout)
         evt.set()
         evt.clear()
         b.wait_for_finished()
         self.assertEqual(results, [True] * N)
+
+    def test_reset_internal_locks(self):
+        # ensure that condition is still using a Lock after reset
+        evt = self.eventtype()
+        with evt._cond:
+            self.assertFalse(evt._cond.acquire(False))
+        evt._reset_internal_locks()
+        with evt._cond:
+            self.assertFalse(evt._cond.acquire(False))
 
 
 class ConditionTests(BaseTestCase):
@@ -430,21 +472,28 @@ class ConditionTests(BaseTestCase):
         # construct.  In particular, it is possible that this can no longer
         # be conveniently guaranteed should their implementation ever change.
         N = 5
+        ready = []
         results1 = []
         results2 = []
         phase_num = 0
         def f():
             cond.acquire()
+            ready.append(phase_num)
             result = cond.wait()
             cond.release()
             results1.append((result, phase_num))
             cond.acquire()
+            ready.append(phase_num)
             result = cond.wait()
             cond.release()
             results2.append((result, phase_num))
         b = Bunch(f, N)
         b.wait_for_started()
-        _wait()
+        # first wait, to ensure all workers settle into cond.wait() before
+        # we continue. See issues #8799 and #30727.
+        while len(ready) < 5:
+            _wait()
+        ready.clear()
         self.assertEqual(results1, [])
         # Notify 3 threads at first
         cond.acquire()
@@ -456,9 +505,9 @@ class ConditionTests(BaseTestCase):
             _wait()
         self.assertEqual(results1, [(True, 1)] * 3)
         self.assertEqual(results2, [])
-        # first wait, to ensure all workers settle into cond.wait() before
-        # we continue. See issue #8799
-        _wait()
+        # make sure all awaken workers settle into cond.wait()
+        while len(ready) < 3:
+            _wait()
         # Notify 5 threads: they might be in their first or second wait
         cond.acquire()
         cond.notify(5)
@@ -469,7 +518,9 @@ class ConditionTests(BaseTestCase):
             _wait()
         self.assertEqual(results1, [(True, 1)] * 3 + [(True, 2)] * 2)
         self.assertEqual(results2, [(True, 2)] * 3)
-        _wait() # make sure all workers settle into cond.wait()
+        # make sure all workers settle into cond.wait()
+        while len(ready) < 5:
+            _wait()
         # Notify all threads: they are all in their second wait
         cond.acquire()
         cond.notify_all()
@@ -494,9 +545,9 @@ class ConditionTests(BaseTestCase):
         N = 5
         def f():
             cond.acquire()
-            t1 = time.time()
+            t1 = time.monotonic()
             result = cond.wait(0.5)
-            t2 = time.time()
+            t2 = time.monotonic()
             cond.release()
             results.append((t2 - t1, result))
         Bunch(f, N).wait_for_finished()
@@ -533,9 +584,9 @@ class ConditionTests(BaseTestCase):
         success = []
         def f():
             with cond:
-                dt = time.time()
+                dt = time.monotonic()
                 result = cond.wait_for(lambda : state==4, timeout=0.1)
-                dt = time.time() - dt
+                dt = time.monotonic() - dt
                 self.assertFalse(result)
                 self.assertTimeout(dt, 0.1)
                 success.append(None)
@@ -579,13 +630,14 @@ class BaseSemaphoreTests(BaseTestCase):
         sem = self.semtype(7)
         sem.acquire()
         N = 10
+        sem_results = []
         results1 = []
         results2 = []
         phase_num = 0
         def f():
-            sem.acquire()
+            sem_results.append(sem.acquire())
             results1.append(phase_num)
-            sem.acquire()
+            sem_results.append(sem.acquire())
             results2.append(phase_num)
         b = Bunch(f, 10)
         b.wait_for_started()
@@ -609,6 +661,7 @@ class BaseSemaphoreTests(BaseTestCase):
         # Final release, to let the last thread finish
         sem.release()
         b.wait_for_finished()
+        self.assertEqual(sem_results, [True] * (6 + 7 + 6 + 1))
 
     def test_try_acquire(self):
         sem = self.semtype(2)
@@ -639,9 +692,9 @@ class BaseSemaphoreTests(BaseTestCase):
         self.assertFalse(sem.acquire(timeout=0.005))
         sem.release()
         self.assertTrue(sem.acquire(timeout=0.005))
-        t = time.time()
+        t = time.monotonic()
         self.assertFalse(sem.acquire(timeout=0.5))
-        dt = time.time() - t
+        dt = time.monotonic() - t
         self.assertTimeout(dt, 0.5)
 
     def test_default_value(self):

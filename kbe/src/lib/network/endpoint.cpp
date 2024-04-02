@@ -92,16 +92,7 @@ EndPoint::SmartPoolObjectPtr EndPoint::createSmartPoolObj(const std::string& log
 //-------------------------------------------------------------------------------------
 void EndPoint::onReclaimObject()
 {
-#if KBE_PLATFORM == PLATFORM_WIN32
-	socket_ = INVALID_SOCKET;
-#else
-	socket_ = -1;
-#endif
-
-	address_ = Address::NONE;
-
-	isRefSocket_ = false;
-	destroySSL();
+	close();
 }
 
 //-------------------------------------------------------------------------------------
@@ -673,7 +664,9 @@ static long ssl_bio_callback(BIO *bio, int cmd, const char *argp, int argi, long
 	{
 		memcpy((void*)argp, pPacket->data() + pPacket->rpos(), argi);
 		pPacket->read_skip(argi);
+#if (OPENSSL_VERSION_NUMBER <  0x10100000)
 		bio->num_read += argi;
+#endif
 	}
 	else
 	{
@@ -693,12 +686,17 @@ bool EndPoint::setupSSL(int sslVersion, Packet* pPacket)
 {
 	switch (sslVersion)
 	{
+#if (OPENSSL_VERSION_NUMBER <  0x1000207fL)
+#ifndef OPENSSL_NO_SSL2
 	case SSL2_VERSION:
 		sslContext_ = SSL_CTX_new(SSLv2_server_method());
 		break;
+#endif
+#ifndef OPENSSL_NO_SSL3_METHOD
 	case SSL3_VERSION:
 		sslContext_ = SSL_CTX_new(SSLv3_server_method());
 		break;
+#endif
 	case TLS1_VERSION:
 		sslContext_ = SSL_CTX_new(TLSv1_server_method());
 		break;
@@ -708,6 +706,7 @@ bool EndPoint::setupSSL(int sslVersion, Packet* pPacket)
 	case TLS1_2_VERSION:
 		sslContext_ = SSL_CTX_new(TLSv1_2_server_method());
 		break;
+#endif
 	default:
 		sslContext_ = SSL_CTX_new(SSLv23_server_method());
 		break;
@@ -760,8 +759,8 @@ bool EndPoint::setupSSL(int sslVersion, Packet* pPacket)
 
 	SSL_set_fd(sslHandle_, *this);
 
-	BIO_set_callback(sslHandle_->rbio, ssl_bio_callback);
-	BIO_set_callback_arg(sslHandle_->rbio, (char*)pPacket);
+	BIO_set_callback(SSL_get_rbio(sslHandle_), ssl_bio_callback);
+	BIO_set_callback_arg(SSL_get_rbio(sslHandle_), (char*)pPacket);
 
 	while (SSL_accept(sslHandle_) == -1)
 	{
@@ -806,8 +805,8 @@ bool EndPoint::setupSSL(int sslVersion, Packet* pPacket)
 		}
 	}
 
-	BIO_set_callback(sslHandle_->rbio, NULL);
-	BIO_set_callback_arg(sslHandle_->rbio, (char*)NULL);
+	BIO_set_callback(SSL_get_rbio(sslHandle_), NULL);
+	BIO_set_callback_arg(SSL_get_rbio(sslHandle_), (char*)NULL);
 	return true;
 }
 

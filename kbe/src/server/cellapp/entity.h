@@ -197,14 +197,6 @@ public:
 	*/
 	void setPosition_XYZ_float(Network::Channel* pChannel, float x, float y, float z);
 
-	/** 网络接口
-		entity传送
-		@cellAppID: 要传送到的目的cellappID
-		@targetEntityID：要传送到这个entity的space中
-		@sourceBaseAppID: 有可能是由某个baseapp上的base请求teleport的， 如果为0则为cellEntity发起
-	*/
-	void teleportFromBaseapp(Network::Channel* pChannel, COMPONENT_ID cellAppID, ENTITY_ID targetEntityID, COMPONENT_ID sourceBaseAppID);
-
 	/**
 		cell上的传送方法
 	*/
@@ -259,6 +251,11 @@ public:
 	DECLARE_PY_MOTHOD_ARG2(pySetViewRadius, float, float);
 	DECLARE_PY_MOTHOD_ARG0(pyGetViewRadius);
 	DECLARE_PY_MOTHOD_ARG0(pyGetViewHystArea);
+
+	/**
+		返回观察该实体的所有观察者
+	*/
+	DECLARE_PY_MOTHOD_ARG0(pyGetWitnesses);
 
 	/** 
 		当前entity是否为real 
@@ -344,7 +341,8 @@ public:
 	/** 
 		脚本请求获得View范围内的entities 
 	*/
-	DECLARE_PY_MOTHOD_ARG0(pyEntitiesInView);
+	static PyObject* __py_pyEntitiesInView(PyObject* self, PyObject* args);
+	PyObject* entitiesInView(bool pending);
 
 	/**
 		设置获取是否自动备份

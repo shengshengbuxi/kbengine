@@ -374,10 +374,18 @@ bool EntityTableMysql::syncToDB(DBInterface* pdbi)
 	if(this->isChild())
 		exItems = ", " TABLE_PARENTID_CONST_STR " bigint(20) unsigned NOT NULL, INDEX(" TABLE_PARENTID_CONST_STR ")";
 
+	char autoIncrement_str[SQL_BUF];
+	memset(autoIncrement_str, 0, sizeof(autoIncrement_str));
+	const char* autoIncrementInit = pdbi->getAutoIncrementInit();
+	if (autoIncrementInit != NULL && strlen(autoIncrementInit) > 0)
+	{
+		kbe_snprintf(autoIncrement_str, SQL_BUF, " AUTO_INCREMENT=%s", autoIncrementInit);
+	}
+
 	kbe_snprintf(sql_str, SQL_BUF, "CREATE TABLE IF NOT EXISTS " ENTITY_TABLE_PERFIX "_%s "
 			"(id bigint(20) unsigned AUTO_INCREMENT, PRIMARY KEY idKey (id)%s)"
-		"ENGINE=" MYSQL_ENGINE_TYPE, 
-		tableName(), exItems.c_str());
+		"ENGINE=" MYSQL_ENGINE_TYPE "%s", 
+		tableName(), exItems.c_str(), autoIncrement_str);
 
 	try
 	{
@@ -1861,7 +1869,7 @@ void EntityTableItemMysql_STRING::getWriteSqlItem(DBInterface* pdbi,
 
 	SAFE_RELEASE_ARRAY(tbuf);
 
-	memset(pSotvs, 0, sizeof(pSotvs->sqlval));
+	memset(pSotvs->sqlval, 0, sizeof(pSotvs->sqlval));
 	pSotvs->sqlkey = db_item_name();
 	context.items.push_back(KBEShared_ptr<mysql::DBContext::DB_ITEM_DATA>(pSotvs));
 }
@@ -1931,7 +1939,7 @@ void EntityTableItemMysql_UNICODE::getWriteSqlItem(DBInterface* pdbi, MemoryStre
 	pSotvs->extraDatas += "\"";
 	SAFE_RELEASE_ARRAY(tbuf);
 
-	memset(pSotvs, 0, sizeof(pSotvs->sqlval));
+	memset(pSotvs->sqlval, 0, sizeof(pSotvs->sqlval));
 	pSotvs->sqlkey = db_item_name();
 	context.items.push_back(KBEShared_ptr<mysql::DBContext::DB_ITEM_DATA>(pSotvs));
 }
@@ -1983,7 +1991,7 @@ void EntityTableItemMysql_BLOB::getWriteSqlItem(DBInterface* pdbi, MemoryStream*
 	pSotvs->extraDatas += "\"";
 	SAFE_RELEASE_ARRAY(tbuf);
 
-	memset(pSotvs, 0, sizeof(pSotvs->sqlval));
+	memset(pSotvs->sqlval, 0, sizeof(pSotvs->sqlval));
 	pSotvs->sqlkey = db_item_name();
 	context.items.push_back(KBEShared_ptr<mysql::DBContext::DB_ITEM_DATA>(pSotvs));
 }
@@ -2035,7 +2043,7 @@ void EntityTableItemMysql_PYTHON::getWriteSqlItem(DBInterface* pdbi, MemoryStrea
 	pSotvs->extraDatas += "\"";
 	SAFE_RELEASE_ARRAY(tbuf);
 
-	memset(pSotvs, 0, sizeof(pSotvs->sqlval));
+	memset(pSotvs->sqlval, 0, sizeof(pSotvs->sqlval));
 	pSotvs->sqlkey = db_item_name();
 	context.items.push_back(KBEShared_ptr<mysql::DBContext::DB_ITEM_DATA>(pSotvs));
 }

@@ -5,6 +5,9 @@
 #include "client_sdk.h"
 #include "server_assets.h"
 #include "entitydef/entitydef.h"
+#include "entitydef/py_entitydef.h"
+#include "pyscript/py_compression.h"
+#include "pyscript/py_platform.h"
 
 #undef DEFINE_IN_INTERFACE
 #include "machine/machine_interface.h"
@@ -169,8 +172,7 @@ int process_make_client_sdk(int argc, char* argv[], const std::string clientType
 		return -1;
 	}
 
-	std::vector<PyTypeObject*> scriptBaseTypes;
-	if (!EntityDef::initialize(scriptBaseTypes, g_componentType)) 
+	if (!script::entitydef::installModule("EntityDef"))
 	{
 		ERROR_MSG("app::initialize(): EntityDef initialization failed!\n");
 
@@ -181,11 +183,56 @@ int process_make_client_sdk(int argc, char* argv[], const std::string clientType
 		return -1;
 	}
 
+	std::vector<PyTypeObject*> scriptBaseTypes;
+	if (!EntityDef::initialize(scriptBaseTypes, g_componentType))
+	{
+		ERROR_MSG("app::initialize(): EntityDef initialization failed!\n");
+
+		script::entitydef::uninstallModule();
+		app.finalise();
+
+		// 如果还有日志未同步完成， 这里会继续同步完成才结束
+		DebugHelper::getSingleton().finalise();
+		return -1;
+	}
+
 	std::string path = "";
+	std::string compressionfile = "";
+	int compressionType = 0;
 
 	PARSE_COMMAND_ARG_BEGIN();
 	PARSE_COMMAND_ARG_GET_VALUE("--outpath=", path);
 	PARSE_COMMAND_ARG_END();
+
+	PARSE_COMMAND_ARG_BEGIN();
+	PARSE_COMMAND_ARG_GET_VALUE("--zip=", compressionfile);
+	PARSE_COMMAND_ARG_END();
+
+	if (compressionfile.size() == 0)
+	{
+		PARSE_COMMAND_ARG_BEGIN();
+		PARSE_COMMAND_ARG_GET_VALUE("--tar=", compressionfile);
+		PARSE_COMMAND_ARG_END();
+
+		compressionType = 2;
+	}
+	else
+	{
+		compressionType = 1;
+	}
+
+	// 如果检测到设置了zip文件，那么从zip文件得到path
+	if (compressionfile.size() > 0)
+	{
+		std::vector<std::string> tmpvec;
+		KBEngine::strutil::kbe_splits(compressionfile, ".", tmpvec);
+		path = tmpvec[0];
+		compressionfile = tmpvec[1];
+	}
+
+	if (script::PyPlatform::pathExists(path) && !script::PyPlatform::rmdir(path)) {
+		ERROR_MSG(fmt::format("app::initialize(): delete directorys({}) error!\n", path));
+	}
 
 	ClientSDK* pClientSDK = ClientSDK::createClientSDK(clientType);
 	
@@ -211,8 +258,36 @@ int process_make_client_sdk(int argc, char* argv[], const std::string clientType
 		ret = -1;
 	}
 
+	// 开始打包
+	if (compressionfile.size() > 0)
+	{
+		if (compressionType == 1)
+		{
+			if (!script::PyCompression::zipCompressDirectory(path, (path + "." + compressionfile)))
+			{
+				ERROR_MSG("app::initialize(): compress zip error!\n");
+			}
+		}
+		else if (compressionType == 2)
+		{
+			if (!script::PyCompression::tarCompressDirectory(path, (path + "." + compressionfile)))
+			{
+				ERROR_MSG("app::initialize(): compress tar error!\n");
+			}
+		}
+		else
+		{
+
+		}
+
+		if (!script::PyPlatform::rmdir(path)) {
+			ERROR_MSG(fmt::format("app::initialize(): delete directorys({}) error!\n", path));
+		}
+	}
+
+	script::entitydef::uninstallModule();
 	app.finalise();
-	INFO_MSG(fmt::format("{}({}) has shut down. ClientSDK={}\n", COMPONENT_NAME_EX(g_componentType), g_componentID, pClientSDK->good()));
+	INFO_MSG(fmt::format("{}({}) has shut down. ClientSDK={}\n", COMPONENT_NAME_EX(g_componentType), g_componentID, (pClientSDK ? pClientSDK->good() : false)));
 
 	// 如果还有日志未同步完成， 这里会继续同步完成才结束
 	DebugHelper::getSingleton().finalise();
@@ -282,11 +357,23 @@ int process_newassets(int argc, char* argv[], const std::string assetsType)
 		return -1;
 	}
 
+	if (!script::entitydef::installModule("EntityDef"))
+	{
+		ERROR_MSG("app::initialize(): EntityDef initialization failed!\n");
+
+		app.finalise();
+
+		// 如果还有日志未同步完成， 这里会继续同步完成才结束
+		DebugHelper::getSingleton().finalise();
+		return -1;
+	}
+
 	std::vector<PyTypeObject*> scriptBaseTypes;
 	if (!EntityDef::initialize(scriptBaseTypes, g_componentType))
 	{
 		ERROR_MSG("app::initialize(): EntityDef initialization failed!\n");
 
+		script::entitydef::uninstallModule();
 		app.finalise();
 
 		// 如果还有日志未同步完成， 这里会继续同步完成才结束
@@ -324,8 +411,9 @@ int process_newassets(int argc, char* argv[], const std::string assetsType)
 		ret = -1;
 	}
 
+	script::entitydef::uninstallModule();
 	app.finalise();
-	INFO_MSG(fmt::format("{}({}) has shut down. ServerAssets={}\n", COMPONENT_NAME_EX(g_componentType), g_componentID, pServerAssets->good()));
+	INFO_MSG(fmt::format("{}({}) has shut down. ServerAssets={}\n", COMPONENT_NAME_EX(g_componentType), g_componentID, (pServerAssets ? pServerAssets->good() : false)));
 
 	// 如果还有日志未同步完成， 这里会继续同步完成才结束
 	DebugHelper::getSingleton().finalise();
@@ -354,7 +442,8 @@ int process_help(int argc, char* argv[])
 	printf("--clientsdk:\n");
 	printf("\tAutomatically generate client code based on entity_defs file. Environment variables based on KBE.\n");
 	printf("\tkbcmd.exe --clientsdk=unity --outpath=c:/unity_kbesdk\n");
-	printf("\tkbcmd.exe --clientsdk=ue4 --outpath=c:/unity_kbesdk\n");
+	printf("\tkbcmd.exe --clientsdk=ue4 --zip=c:/unity_kbesdk.zip\n");
+	printf("\tkbcmd.exe --clientsdk=ue4 --tar=c:/unity_kbesdk.tgz\n");
 	printf("\tkbcmd.exe --clientsdk=ue4 --outpath=c:/unity_kbesdk --KBE_ROOT=\"*\"  --KBE_RES_PATH=\"*\"  --KBE_BIN_PATH=\"*\"\n");
 
 	printf("\n--getuid\n");

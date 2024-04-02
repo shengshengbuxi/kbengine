@@ -6,6 +6,7 @@
 #include "profile.h"	
 #include "http_cb_handler.h"
 #include "loginapp_interface.h"
+#include "clientsdk_downloader.h"
 #include "network/common.h"
 #include "network/tcp_packet.h"
 #include "network/udp_packet.h"
@@ -123,6 +124,22 @@ void Loginapp::onChannelDeregister(Network::Channel * pChannel)
 				(*pBundle).newMessage(DbmgrInterface::eraseClientReq);
 				(*pBundle) << extra;
 				dbmgrinfos->pChannel->send(pBundle);
+
+                // 把请求交由脚本处理
+                SCOPED_PROFILE(SCRIPTCALL_PROFILE);
+                PyObject* pyResult = PyObject_CallMethod(getEntryScript().get(), 
+                                                    const_cast<char*>("onLoseLogin"), 
+                                                    const_cast<char*>("s"), 
+                                                    extra.c_str());
+
+                if(pyResult != NULL)
+                {
+                    Py_DECREF(pyResult);
+                }
+                else
+                {
+                    SCRIPT_ERROR_CHECK();
+                }
 			}
 		}
 	}
@@ -199,6 +216,33 @@ void Loginapp::finalise()
 
 	mainProcessTimer_.cancel();
 	PythonApp::finalise();
+}
+
+//-------------------------------------------------------------------------------------		
+bool Loginapp::installSignals()
+{
+	PythonApp::installSignals();
+	g_kbeSignalHandlers.addSignal(SIGCHLD, this);
+	return true;
+}
+
+//-------------------------------------------------------------------------------------	
+void Loginapp::onSignalled(int sigNum)
+{
+	if (sigNum == SIGCHLD)
+	{
+#if KBE_PLATFORM != PLATFORM_WIN32
+		/* Wait for all dead processes.
+		* We use a non-blocking call to be sure this signal handler will not
+		* block if a child was cleaned up in another part of the program. */
+		while (waitpid(-1, NULL, WNOHANG) > 0) {
+		}
+#endif
+	}
+	else
+	{
+		PythonApp::onSignalled(sigNum);
+	}
 }
 
 //-------------------------------------------------------------------------------------
@@ -337,7 +381,7 @@ bool Loginapp::_createAccount(Network::Channel* pChannel, std::string& accountNa
 			    char *extraDatas;
 			    Py_ssize_t extraDatas_size = 0;
 				
-				if(PyArg_ParseTuple(pyResult, "H|s|s|y#",  &retcode, &sname, &spassword, &extraDatas, &extraDatas_size) == -1)
+				if(!PyArg_ParseTuple(pyResult, "H|s|s|y#",  &retcode, &sname, &spassword, &extraDatas, &extraDatas_size))
 				{
 					ERROR_MSG(fmt::format("Loginapp::_createAccount: {}.onRequestCreateAccount, Return value error! accountName={}\n", 
 						g_kbeSrvConfig.getLoginApp().entryScriptFile, accountName));
@@ -603,7 +647,7 @@ void Loginapp::onReqCreateMailAccountResult(Network::Channel* pChannel, MemorySt
 		if(startGroupOrder_ == 1)
 		{
 			if(strlen((const char*)&g_kbeSrvConfig.getLoginApp().externalAddress) > 0)
-				http_host = g_kbeSrvConfig.getBaseApp().externalAddress;
+				http_host = g_kbeSrvConfig.getLoginApp().externalAddress;
 			else
 				http_host = inet_ntoa((struct in_addr&)Loginapp::getSingleton().networkInterface().extTcpAddr().ip);
 		}
@@ -759,7 +803,7 @@ void Loginapp::onReqAccountResetPasswordCB(Network::Channel* pChannel, std::stri
 		if(startGroupOrder_ == 1)
 		{
 			if(strlen((const char*)&g_kbeSrvConfig.getLoginApp().externalAddress) > 0)
-				http_host = g_kbeSrvConfig.getBaseApp().externalAddress;
+				http_host = g_kbeSrvConfig.getLoginApp().externalAddress;
 			else
 				http_host = inet_ntoa((struct in_addr&)Loginapp::getSingleton().networkInterface().extTcpAddr().ip);
 		}
@@ -800,7 +844,7 @@ void Loginapp::onReqAccountBindEmailAllocCallbackLoginapp(Network::Channel* pCha
 	if (startGroupOrder_ == 1)
 	{
 		if (strlen((const char*)&g_kbeSrvConfig.getLoginApp().externalAddress) > 0)
-			http_host = g_kbeSrvConfig.getBaseApp().externalAddress;
+			http_host = g_kbeSrvConfig.getLoginApp().externalAddress;
 		else
 			http_host = inet_ntoa((struct in_addr&)Loginapp::getSingleton().networkInterface().extTcpAddr().ip);
 	}
@@ -928,6 +972,7 @@ void Loginapp::login(Network::Channel* pChannel, MemoryStream& s)
 
 				datas = "";
 				_loginFailed(pChannel, loginName, SERVER_ERR_ENTITYDEFS_NOT_MATCH, datas, true);
+				s.done();
 				return;
 			}
 		}
@@ -984,7 +1029,7 @@ void Loginapp::login(Network::Channel* pChannel, MemoryStream& s)
 		    Py_ssize_t extraDatas_size = 0;
 			SERVER_ERROR_CODE error;
 			
-			if(PyArg_ParseTuple(pyResult, "H|s|s|b|y#",  &error, &sname, &spassword, &tctype, &extraDatas, &extraDatas_size) == -1)
+			if(!PyArg_ParseTuple(pyResult, "H|s|s|b|y#",  &error, &sname, &spassword, &tctype, &extraDatas, &extraDatas_size))
 			{
 				ERROR_MSG(fmt::format("Loginapp::login: {}.onRequestLogin, Return value error! loginName={}\n", 
 					g_kbeSrvConfig.getLoginApp().entryScriptFile, loginName));
@@ -1541,8 +1586,50 @@ void Loginapp::importServerErrorsDescr(Network::Channel* pChannel)
 }
 
 //-------------------------------------------------------------------------------------
+void Loginapp::importClientSDK(Network::Channel* pChannel, MemoryStream& s)
+{
+	// 防止线上被恶意调用
+	static uint8 getcount = 0;
+	if(++getcount == 0)
+	{
+		ERROR_MSG(fmt::format("Loginapp::importClientSDK: The number of requests exceeded the limit!\n"));
+		return;
+	}
+	
+	std::string options;
+	s >> options;
+
+	int clientWindowSize = 0;
+	s >> clientWindowSize;
+
+	// 如果ip不等于空， 那么新建一个tcp连接返回数据，否则原路返回
+	std::string callbackIP = "";
+	s >> callbackIP;
+
+	uint16 callbackPort = 0;
+	s >> callbackPort;
+
+	INFO_MSG(fmt::format("Loginapp::importClientSDK: options={}! reqaAdr={}, callbackAddr={}:{}\n",
+		options, pChannel->c_str(), callbackIP, callbackPort));
+
+	std::string assetsPath = Resmgr::getSingleton().getPyUserAssetsPath();
+	std::string binPath = Resmgr::getSingleton().getEnv().bin_path;
+
+	if (binPath.size() == 0)
+	{
+		ERROR_MSG(fmt::format("Loginapp::importClientSDK: KBE_BIN_PATH no set!\n"));
+		return;
+	}
+
+	new ClientSDKDownloader(networkInterface(), pChannel->addr(), clientWindowSize, assetsPath, binPath, options);
+}
+
+//-------------------------------------------------------------------------------------
 void Loginapp::onBaseappInitProgress(Network::Channel* pChannel, float progress)
 {
+	if(pChannel->isExternal())
+		return;
+		
 	if(progress > 1.f)
 	{
 		INFO_MSG(fmt::format("Loginapp::onBaseappInitProgress: progress={}.\n", 

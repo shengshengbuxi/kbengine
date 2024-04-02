@@ -2,6 +2,7 @@
 
 
 #include "shutdowner.h"
+#include "serverconfig.h"
 #include "network/event_dispatcher.h"
 
 namespace KBEngine { 
@@ -12,7 +13,8 @@ Shutdowner::Shutdowner(ShutdownHandler* pShutdownHandler) :
 	pShutdownHandler_(pShutdownHandler),
 	pTimerHandle_(),
 	pDispatcher_(0),
-	tickPeriod_(1.0f)
+	tickPeriod_(1.0f),
+	shutDownCount_(0)
 {
 }
 
@@ -71,33 +73,37 @@ void Shutdowner::handleTimeout(TimerHandle handle, void * arg)
 			pShutdownHandler_->setShuttingdown(ShutdownHandler::SHUTDOWN_STATE_RUNNING);
 			ShutdownHandler::CAN_SHUTDOWN_STATE canState = pShutdownHandler_->canShutdown();
 
-			if (canState == ShutdownHandler::CAN_SHUTDOWN_STATE_TRUE || canState == ShutdownHandler::CAN_SHUTDOWN_STATE_USER_TRUE)
-				pShutdownHandler_->onShutdown(true);
+			if (canState == ShutdownHandler::CAN_SHUTDOWN_STATE_TRUE)
+			{
+				pShutdownHandler_->onShutdown(shutDownCount_++ == 0);
+			}
 
 			cancel();
 
 			pTimerHandle_ = pDispatcher_->addTimer(int(tickPeriod_ * 1000000),
-				this, (void *)TIMEOUT_SHUTDOWN_END_TICK);
+				this, (void *)TIMEOUT_SHUTDOWN_READY_END_TICK);
 
 			break;
 		}
-		case TIMEOUT_SHUTDOWN_END_TICK:
+		case TIMEOUT_SHUTDOWN_READY_END_TICK:
 		{
 			pShutdownHandler_->setShuttingdown(ShutdownHandler::SHUTDOWN_STATE_END);
 			ShutdownHandler::CAN_SHUTDOWN_STATE canState = pShutdownHandler_->canShutdown();
-
-			if (canState != ShutdownHandler::CAN_SHUTDOWN_STATE_TRUE && canState != ShutdownHandler::CAN_SHUTDOWN_STATE_USER_TRUE)
+		
+			if (canState != ShutdownHandler::CAN_SHUTDOWN_STATE_TRUE)
 			{
 				//INFO_MSG(fmt::format("Shutdowner::onShutdownEnd: waiting for {} to complete!\n",
 				//	pShutdownHandler_->lastShutdownFailReason()));
 
 				if (canState != ShutdownHandler::CAN_SHUTDOWN_STATE_USER_FALSE)
-					pShutdownHandler_->onShutdown(false);
+				{
+					pShutdownHandler_->onShutdown(shutDownCount_++ == 0);
+				}
 
 				cancel();
 
-				pTimerHandle_ = pDispatcher_->addTimer(int(100000),
-					this, (void *)TIMEOUT_SHUTDOWN_END_TICK);
+				pTimerHandle_ = pDispatcher_->addTimer(int(tickPeriod_ * 1000000),
+					this, (void *)TIMEOUT_SHUTDOWN_READY_END_TICK);
 
 				break;
 			}
@@ -105,8 +111,16 @@ void Shutdowner::handleTimeout(TimerHandle handle, void * arg)
 			INFO_MSG("Shutdowner::onShutdownEnd: shutting down\n");
 
 			cancel();
-			pShutdownHandler_->onShutdownEnd();
+
+			pTimerHandle_ = pDispatcher_->addTimer(1000000 / g_kbeSrvConfig.gameUpdateHertz(),
+				this, (void *)TIMEOUT_SHUTDOWN_END_TICK);
+
 			break;
+		}
+		case TIMEOUT_SHUTDOWN_END_TICK:
+		{
+			cancel();
+			pShutdownHandler_->onShutdownEnd();
 		}
 		default:
 			break;

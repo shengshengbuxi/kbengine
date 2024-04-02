@@ -166,7 +166,7 @@ public:
 	/** 
 		检查脚本模块中被定义的属性是否合法 
 	*/
-	static bool validDefPropertyName(ScriptDefModule* pScriptModule, const std::string& name);
+	static bool validDefPropertyName(const std::string& name);
 
 	/** 
 		通过标记来寻找到对应的脚本模块对象 
@@ -228,6 +228,18 @@ public:
 	static Context& context() {
 		return __context;
 	}
+
+	static ScriptDefModule* registerNewScriptDefModule(const std::string& moduleName);
+	static MethodDescription* createMethodDescription(ScriptDefModule* pScriptModule, ENTITY_METHOD_UID utype, COMPONENT_ID domain, const std::string& name, MethodDescription::EXPOSED_TYPE exposedType);
+
+	static bool isReload();
+
+	static std::vector<PyTypeObject*> getScriptBaseTypes() { return __scriptBaseTypes;  }
+
+	/**
+		是否是继承引擎底层允许的基础类的派生类
+	*/
+	static std::string isSubClass(PyObject* pyClass);
 
 private:
 	static SCRIPT_MODULES __scriptModules;										// 所有的扩展脚本模块都存储在这里

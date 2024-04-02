@@ -3,6 +3,7 @@
 
 .. module:: fileinput
    :synopsis: Loop over standard input or a list of files.
+
 .. moduleauthor:: Guido van Rossum <guido@python.org>
 .. sectionauthor:: Fred L. Drake, Jr. <fdrake@acm.org>
 
@@ -62,7 +63,7 @@ The following function is the primary interface of this module:
 
    The :class:`FileInput` instance can be used as a context manager in the
    :keyword:`with` statement.  In this example, *input* is closed after the
-   :keyword:`with` statement is exited, even if an exception occurs::
+   :keyword:`!with` statement is exited, even if an exception occurs::
 
       with fileinput.input(files=('spam.txt', 'eggs.txt')) as f:
           for line in f:
@@ -71,6 +72,8 @@ The following function is the primary interface of this module:
    .. versionchanged:: 3.2
       Can be used as a context manager.
 
+   .. deprecated-removed:: 3.6 3.8
+      The *bufsize* parameter.
 
 The following functions use the global state created by :func:`fileinput.input`;
 if there is no active state, :exc:`RuntimeError` is raised.
@@ -152,7 +155,7 @@ available for subclassing as well:
 
    A :class:`FileInput` instance can be used as a context manager in the
    :keyword:`with` statement.  In this example, *input* is closed after the
-   :keyword:`with` statement is exited, even if an exception occurs::
+   :keyword:`!with` statement is exited, even if an exception occurs::
 
       with FileInput(files=('spam.txt', 'eggs.txt')) as input:
           process(input)
@@ -161,7 +164,10 @@ available for subclassing as well:
       Can be used as a context manager.
 
    .. deprecated:: 3.4
-        The ``'rU'`` and ``'U'`` modes.
+      The ``'rU'`` and ``'U'`` modes.
+
+   .. deprecated-removed:: 3.6 3.8
+      The *bufsize* parameter.
 
 
 **Optional in-place filtering:** if the keyword argument ``inplace=True`` is
@@ -188,10 +194,14 @@ The two following opening hooks are provided by this module:
    Usage example:  ``fi = fileinput.FileInput(openhook=fileinput.hook_compressed)``
 
 
-.. function:: hook_encoded(encoding)
+.. function:: hook_encoded(encoding, errors=None)
 
-   Returns a hook which opens each file with :func:`codecs.open`, using the given
-   *encoding* to read the file.
+   Returns a hook which opens each file with :func:`open`, using the given
+   *encoding* and *errors* to read the file.
 
    Usage example: ``fi =
-   fileinput.FileInput(openhook=fileinput.hook_encoded("iso-8859-1"))``
+   fileinput.FileInput(openhook=fileinput.hook_encoded("utf-8",
+   "surrogateescape"))``
+
+   .. versionchanged:: 3.6
+      Added the optional *errors* parameter.

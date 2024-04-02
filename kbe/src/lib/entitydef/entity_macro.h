@@ -192,9 +192,9 @@ namespace KBEngine{
 #define DEBUG_CREATE_ENTITY_NAMESPACE																		\
 		if(g_debugEntity)																					\
 		{																									\
-			char* ccattr_DEBUG_CREATE_ENTITY_NAMESPACE = PyUnicode_AsUTF8AndSize(key, NULL);				\
+			const char* ccattr_DEBUG_CREATE_ENTITY_NAMESPACE = PyUnicode_AsUTF8AndSize(key, NULL);			\
 			PyObject* pytsval = PyObject_Str(value);														\
-			char* cccpytsval = PyUnicode_AsUTF8AndSize(pytsval, NULL);										\
+			const char* cccpytsval = PyUnicode_AsUTF8AndSize(pytsval, NULL);								\
 			Py_DECREF(pytsval);																				\
 			DEBUG_MSG(fmt::format("{}(refc={}, id={})::debug_createNamespace:add {}({}).\n",				\
 												scriptName(),												\
@@ -208,7 +208,7 @@ namespace KBEngine{
 #define DEBUG_OP_ATTRIBUTE(op, ccattr)																		\
 		if(g_debugEntity)																					\
 		{																									\
-			char* ccattr_DEBUG_OP_ATTRIBUTE = PyUnicode_AsUTF8AndSize(ccattr, NULL);						\
+			const char* ccattr_DEBUG_OP_ATTRIBUTE = PyUnicode_AsUTF8AndSize(ccattr, NULL);					\
 			DEBUG_MSG(fmt::format("{}(refc={}, id={})::debug_op_attr:op={}, {}.\n",							\
 												scriptName(),												\
 												static_cast<PyObject*>(this)->ob_refcnt, this->id(),		\
@@ -412,13 +412,36 @@ public:																										\
 			PyErr_Clear();																					\
 			EntityComponent::convertDictDataToEntityComponent(id(), this, pScriptModule_, dictData, persistentData); \
 		}																									\
+		else																								\
+		{																									\
+			PyObject* cellDataDictNew = PyDict_GetItemString(dictData, "cellData");							\
+			if (cellDataDictNew)																			\
+			{																								\
+				if(PyDict_Check(cellDataDictNew))															\
+				{																							\
+					PyDict_Update(cellDataDict, cellDataDictNew);											\
+				}																							\
+				else																						\
+				{																							\
+					ERROR_MSG(fmt::format(#CLASS"::createNamespace: create"#CLASS"[{}:{}] "					\
+						"cellData is not a dict.\n",														\
+						scriptName(), id_));																\
+				}																							\
+																											\
+				PyDict_DelItemString(dictData, "cellData");													\
+			}																								\
+			else																							\
+			{																								\
+				PyErr_Clear();																				\
+			}																								\
+		}																									\
 																											\
 		while(PyDict_Next(dictData, &pos, &key, &value))													\
 		{																									\
 			DEBUG_CREATE_ENTITY_NAMESPACE																	\
 			if(PyObject_HasAttr(this, key) > 0)																\
 			{																								\
-				char* ccattr = PyUnicode_AsUTF8AndSize(key, NULL);											\
+				const char* ccattr = PyUnicode_AsUTF8AndSize(key, NULL);									\
 																											\
 				PropertyDescription* pCompPropertyDescription =												\
 					pScriptModule_->findComponentPropertyDescription(ccattr);								\
@@ -462,7 +485,7 @@ public:																										\
 			}																								\
 			else																							\
 			{																								\
-				char* ccattr = PyUnicode_AsUTF8AndSize(key, NULL);											\
+				const char* ccattr = PyUnicode_AsUTF8AndSize(key, NULL);									\
 																											\
 				PropertyDescription* pCompPropertyDescription =												\
 					pScriptModule_->findComponentPropertyDescription(ccattr);								\
@@ -725,7 +748,7 @@ public:																										\
 																											\
 	int onScriptDelAttribute(PyObject* attr)																\
 	{																										\
-		char* ccattr = PyUnicode_AsUTF8AndSize(attr, NULL);													\
+		const char* ccattr = PyUnicode_AsUTF8AndSize(attr, NULL);											\
 		DEBUG_OP_ATTRIBUTE("del", attr)																		\
 																											\
 		if(pPropertyDescrs_)																				\
@@ -756,7 +779,7 @@ public:																										\
 	int onScriptSetAttribute(PyObject* attr, PyObject* value)												\
 	{																										\
 		DEBUG_OP_ATTRIBUTE("set", attr)																		\
-		char* ccattr = PyUnicode_AsUTF8AndSize(attr, NULL);													\
+		const char* ccattr = PyUnicode_AsUTF8AndSize(attr, NULL);											\
 																											\
 		if(pPropertyDescrs_)																				\
 		{																									\
@@ -805,7 +828,6 @@ public:																										\
 	PyObject * onScriptGetAttribute(PyObject* attr);														\
 																											\
 	DECLARE_PY_MOTHOD_ARG3(pyAddTimer, float, float, int32);												\
-	DECLARE_PY_MOTHOD_ARG1(pyDelTimer, ScriptID);															\
 																											\
 	static PyObject* __py_pyWriteToDB(PyObject* self, PyObject* args)										\
 	{																										\
@@ -847,7 +869,7 @@ public:																										\
 		{																									\
 			if(g_componentType == BASEAPP_TYPE)																\
 			{																								\
-				if(PyArg_ParseTuple(args, "O", &pycallback) == -1)											\
+				if(!PyArg_ParseTuple(args, "O", &pycallback))												\
 				{																							\
 					PyErr_Format(PyExc_AssertionError, "%s::writeToDB: args error!", pobj->scriptName());	\
 					PyErr_PrintEx(0);																		\
@@ -871,7 +893,7 @@ public:																										\
 			}																								\
 			else																							\
 			{																								\
-				if(PyArg_ParseTuple(args, "i", &extra) == -1)												\
+				if(!PyArg_ParseTuple(args, "i", &extra))													\
 				{																							\
 					PyErr_Format(PyExc_AssertionError, "%s::writeToDB: args error!", pobj->scriptName());	\
 					PyErr_PrintEx(0);																		\
@@ -884,7 +906,7 @@ public:																										\
 		{																									\
 			if(g_componentType == BASEAPP_TYPE)																\
 			{																								\
-				if(PyArg_ParseTuple(args, "O|i", &pycallback, &extra) == -1)								\
+				if(!PyArg_ParseTuple(args, "O|i", &pycallback, &extra))										\
 				{																							\
 					PyErr_Format(PyExc_AssertionError, "%s::writeToDB: args error!", pobj->scriptName());	\
 					PyErr_PrintEx(0);																		\
@@ -909,7 +931,7 @@ public:																										\
 			else																							\
 			{																								\
 				PyObject* pystr_extra = NULL;																\
-				if(PyArg_ParseTuple(args, "i|O", &extra, &pystr_extra) == -1)								\
+				if(!PyArg_ParseTuple(args, "i|O", &extra, &pystr_extra))									\
 				{																							\
 					PyErr_Format(PyExc_AssertionError, "%s::writeToDB: args error!", pobj->scriptName());	\
 					PyErr_PrintEx(0);																		\
@@ -937,7 +959,7 @@ public:																										\
 			if(g_componentType == BASEAPP_TYPE)																\
 			{																								\
 				PyObject* pystr_extra = NULL;																\
-				if(PyArg_ParseTuple(args, "O|i|O", &pycallback, &extra, &pystr_extra) == -1)				\
+				if(!PyArg_ParseTuple(args, "O|i|O", &pycallback, &extra, &pystr_extra))						\
 				{																							\
 					PyErr_Format(PyExc_AssertionError, "%s::writeToDB: args error!", pobj->scriptName());	\
 					PyErr_PrintEx(0);																		\
@@ -1033,7 +1055,7 @@ public:																										\
 																											\
 		if (!PyCallable_Check(pyCallback))																	\
 		{																									\
-			PyErr_Format(PyExc_TypeError, "{}::registerEvent: '%.200s' object is not callable! eventName=%s, entityID={}",\
+			PyErr_Format(PyExc_TypeError, "%s::registerEvent: '%.200s' object is not callable! eventName=%s, entityID=%d",\
 				scriptName(), (pyCallback ? pyCallback->ob_type->tp_name : "NULL"), evnName.c_str(), id());		\
 			PyErr_PrintEx(0);																				\
 			return false;																					\
@@ -1045,7 +1067,7 @@ public:																										\
 		{																									\
 			if((*iter).get() == pyCallback)																	\
 			{																								\
-				PyErr_Format(PyExc_TypeError, "{}::registerEvent: This callable('%.200s') has been registered! eventName=%s, entityID={}",\
+				PyErr_Format(PyExc_TypeError, "%s::registerEvent: This callable('%.200s') has been registered! eventName=%s, entityID=%d",\
 					scriptName(), (pyCallback ? pyCallback->ob_type->tp_name : "NULL"), evnName.c_str(), id());	\
 				PyErr_PrintEx(0);																			\
 				return false;																				\
@@ -1118,7 +1140,7 @@ public:																										\
 																											\
 		const char* eventName = NULL;																		\
 		PyObject* pycallback = NULL;																		\
-		if(PyArg_ParseTuple(args, "sO", &eventName, &pycallback) == -1)										\
+		if(!PyArg_ParseTuple(args, "sO", &eventName, &pycallback))											\
 		{																									\
 			PyErr_Format(PyExc_AssertionError, "%s::registerEvent:: args error!", pobj->scriptName());		\
 			PyErr_PrintEx(0);																				\
@@ -1154,7 +1176,7 @@ public:																										\
 																											\
 		const char* eventName = NULL;																		\
 		PyObject* pycallback = NULL;																		\
-		if(PyArg_ParseTuple(args, "sO", &eventName, &pycallback) == -1)										\
+		if(!PyArg_ParseTuple(args, "sO", &eventName, &pycallback))											\
 		{																									\
 			PyErr_Format(PyExc_AssertionError, "%s::deregisterEvent:: args error!", pobj->scriptName());	\
 			PyErr_PrintEx(0);																				\
@@ -1191,9 +1213,9 @@ public:																										\
 		char* eventName = NULL;																				\
 		if(currargsSize == 1)																				\
 		{																									\
-			if(PyArg_ParseTuple(args, "s", &eventName) == -1)												\
+			if(!PyArg_ParseTuple(args, "s", &eventName))													\
 			{																								\
-				PyErr_Format(PyExc_AssertionError, "%s::fireEvent:: args error! entityID={}", pobj->scriptName(), pobj->id());		\
+				PyErr_Format(PyExc_AssertionError, "%s::fireEvent:: args error! entityID=%d", pobj->scriptName(), pobj->id());		\
 				PyErr_PrintEx(0);																			\
 				Py_RETURN_FALSE;																			\
 			}																								\
@@ -1210,9 +1232,9 @@ public:																										\
 		else if(currargsSize == 2)																			\
 		{																									\
 			PyObject* pyobj = NULL;																			\
-			if (PyArg_ParseTuple(args, "sO", &eventName, &pyobj) == -1)										\
+			if (!PyArg_ParseTuple(args, "sO", &eventName, &pyobj))											\
 			{																								\
-				PyErr_Format(PyExc_AssertionError, "%s::fireEvent:: args error! entityID={}", pobj->scriptName(), pobj->id());		\
+				PyErr_Format(PyExc_AssertionError, "%s::fireEvent:: args error! entityID=%d", pobj->scriptName(), pobj->id());		\
 				PyErr_PrintEx(0);																			\
 				Py_RETURN_FALSE;																			\
 			}																								\
@@ -1241,7 +1263,7 @@ public:																										\
 				Py_RETURN_FALSE;																			\
 			}																								\
 																											\
-			eventName = PyUnicode_AsUTF8AndSize(pyEvnName, NULL);											\
+			eventName = const_cast<char*>(PyUnicode_AsUTF8AndSize(pyEvnName, NULL));						\
 																											\
 			PyObject* pyargs = PyTuple_GetSlice(args, 1, currargsSize);										\
 			pobj->fireEvent(eventName, pyargs);																\
@@ -1296,7 +1318,7 @@ public:																										\
 		char* componentName = NULL;																			\
 		if(currargsSize == 1)																				\
 		{																									\
-			if(PyArg_ParseTuple(args, "s", &componentName) == -1)											\
+			if(!PyArg_ParseTuple(args, "s", &componentName))												\
 			{																								\
 				PyErr_Format(PyExc_AssertionError, "%s::getComponent:: args error!", pobj->scriptName());	\
 				PyErr_PrintEx(0);																			\
@@ -1315,7 +1337,7 @@ public:																										\
 		else if(currargsSize == 2)																			\
 		{																									\
 			PyObject* pyobj = NULL;																			\
-			if (PyArg_ParseTuple(args, "sO", &componentName, &pyobj) == -1)									\
+			if (!PyArg_ParseTuple(args, "sO", &componentName, &pyobj))										\
 			{																								\
 				PyErr_Format(PyExc_AssertionError, "%s::getComponent:: args error!", pobj->scriptName());	\
 				PyErr_PrintEx(0);																			\
@@ -1382,9 +1404,78 @@ public:																										\
 		return PyLong_FromLong(id);																			\
 	}																										\
 																											\
-	PyObject* CLASS::pyDelTimer(ScriptID timerID)															\
+	static PyObject* __py_pyDelTimer(PyObject* self, PyObject* args)										\
 	{																										\
-		if(!ScriptTimersUtil::delTimer(&scriptTimers_, timerID))											\
+		uint16 currargsSize = PyTuple_Size(args);															\
+		CLASS* pobj = static_cast<CLASS*>(self);															\
+																											\
+		if (currargsSize != 1)																				\
+		{																									\
+			PyErr_Format(PyExc_AssertionError,																\
+				"%s::delTimer: args require 1 args(id|int or \"All\"|str), gived %d!\n",					\
+				pobj->scriptName(), currargsSize);															\
+																											\
+			PyErr_PrintEx(0);																				\
+			return PyLong_FromLong(-1);																		\
+		}																									\
+																											\
+		ScriptID timerID = 0;																				\
+		PyObject* pyargobj = NULL;																			\
+																											\
+		if (!PyArg_ParseTuple(args, "O", &pyargobj))														\
+		{																									\
+			PyErr_Format(PyExc_TypeError,																	\
+				"%s::delTimer: args(id|int or \"All\"|str) error!",											\
+				pobj->scriptName());																		\
+																											\
+			PyErr_PrintEx(0);																				\
+			return PyLong_FromLong(-1);																		\
+		}																									\
+																											\
+		if (pyargobj == NULL)																				\
+		{																									\
+			PyErr_Format(PyExc_TypeError,																	\
+				"%s::delTimer: args(id|int or \"All\"|str) error!",											\
+				pobj->scriptName());																		\
+																											\
+			PyErr_PrintEx(0);																				\
+			return PyLong_FromLong(-1);																		\
+		}																									\
+																											\
+		if (PyUnicode_Check(pyargobj))																		\
+		{																									\
+			if (strcmp(PyUnicode_AsUTF8AndSize(pyargobj, NULL), "All") == 0)								\
+			{																								\
+				pobj->scriptTimers().cancelAll();															\
+			}																								\
+			else																							\
+			{																								\
+				PyErr_Format(PyExc_TypeError,																\
+					"%s::delTimer: args not is \"All\"!",													\
+					pobj->scriptName());																	\
+																											\
+				PyErr_PrintEx(0);																			\
+				return PyLong_FromLong(-1);																	\
+			}																								\
+																											\
+			return PyLong_FromLong(0);																		\
+		}																									\
+		else                                                                                                \
+		{																									\
+			if (!PyLong_Check(pyargobj))																	\
+			{																								\
+				PyErr_Format(PyExc_TypeError,																\
+					"%s::delTimer: args(id|int) error!",													\
+					pobj->scriptName());																	\
+																											\
+				PyErr_PrintEx(0);																			\
+				return PyLong_FromLong(-1);																	\
+			}																								\
+																											\
+			timerID = PyLong_AsLong(pyargobj);																\
+		}																									\
+																											\
+		if(!ScriptTimersUtil::delTimer(&pobj->scriptTimers(), timerID))										\
 		{																									\
 			return PyLong_FromLong(-1);																		\
 		}																									\

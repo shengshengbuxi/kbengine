@@ -35,7 +35,7 @@ EntityComponent::ENTITY_COMPONENTS EntityComponent::entity_components;
 #define DEBUG_OP_ATTRIBUTE(op, ccattr)																		\
 		if(g_debugEntity)																					\
 		{																									\
-			char* ccattr_DEBUG_OP_ATTRIBUTE = PyUnicode_AsUTF8AndSize(ccattr, NULL);						\
+			const char* ccattr_DEBUG_OP_ATTRIBUTE = PyUnicode_AsUTF8AndSize(ccattr, NULL);					\
 			DEBUG_MSG(fmt::format("{}.{}(refc={}, id={})::debug_op_attr:op={}, {}.\n",						\
 												owner()->ob_type->tp_name,									\
 										(pComponentDescrs_ ? pComponentDescrs_->getName() : ""),			\
@@ -46,9 +46,9 @@ EntityComponent::ENTITY_COMPONENTS EntityComponent::entity_components;
 #define DEBUG_CREATE_NAMESPACE																				\
 		if(g_debugEntity)																					\
 		{																									\
-			char* ccattr_DEBUG_CREATE_NAMESPACE = PyUnicode_AsUTF8AndSize(key, NULL);						\
+			const char* ccattr_DEBUG_CREATE_NAMESPACE = PyUnicode_AsUTF8AndSize(key, NULL);					\
 			PyObject* pytsval = PyObject_Str(value);														\
-			char* cccpytsval = PyUnicode_AsUTF8AndSize(pytsval, NULL);										\
+			const char* cccpytsval = PyUnicode_AsUTF8AndSize(pytsval, NULL);								\
 			Py_DECREF(pytsval);																				\
 			DEBUG_MSG(fmt::format("{}.{}(refc={}, id={})::debug_createNamespace:add {}({}).\n",				\
 												owner()->ob_type->tp_name,									\
@@ -97,8 +97,11 @@ EntityComponent::~EntityComponent()
 
 	script::PyGC::decTracing("EntityComponent");
 
-	if(owner_)
+	// 组件以及被销毁的情况不能再减引用，查看onOwnerDestroyEnd中描述
+	if(!isDestroyed() && owner_)
 		Py_DECREF(owner_);
+
+	//ERROR_MSG(fmt::format("{}::~{}!\n", pComponentDescrs_->getName(), pComponentDescrs_->getName()));
 }
 
 //-------------------------------------------------------------------------------------
@@ -178,6 +181,12 @@ PyObject* EntityComponent::pyGetOwner()
 PyObject* EntityComponent::pyName()
 {
 	return PyUnicode_FromString(pPropertyDescription_->getName());
+}
+
+//-------------------------------------------------------------------------------------
+PyObject* EntityComponent::pyGetClassName()
+{
+	return PyUnicode_FromString(scriptName());
 }
 
 //-------------------------------------------------------------------------------------
@@ -400,7 +409,7 @@ void EntityComponent::onInstallScript(PyObject* mod)
 int EntityComponent::onScriptSetAttribute(PyObject* attr, PyObject* value)
 {
 	DEBUG_OP_ATTRIBUTE("set", attr)
-	char* ccattr = PyUnicode_AsUTF8AndSize(attr, NULL);
+	const char* ccattr = PyUnicode_AsUTF8AndSize(attr, NULL);
 
 	const ScriptDefModule::PROPERTYDESCRIPTION_MAP* pPropertyDescrs = &pComponentDescrs_->getPropertyDescrs();
 
@@ -493,7 +502,7 @@ int EntityComponent::onScriptSetAttribute(PyObject* attr, PyObject* value)
 //-------------------------------------------------------------------------------------
 int EntityComponent::onScriptDelAttribute(PyObject* attr)
 {
-	char* ccattr = PyUnicode_AsUTF8AndSize(attr, NULL);
+	const char* ccattr = PyUnicode_AsUTF8AndSize(attr, NULL);
 	DEBUG_OP_ATTRIBUTE("del", attr)
 
 	const ScriptDefModule::PROPERTYDESCRIPTION_MAP* pPropertyDescrs = &pComponentDescrs_->getPropertyDescrs();
@@ -526,6 +535,7 @@ int EntityComponent::onScriptDelAttribute(PyObject* attr)
 //-------------------------------------------------------------------------------------
 void EntityComponent::onEntityDestroy(PyObject* pEntity, ScriptDefModule* pEntityScriptDescrs, bool callScript, bool beforeDestroy)
 {
+	Py_INCREF(pEntity);
 	ScriptDefModule::COMPONENTDESCRIPTION_MAP& componentDescrs = pEntityScriptDescrs->getComponentDescrs();
 
 	ScriptDefModule::COMPONENTDESCRIPTION_MAP::iterator comps_iter = componentDescrs.begin();
@@ -565,63 +575,45 @@ void EntityComponent::onEntityDestroy(PyObject* pEntity, ScriptDefModule* pEntit
 		}
 	}
 
-	
+	// 等所有组件都destroy完毕之后再清理组件owner，因为此后在任何地方引用了组件访问组件的owner将不可用
 	if (!beforeDestroy)
 	{
-		EntityComponentUnbind* pEntityComponentUnbind = new EntityComponentUnbind(pEntity, pEntityScriptDescrs);
-		DebugHelper::getSingleton().pDispatcher()->addTimer(1000000 / g_kbeSrvConfig.gameUpdateHertz(), pEntityComponentUnbind, NULL);
-	}
-}
+		ScriptDefModule::COMPONENTDESCRIPTION_MAP::iterator comps_iter = componentDescrs.begin();
+		for (; comps_iter != componentDescrs.end(); ++comps_iter)
+		{
+			if (g_componentType == BASEAPP_TYPE)
+			{
+				if (!comps_iter->second->hasBase())
+					continue;
+			}
+			else if (g_componentType == CELLAPP_TYPE)
+			{
+				if (!comps_iter->second->hasCell())
+					continue;
+			}
+			else
+			{
+				if (!comps_iter->second->hasClient())
+					continue;
+			}
 
-//-------------------------------------------------------------------------------------
-void EntityComponent::onEntityUnbind(PyObject* pEntity, ScriptDefModule* pEntityScriptDescrs, EntityComponentUnbind* pEntityComponentUnbind)
-{
-	ScriptDefModule::COMPONENTDESCRIPTION_MAP& componentDescrs = pEntityScriptDescrs->getComponentDescrs();
-	ScriptDefModule::COMPONENTDESCRIPTION_MAP::iterator comps_iter = componentDescrs.begin();
-	for (; comps_iter != componentDescrs.end(); ++comps_iter)
-	{
-		if (g_componentType == BASEAPP_TYPE)
-		{
-			if (!comps_iter->second->hasBase())
-				continue;
-		}
-		else if (g_componentType == CELLAPP_TYPE)
-		{
-			if (!comps_iter->second->hasCell())
-				continue;
-		}
-		else
-		{
-			if (!comps_iter->second->hasClient())
-				continue;
-		}
+			PyObject* pyObj = PyObject_GetAttrString(pEntity, comps_iter->first.c_str());
+			if (pyObj)
+			{
+				EntityComponent* pEntityComponent = static_cast<EntityComponent*>(pyObj);
 
-		PyObject* pyObj = PyObject_GetAttrString(pEntity, comps_iter->first.c_str());
-		if (pyObj)
-		{
-			EntityComponent* pEntityComponent = static_cast<EntityComponent*>(pyObj);
-			pEntityComponent->onOwnerUnbind(pEntity, pEntityScriptDescrs);
+				pEntityComponent->onOwnerDestroyClear(pEntity, pEntityScriptDescrs);
 
-			Py_DECREF(pyObj);
-		}
-		else
-		{
-			SCRIPT_ERROR_CHECK();
+				Py_DECREF(pyObj);
+			}
+			else
+			{
+				SCRIPT_ERROR_CHECK();
+			}
 		}
 	}
 
-	delete pEntityComponentUnbind;
-}
-
-//-------------------------------------------------------------------------------------
-void EntityComponent::onOwnerUnbind(PyObject* pEntity, ScriptDefModule* pEntityScriptDescrs)
-{
-	ownerID_ = 0;
-
-	if (owner_)
-		Py_DECREF(owner_);
-
-	owner_ = NULL;
+	Py_DECREF(pEntity);
 }
 
 //-------------------------------------------------------------------------------------
@@ -634,13 +626,21 @@ void EntityComponent::onOwnerDestroyBegin(PyObject* pEntity, ScriptDefModule* pE
 //-------------------------------------------------------------------------------------
 void EntityComponent::onOwnerDestroyEnd(PyObject* pEntity, ScriptDefModule* pEntityScriptDescrs, bool callScript)
 {
-	ownerID_ = 0;
+	destroyed();
 
-	// 等待onOwnerUnbind来延时处理
-	//if (owner_)
-	//	Py_DECREF(owner_);
+	if (owner_)
+		Py_DECREF(owner_);
 
+	// 此处减引用是为了解除组件和实体之间的循环引用导致无法释放问题
+	// 但是此处不设置为NULL， 由于在多个组件的情况时如在某个组件脚本的onClientDeath中调用owner.destroy()
+	// 其他脚本中也需要能够访问到owner，只不过owner的isDestroyed为True
 	//owner_ = NULL;
+}
+
+//-------------------------------------------------------------------------------------
+void EntityComponent::onOwnerDestroyClear(PyObject* pEntity, ScriptDefModule* pEntityScriptDescrs)
+{
+	owner_ = NULL;
 }
 
 //-------------------------------------------------------------------------------------
@@ -656,7 +656,7 @@ void EntityComponent::c_str(char* s, size_t size)
 {
 	kbe_snprintf(s, size, "EntityComponent=%s, utype=%d, owner=%s, ownerID=%d, domain=%s.",
 		pComponentDescrs_ ? pComponentDescrs_->getName() : "", pComponentDescrs_ ? pComponentDescrs_->getUType() : 0,
-		owner()->ob_type->tp_name, ownerID(), COMPONENT_NAME_EX(componentType()));
+		(owner() ? owner()->ob_type->tp_name : "unknown"), ownerID(), COMPONENT_NAME_EX(componentType()));
 }
 
 //-------------------------------------------------------------------------------------
@@ -761,7 +761,12 @@ bool EntityComponent::isSamePersistentType(PyObject* pyValue)
 				{
 					cellComponentPart = PyDict_GetItemString(cellDataDict, pPropertyDescription_->getName());
 					Py_DECREF(cellDataDict);
-					Py_INCREF(cellComponentPart);
+
+					// 组件没有cell属性时不会在cell创建这个组件
+					if (cellComponentPart)
+					{
+						Py_INCREF(cellComponentPart);
+					}
 				}
 			}
 
@@ -933,7 +938,12 @@ void EntityComponent::addPersistentToStream(MemoryStream* mstream, PyObject* pyV
 				{
 					cellComponentPart = PyDict_GetItemString(cellDataDict, pPropertyDescription_->getName());
 					Py_DECREF(cellDataDict);
-					Py_INCREF(cellComponentPart);
+
+					// 组件没有cell属性时不会在cell创建这个组件
+					if (cellComponentPart)
+					{
+						Py_INCREF(cellComponentPart);
+					}
 				}
 			}
 
@@ -977,7 +987,7 @@ void EntityComponent::addPersistentToStream(MemoryStream* mstream, PyObject* pyV
 
 		if (pyVal)
 		{
-			propertyDescription->addToStream(mstream, pyVal);
+			propertyDescription->addPersistentToStream(mstream, pyVal);
 			Py_DECREF(pyVal);
 		}
 		else
@@ -1397,7 +1407,7 @@ void EntityComponent::updateFromDict(PyObject* pOwner, PyObject* pyDict)
 
 	while (PyDict_Next(pyDict, &pos, &key, &value))
 	{
-		char* ccattr = PyUnicode_AsUTF8AndSize(key, NULL);
+		const char* ccattr = PyUnicode_AsUTF8AndSize(key, NULL);
 
 		ScriptDefModule::PROPERTYDESCRIPTION_MAP::const_iterator iter = pPropertyDescrs->find(ccattr);
 		if (iter != pPropertyDescrs->end())
@@ -1543,7 +1553,7 @@ PyObject* EntityComponent::pyGetCellEntityCall()
 	{
 		PyErr_Format(PyExc_AssertionError, "%s: %d is destroyed!\n",
 			scriptName(), ownerID_);
-		PyErr_PrintEx(0);
+
 		return 0;
 	}
 
@@ -1576,7 +1586,7 @@ PyObject* EntityComponent::pyGetBaseEntityCall()
 	{
 		PyErr_Format(PyExc_AssertionError, "%s: %d is destroyed!\n",
 			scriptName(), ownerID_);
-		PyErr_PrintEx(0);
+
 		return 0;
 	}
 
@@ -1609,7 +1619,7 @@ PyObject* EntityComponent::pyGetClientEntityCall()
 	{
 		PyErr_Format(PyExc_AssertionError, "%s: %d is destroyed!\n",
 			scriptName(), ownerID_);
-		PyErr_PrintEx(0);
+
 		return 0;
 	}
 
@@ -1642,7 +1652,7 @@ PyObject* EntityComponent::pyGetAllClients()
 	{
 		PyErr_Format(PyExc_AssertionError, "%s: %d is destroyed!\n",
 			scriptName(), ownerID_);
-		PyErr_PrintEx(0);
+
 		return 0;
 	}
 
@@ -1675,7 +1685,7 @@ PyObject* EntityComponent::pyGetOtherClients()
 	{
 		PyErr_Format(PyExc_AssertionError, "%s: %d is destroyed!\n",
 			scriptName(), ownerID_);
-		PyErr_PrintEx(0);
+
 		return 0;
 	}
 
@@ -1743,7 +1753,7 @@ PyObject* EntityComponent::pyAddTimer(float interval, float repeat, int32 userAr
 }
 
 //-------------------------------------------------------------------------------------
-PyObject* EntityComponent::pyDelTimer(ScriptID timerID)
+PyObject* EntityComponent::pyDelTimer(PyObject_ptr args)
 {
 	PyObject* pEntity = owner();
 
@@ -1755,6 +1765,52 @@ PyObject* EntityComponent::pyDelTimer(ScriptID timerID)
 		return 0;
 	}
 
+	ScriptID timerID = 0;
+
+	if (args == NULL)
+	{																									
+		PyErr_Format(PyExc_TypeError, 
+			"%s::delTimer: args(id|int or \"All\"|str) error!", 
+			scriptName());																		
+		
+		PyErr_PrintEx(0);																				
+		return PyLong_FromLong(-1);																		
+	}	
+
+	if (PyUnicode_Check(args))
+	{																									
+		if (strcmp(PyUnicode_AsUTF8AndSize(args, NULL), "All") == 0)
+		{																								
+			return PyObject_CallMethod(pEntity, const_cast<char*>("delTimer"),
+				const_cast<char*>("s"), "All");
+		}																								
+		else																							
+		{																								
+			PyErr_Format(PyExc_TypeError, 
+				"%s::delTimer: args not is \"All\"!", 
+				scriptName());																	
+			
+			PyErr_PrintEx(0);																			
+			return PyLong_FromLong(-1);																	
+		}																								
+			
+		return PyLong_FromLong(0);																		
+	}																									
+	else                                                                                                
+	{																								
+		if (!PyLong_Check(args))
+		{																								
+			PyErr_Format(PyExc_TypeError, 
+				"%s::delTimer: args(id|int) error!", 
+				scriptName());																	
+			
+			PyErr_PrintEx(0);																			
+			return PyLong_FromLong(-1);																	
+		}																								
+			
+		timerID = PyLong_AsLong(args);
+	}																									
+		
 	return PyObject_CallMethod(pEntity, const_cast<char*>("delTimer"),
 		const_cast<char*>("I"), timerID);
 }

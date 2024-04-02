@@ -454,6 +454,12 @@ KBEngine.Event = function()
 			}
 		}
 	}
+
+	this.clear = function()
+	{
+		this._events = {};
+		this._firedEvents.splice(0, this._firedEvents.length);
+	}
 }
 
 KBEngine.Event = new KBEngine.Event();
@@ -461,6 +467,27 @@ KBEngine.Event = new KBEngine.Event();
 /*-----------------------------------------------------------------------------------------
 												memorystream
 -----------------------------------------------------------------------------------------*/
+
+/*
+	union PackFloatXType
+	{
+		float	fv;
+		uint32	uv;
+		int		iv;
+	};	
+*/
+KBEngine.PackFloatXType = function()
+{
+	this._unionData = new ArrayBuffer(4);
+	this.fv = new Float32Array(this._unionData, 0, 1);
+	this.uv = new Uint32Array(this._unionData, 0, 1);
+	this.iv = new Int32Array(this._unionData, 0, 1);
+};
+
+KBEngine._xPackData = new KBEngine.PackFloatXType();
+KBEngine._yPackData = new KBEngine.PackFloatXType();
+KBEngine._zPackData = new KBEngine.PackFloatXType();
+
 KBEngine.MemoryStream = function(size_or_buffer)
 {
 	if(size_or_buffer instanceof ArrayBuffer)
@@ -475,22 +502,6 @@ KBEngine.MemoryStream = function(size_or_buffer)
 	this.rpos = 0;
 	this.wpos = 0;
 	
-	/*
-		union PackFloatXType
-		{
-			float	fv;
-			uint32	uv;
-			int		iv;
-		};	
-	*/
-	KBEngine.MemoryStream.PackFloatXType = function()
-	{
-		this._unionData = new ArrayBuffer(4);
-		this.fv = new Float32Array(this._unionData, 0, 1);
-		this.uv = new Uint32Array(this._unionData, 0, 1);
-		this.iv = new Int32Array(this._unionData, 0, 1);
-	};
-			
 	//---------------------------------------------------------------------------------
 	this.readInt8 = function()
 	{
@@ -626,8 +637,8 @@ KBEngine.MemoryStream = function(size_or_buffer)
 	
 	this.readPackXZ = function()
 	{
-		var xPackData = new KBEngine.MemoryStream.PackFloatXType();
-		var zPackData = new KBEngine.MemoryStream.PackFloatXType();
+		var xPackData = KBEngine._xPackData;
+		var zPackData = KBEngine._zPackData;
 		
 		xPackData.fv[0] = 0.0;
 		zPackData.fv[0] = 0.0;
@@ -663,7 +674,7 @@ KBEngine.MemoryStream = function(size_or_buffer)
 	{
 		var v = this.readUint16();
 		
-		var yPackData = new  KBEngine.MemoryStream.PackFloatXType();
+		var yPackData = KBEngine._yPackData;
 		yPackData.uv[0] = 0x40000000;
 		yPackData.uv[0] |= (v & 0x7fff) << 12;
 		yPackData.fv[0] -= 2.0;
@@ -826,7 +837,7 @@ KBEngine.MemoryStream = function(size_or_buffer)
 		buf.set(new Uint8Array(stream.buffer, offset, size), 0);
 		this.wpos += size;
 	}
-	
+
 	//---------------------------------------------------------------------------------
 	this.readSkip = function(v)
 	{
@@ -864,6 +875,13 @@ KBEngine.MemoryStream = function(size_or_buffer)
 	}
 
 	//---------------------------------------------------------------------------------
+	this.setbuffer = function(buffer)
+	{
+		this.clear();
+		this.buffer = buffer;
+	}
+
+	//---------------------------------------------------------------------------------
 	this.size = function()
 	{
 		return this.buffer.byteLength;
@@ -878,7 +896,25 @@ KBEngine.MemoryStream = function(size_or_buffer)
 		if(this.buffer.byteLength > KBEngine.PACKET_MAX_SIZE)
 			this.buffer = new ArrayBuffer(KBEngine.PACKET_MAX_SIZE);
 	}
+
+	this.reclaimObject = function()
+	{
+		this.clear();
+
+		if(KBEngine.MemoryStream._objects != undefined)
+			KBEngine.MemoryStream._objects.push(this);
+	}
 }
+
+KBEngine.MemoryStream.createObject = function()
+{
+	if(KBEngine.MemoryStream._objects == undefined)
+		KBEngine.MemoryStream._objects = [];
+  
+	return KBEngine.MemoryStream._objects.length > 0 ? KBEngine.MemoryStream._objects.pop() : new KBEngine.MemoryStream(KBEngine.PACKET_MAX_SIZE_TCP);
+}
+
+
 
 /*-----------------------------------------------------------------------------------------
 												bundle
@@ -886,7 +922,7 @@ KBEngine.MemoryStream = function(size_or_buffer)
 KBEngine.Bundle = function()
 {
 	this.memorystreams = new Array();
-	this.stream = new KBEngine.MemoryStream(KBEngine.PACKET_MAX_SIZE_TCP);
+	this.stream = KBEngine.MemoryStream.createObject();
 	
 	this.numMessage = 0;
 	this.messageLengthBuffer = null;
@@ -935,6 +971,8 @@ KBEngine.Bundle = function()
 			this.writeMsgLength(this.messageLength);
 			if(this.stream)
 				this.memorystreams.push(this.stream);
+
+			this.stream = KBEngine.MemoryStream.createObject();
 		}
 		
 		if(issend)
@@ -955,9 +993,8 @@ KBEngine.Bundle = function()
 			var tmpStream = this.memorystreams[i];
 			network.send(tmpStream.getbuffer());
 		}
-		
-		this.memorystreams = new Array();
-		this.stream = new KBEngine.MemoryStream(KBEngine.PACKET_MAX_SIZE_TCP);
+
+		this.reclaimObject();
 	}
 	
 	//---------------------------------------------------------------------------------
@@ -966,7 +1003,7 @@ KBEngine.Bundle = function()
 		if(v > this.stream.space())
 		{
 			this.memorystreams.push(this.stream);
-			this.stream = new KBEngine.MemoryStream(KBEngine.PACKET_MAX_SIZE_TCP);
+			this.stream = KBEngine.MemoryStream.createObject();
 		}
 
 		this.messageLength += v;
@@ -1044,6 +1081,42 @@ KBEngine.Bundle = function()
 		this.checkStream(v.length + 4);
 		this.stream.writeBlob(v);
 	}
+
+	this.clear = function()
+	{
+		for(var i=0; i<this.memorystreams.length; i++)
+		{
+			if(this.stream != this.memorystreams[i])
+				this.memorystreams[i].reclaimObject();
+		}
+
+		if(this.stream)
+			this.stream.clear();
+		else
+			this.stream = KBEngine.MemoryStream.createObject();
+
+		this.memorystreams = new Array();
+		this.numMessage = 0;
+		this.messageLengthBuffer = null;
+		this.messageLength = 0;
+		this.msgtype = null;
+	}
+
+	this.reclaimObject = function()
+	{
+		this.clear();
+
+		if(KBEngine.Bundle._objects != undefined)
+			KBEngine.Bundle._objects.push(this);
+	}
+}
+
+KBEngine.Bundle.createObject = function()
+{
+	if(KBEngine.Bundle._objects == undefined)
+		KBEngine.Bundle._objects = [];
+
+	return KBEngine.Bundle._objects.length > 0 ? KBEngine.Bundle._objects.pop() : new KBEngine.Bundle();
 }
 
 /*-----------------------------------------------------------------------------------------
@@ -1860,7 +1933,7 @@ KBEngine.EntityCall = function()
 	this.newCall = function()
 	{  
 		if(this.bundle == null)
-			this.bundle = new KBEngine.Bundle();
+			this.bundle = KBEngine.Bundle.createObject();
 		
 		if(this.type == KBEngine.ENTITYCALL_TYPE_CELL)
 			this.bundle.newMessage(KBEngine.messages.Baseapp_onRemoteCallCellMethodFromClient);
@@ -2687,7 +2760,7 @@ KBEngine.KBEngineArgs = function()
 	this.updateHZ = @{KBE_UPDATEHZ} * 10;
 	this.serverHeartbeatTick = @{KBE_SERVER_EXTERNAL_TIMEOUT};
 
-	// Reference: http://www.kbengine.org/docs/programming/clientsdkprogramming.html, client types
+	// Reference: http://kbengine.github.io/docs/programming/clientsdkprogramming.html, client types
 	this.clientType = 5;
 
 	// 在Entity初始化时是否触发属性的set_*事件(callPropertysSetMethods)
@@ -2702,32 +2775,43 @@ KBEngine.KBEngineArgs = function()
 -----------------------------------------------------------------------------------------*/
 KBEngine.EventTypes =
 {
+	// ------------------------------------账号相关------------------------------------
+
 	// Create new account.
 	// <para> param1(string): accountName</para>
 	// <para> param2(string): password</para>
 	// <para> param3(bytes): datas // Datas by user defined. Data will be recorded into the KBE account database, you can access the datas through the script layer. If you use third-party account system, datas will be submitted to the third-party system.</para>
 	createAccount : "createAccount",
 
-	// Login to server.
-	// <para> param1(string): accountName</para>
-	// <para> param2(string): password</para>
-	// <para> param3(bytes): datas // Datas by user defined. Data will be recorded into the KBE account database, you can access the datas through the script layer. If you use third-party account system, datas will be submitted to the third-party system.</para>
-	login : "login",
-
-	// Logout to baseapp, called when exiting the client.	
-	logout : "logout",
-
-	// Relogin to baseapp.
-	reloginBaseapp : "reloginBaseapp",
+	// Create account feedback results.
+	// <para> param1(uint16): retcode. // server_errors</para>
+	// <para> param2(bytes): datas. // If you use third-party account system, the system may fill some of the third-party additional datas. </para>
+	onCreateAccountResult : "onCreateAccountResult",
 
 	// Request server binding account Email.
 	// <para> param1(string): emailAddress</para>
 	bindAccountEmail : "bindAccountEmail",
 
+	// Response from binding account Email request.
+	// <para> param1(uint16): retcode. // server_errors</para>
+	onBindAccountEmail : "onBindAccountEmail",
+
 	// Request to set up a new password for the account. Note: account must be online.
 	// <para> param1(string): old_password</para>
 	// <para> param2(string): new_password</para>
 	newPassword : "newPassword",
+
+	// Response from a new password request.
+	// <para> param1(uint16): retcode. // server_errors</para>
+	onNewPassword : "onNewPassword",
+
+	// Request to reset password for the account. Note: account must be online.
+	// <para> param1(string): username</para>
+	resetPassword : "resetPassword",
+
+	// Response from a reset password request.
+	// <para> param1(uint16): retcode. // server_errors</para>
+	onResetPassword : "onResetPassword",
 
 	// ------------------------------------连接相关------------------------------------
 
@@ -2744,10 +2828,17 @@ KBEngine.EventTypes =
 
 	// ------------------------------------logon相关------------------------------------
 
-	// Create account feedback results.
-	// <para> param1(uint16): retcode. // server_errors</para>
-	// <para> param2(bytes): datas. // If you use third-party account system, the system may fill some of the third-party additional datas. </para>
-	onCreateAccountResult : "onCreateAccountResult",
+	// Login to server.
+	// <para> param1(string): accountName</para>
+	// <para> param2(string): password</para>
+	// <para> param3(bytes): datas // Datas by user defined. Data will be recorded into the KBE account database, you can access the datas through the script layer. If you use third-party account system, datas will be submitted to the third-party system.</para>
+	login : "login",
+
+	// Logout to baseapp, called when exiting the client.	
+	logout : "logout",
+
+	// Relogin to baseapp.
+	reloginBaseapp : "reloginBaseapp",
 
 	// Engine version mismatch.
 	// <para> param1(string): clientVersion
@@ -2915,6 +3006,8 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 	this.fragmentDatasFlag = KBEngine.FragmentDataTypes.FRAGMENT_DATA_UNKNOW;
 	this.fragmentDatasRemain = 0;
 
+	this.msgStream = new KBEngine.MemoryStream(KBEngine.PACKET_MAX_SIZE_TCP);
+
 	this.resetSocket = function()
 	{
 		try
@@ -3000,6 +3093,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		KBEngine.Event.register(KBEngine.EventTypes.reloginBaseapp, KBEngine.app, "reloginBaseapp");
 		KBEngine.Event.register(KBEngine.EventTypes.bindAccountEmail, KBEngine.app, "bindAccountEmail");
 		KBEngine.Event.register(KBEngine.EventTypes.newPassword, KBEngine.app, "newPassword");
+		KBEngine.Event.register(KBEngine.EventTypes.resetPassword, KBEngine.app, "resetPassword");
 	}
 
 	this.uninstallEvents = function()
@@ -3010,11 +3104,12 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		KBEngine.Event.deregister(KBEngine.EventTypes.reloginBaseapp, KBEngine.app);
 		KBEngine.Event.deregister(KBEngine.EventTypes.bindAccountEmail, KBEngine.app);
 		KBEngine.Event.deregister(KBEngine.EventTypes.newPassword, KBEngine.app);
+		KBEngine.Event.deregister(KBEngine.EventTypes.resetPassword, KBEngine.app);
 	}
 	
 	this.hello = function()
 	{  
-		var bundle = new KBEngine.Bundle();
+		var bundle = KBEngine.Bundle.createObject();
 		
 		if(KBEngine.app.currserver == "loginapp")
 			bundle.newMessage(KBEngine.messages.Loginapp_hello);
@@ -3087,8 +3182,10 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 	
 	this.onmessage = function(msg)
 	{ 
-		var stream = new KBEngine.MemoryStream(msg.data);
+		var stream = KBEngine.app.msgStream;
+		stream.setbuffer(msg.data);
 		stream.wpos = msg.data.byteLength;
+
 		var app =  KBEngine.app;
 		var FragmentDataTypes = KBEngine.FragmentDataTypes;
 
@@ -3154,6 +3251,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 				if(app.fragmentStream != null && app.fragmentStream.length() >= app.currMsgLen)
 				{
 					msgHandler.handleMessage(app.fragmentStream);
+					app.fragmentStream.reclaimObject();
 					app.fragmentStream = null;
 				}
 				else if(stream.length() < app.currMsgLen && stream.length() > 0)
@@ -3173,7 +3271,6 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 
 				app.currMsgID = 0;
 				app.currMsgLen = 0;
-				app.fragmentStream = null;
 			}
 			else
 			{
@@ -3196,7 +3293,13 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		
 		app.fragmentDatasRemain = datasize - opsize;
 		app.fragmentDatasFlag = FragmentDataType;
-		app.fragmentStream = stream;
+
+		if(opsize > 0)
+		{
+			KBEngine.app.fragmentStream = KBEngine.MemoryStream.createObject();
+			KBEngine.app.fragmentStream.append(stream, stream.rpos, opsize);
+			stream.done();
+		}
 	}
 
 	this.mergeFragmentMessage = function(stream)
@@ -3219,22 +3322,20 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		{
 			var FragmentDataTypes = KBEngine.FragmentDataTypes;
 			fragmentStream.append(stream, stream.rpos, app.fragmentDatasRemain);
+			stream.rpos += app.fragmentDatasRemain;
 
 			switch(app.fragmentDatasFlag)
 			{
 				case FragmentDataTypes.FRAGMENT_DATA_MESSAGE_ID:
 					app.currMsgID = fragmentStream.readUint16();
-					app.fragmentStream = null;
 					break;
 
 				case FragmentDataTypes.FRAGMENT_DATA_MESSAGE_LENGTH:
 					app.currMsgLen = fragmentStream.readUint16();
-					app.fragmentStream = null;
 					break;
 
 				case FragmentDataTypes.FRAGMENT_DATA_MESSAGE_LENGTH1:
 					app.currMsgLen = fragmentStream.readUint32();
-					app.fragmentStream = null;
 					break;
 
 				case FragmentDataTypes.FRAGMENT_DATA_MESSAGE_BODY:
@@ -3242,7 +3343,6 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 					break;
 			}
 
-			stream.rpos += app.fragmentDatasRemain;
 			app.fragmentDatasFlag = FragmentDataTypes.FRAGMENT_DATA_UNKNOW;
 			app.fragmentDatasRemain = 0;
 			return false;
@@ -3286,7 +3386,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 			return;
 
 		var dateObject = new Date();
-		if((dateObject.getTime() - KBEngine.app.lastTickTime) / 1000 > (KBEngine.app.args.serverHeartbeatTick / 2))
+		if(KBEngine.app.args.serverHeartbeatTick > 0 && (dateObject.getTime() - KBEngine.app.lastTickTime) / 1000 > (KBEngine.app.args.serverHeartbeatTick / 2))
 		{
 			// 如果心跳回调接收时间小于心跳发送时间，说明没有收到回调
 			// 此时应该通知客户端掉线了
@@ -3300,7 +3400,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 			{
 				if(KBEngine.messages.Loginapp_onClientActiveTick != undefined)
 				{
-					var bundle = new KBEngine.Bundle();
+					var bundle = KBEngine.Bundle.createObject();
 					bundle.newMessage(KBEngine.messages.Loginapp_onClientActiveTick);
 					bundle.send(KBEngine.app);
 				}
@@ -3309,7 +3409,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 			{
 				if(KBEngine.messages.Baseapp_onClientActiveTick != undefined)
 				{
-					var bundle = new KBEngine.Bundle();
+					var bundle = KBEngine.Bundle.createObject();
 					bundle.newMessage(KBEngine.messages.Baseapp_onClientActiveTick);
 					bundle.send(KBEngine.app);
 				}
@@ -3365,7 +3465,16 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 			KBEngine.INFO_MSG("Client_onImportServerErrorsDescr: id=" + e.id + ", name=" + e.name + ", descr=" + e.descr);
 		}
 	}
-		
+
+	this.Client_onImportClientSdk = function(stream)
+	{
+		var remainingFiles = stream.readInt32();
+		var fileName = stream.readString();
+		var fileSize = stream.readInt32();
+		var fileDatas = stream.readBlob()
+		KBEngine.Event.fire("onImportClientSDK", remainingFiles, fileName, fileSize, fileDatas);
+	}
+
 	this.onOpenLoginapp_login = function()
 	{  
 		KBEngine.INFO_MSG("KBEngineApp::onOpenLoginapp_login: successfully!");
@@ -3376,7 +3485,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		
 		if(!KBEngine.app.loginappMessageImported)
 		{
-			var bundle = new KBEngine.Bundle();
+			var bundle = KBEngine.Bundle.createObject();
 			bundle.newMessage(KBEngine.messages.Loginapp_importClientMessages);
 			bundle.send(KBEngine.app);
 			KBEngine.app.socket.onmessage = KBEngine.app.Client_onImportClientMessages;  
@@ -3398,7 +3507,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		
 		if(!KBEngine.app.loginappMessageImported)
 		{
-			var bundle = new KBEngine.Bundle();
+			var bundle = KBEngine.Bundle.createObject();
 			bundle.newMessage(KBEngine.messages.Loginapp_importClientMessages);
 			bundle.send(KBEngine.app);
 			KBEngine.app.socket.onmessage = KBEngine.app.Client_onImportClientMessages;  
@@ -3423,7 +3532,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 			{
 				KBEngine.INFO_MSG("KBEngine::onImportClientMessagesCompleted(): send importServerErrorsDescr!");
 				KBEngine.app.serverErrorsDescrImported = true;
-				var bundle = new KBEngine.Bundle();
+				var bundle = KBEngine.Bundle.createObject();
 				bundle.newMessage(KBEngine.messages.Loginapp_importServerErrorsDescr);
 				bundle.send(KBEngine.app);
 			}
@@ -3444,7 +3553,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 			if(!KBEngine.app.entitydefImported)
 			{
 				KBEngine.INFO_MSG("KBEngineApp::onImportClientMessagesCompleted: start importEntityDef ...");
-				var bundle = new KBEngine.Bundle();
+				var bundle = KBEngine.Bundle.createObject();
 				bundle.newMessage(KBEngine.messages.Baseapp_importClientEntityDef);
 				bundle.send(KBEngine.app);
 				KBEngine.Event.fire("Baseapp_importClientEntityDef");
@@ -3864,7 +3973,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		}
 		else
 		{
-			var bundle = new KBEngine.Bundle();
+			var bundle = KBEngine.Bundle.createObject();
 			bundle.newMessage(KBEngine.messages.Loginapp_reqCreateAccount);
 			bundle.writeString(KBEngine.app.username);
 			bundle.writeString(KBEngine.app.password);
@@ -3875,7 +3984,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 	
 	this.bindAccountEmail = function(emailAddress)
 	{  
-		var bundle = new KBEngine.Bundle();
+		var bundle = KBEngine.Bundle.createObject();
 		bundle.newMessage(KBEngine.messages.Baseapp_reqAccountBindEmail);
 		bundle.writeInt32(KBEngine.app.entity_id);
 		bundle.writeString(KBEngine.app.password);
@@ -3885,7 +3994,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 	
 	this.newPassword = function(old_password, new_password)
 	{
-		var bundle = new KBEngine.Bundle();
+		var bundle = KBEngine.Bundle.createObject();
 		bundle.newMessage(KBEngine.messages.Baseapp_reqAccountNewPassword);
 		bundle.writeInt32(KBEngine.app.entity_id);
 		bundle.writeString(old_password);
@@ -3905,13 +4014,13 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 	
 	this.logout = function()
 	{
-		var bundle = new KBEngine.Bundle();
+		var bundle = KBEngine.Bundle.createObject();
 		bundle.newMessage(KBEngine.messages.Baseapp_logoutBaseapp);
 		bundle.writeUint64(KBEngine.app.entity_uuid);
 		bundle.writeInt32(KBEngine.app.entity_id);
 		bundle.send(KBEngine.app);
 	}
-
+	
 	this.login_loginapp = function(noconnect)
 	{  
 		if(noconnect)
@@ -3924,7 +4033,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		}
 		else
 		{
-			var bundle = new KBEngine.Bundle();
+			var bundle = KBEngine.Bundle.createObject();
 			bundle.newMessage(KBEngine.messages.Loginapp_login);
 			bundle.writeInt8(KBEngine.app.args.clientType); // clientType
 			bundle.writeBlob(KBEngine.app.clientdatas);
@@ -3942,7 +4051,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		
 		if(!KBEngine.app.loginappMessageImported)
 		{
-			var bundle = new KBEngine.Bundle();
+			var bundle = KBEngine.Bundle.createObject();
 			bundle.newMessage(KBEngine.messages.Loginapp_importClientMessages);
 			bundle.send(KBEngine.app);
 			KBEngine.app.socket.onmessage = KBEngine.app.Client_onImportClientMessages;  
@@ -3954,7 +4063,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		}
 	}
 
-	this.reset_password = function(username)
+	this.resetPassword = function(username)
 	{ 
 		KBEngine.app.reset();
 		KBEngine.app.username = username;
@@ -3973,7 +4082,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		}
 		else
 		{
-			var bundle = new KBEngine.Bundle();
+			var bundle = KBEngine.Bundle.createObject();
 			bundle.newMessage(KBEngine.messages.Loginapp_reqAccountResetPassword);
 			bundle.writeString(KBEngine.app.username);
 			bundle.send(KBEngine.app);
@@ -3987,7 +4096,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		
 		if(!KBEngine.app.baseappMessageImported)
 		{
-			var bundle = new KBEngine.Bundle();
+			var bundle = KBEngine.Bundle.createObject();
 			bundle.newMessage(KBEngine.messages.Baseapp_importClientMessages);
 			bundle.send(KBEngine.app);
 			KBEngine.app.socket.onmessage = KBEngine.app.Client_onImportClientMessages;  
@@ -4014,7 +4123,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		}
 		else
 		{
-			var bundle = new KBEngine.Bundle();
+			var bundle = KBEngine.Bundle.createObject();
 			bundle.newMessage(KBEngine.messages.Baseapp_loginBaseapp);
 			bundle.writeString(KBEngine.app.username);
 			bundle.writeString(KBEngine.app.password);
@@ -4048,7 +4157,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		KBEngine.INFO_MSG("KBEngineApp::onReOpenBaseapp: successfully!");
 		KBEngine.app.currserver = "baseapp";
 		
-		var bundle = new KBEngine.Bundle();
+		var bundle = KBEngine.Bundle.createObject();
 		bundle.newMessage(KBEngine.messages.Baseapp_reloginBaseapp);
 		bundle.writeString(KBEngine.app.username);
 		bundle.writeString(KBEngine.app.password);
@@ -4082,7 +4191,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		var failedcode = args.readUint16();
 		KBEngine.app.serverdatas = args.readBlob();
 		KBEngine.ERROR_MSG("KBEngineApp::Client_onLoginFailed: failedcode=" + failedcode + "(" + KBEngine.app.serverErrs[failedcode].name + "), datas(" + KBEngine.app.serverdatas.length + ")!");
-		KBEngine.Event.fire(KBEngine.EventTypes.onLoginFailed, failedcode);
+		KBEngine.Event.fire(KBEngine.EventTypes.onLoginFailed, failedcode, KBEngine.app.serverdatas);
 	}
 	
 	this.Client_onLoginSuccessfully = function(args)
@@ -4615,7 +4724,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 			player.entityLastLocalDir.y = player.direction.y;
 			player.entityLastLocalDir.z = player.direction.z;	
 							
-			var bundle = new KBEngine.Bundle();
+			var bundle = KBEngine.Bundle.createObject();
 			bundle.newMessage(KBEngine.messages.Baseapp_onUpdateDataFromClient);
 			bundle.writeFloat(player.position.x);
 			bundle.writeFloat(player.position.y);
@@ -4643,7 +4752,7 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 				entity.entityLastLocalPos = position;
 				entity.entityLastLocalDir = direction;
 
-				var bundle = new KBEngine.Bundle();
+				var bundle = KBEngine.Bundle.createObject();
 				bundle.newMessage(KBEngine.messages.Baseapp_onUpdateDataFromClientForControlledEntity);
 				bundle.writeInt32(entity.id);
 				bundle.writeFloat(position.x);
@@ -4763,12 +4872,34 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		KBEngine.app.entityServerPos.x = x;
 		KBEngine.app.entityServerPos.y = y;
 		KBEngine.app.entityServerPos.z = z;
+
+        var entity = KBEngine.app.player();
+        if(entity != undefined && entity.isControlled)
+        {
+			entity.position.x = KBEngine.app.entityServerPos.x;
+			entity.position.y = KBEngine.app.entityServerPos.y;
+			entity.position.z = KBEngine.app.entityServerPos.z;
+
+			KBEngine.Event.fire(KBEngine.EventTypes.updatePosition, entity);
+			entity.onUpdateVolatileData();
+        }
 	}
 	
 	this.Client_onUpdateBasePosXZ = function(x, z)
 	{
 		KBEngine.app.entityServerPos.x = x;
 		KBEngine.app.entityServerPos.z = z;
+
+        var entity = KBEngine.app.player();
+        if(entity != undefined && entity.isControlled)
+        {
+			entity.position.x = KBEngine.app.entityServerPos.x;
+			entity.position.y = KBEngine.app.entityServerPos.y;
+			entity.position.z = KBEngine.app.entityServerPos.z;
+
+			KBEngine.Event.fire(KBEngine.EventTypes.updatePosition, entity);
+			entity.onUpdateVolatileData();
+        }
 	}
 	
 	this.Client_onUpdateData = function(stream)
@@ -4815,129 +4946,404 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
-		var y = stream.readInt8();
-		var p = stream.readInt8();
-		var r = stream.readInt8();
+		var y = stream.readFloat();
+		var p = stream.readFloat();
+		var r = stream.readFloat();
 		
-		KBEngine.app._updateVolatileData(eid, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, y, p, r, -1);
+		KBEngine.app._updateVolatileData(eid, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, y, p, r, -1, false);
 	}
 	
 	this.Client_onUpdateData_yp = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
-		var y = stream.readInt8();
-		var p = stream.readInt8();
+		var y = stream.readFloat();
+		var p = stream.readFloat();
 		
-		KBEngine.app._updateVolatileData(eid, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, y, p, KBEngine.KBE_FLT_MAX, -1);
+		KBEngine.app._updateVolatileData(eid, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, y, p, KBEngine.KBE_FLT_MAX, -1, false);
 	}
 	
 	this.Client_onUpdateData_yr = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
-		var y = stream.readInt8();
-		var r = stream.readInt8();
+		var y = stream.readFloat();
+		var r = stream.readFloat();
 		
-		KBEngine.app._updateVolatileData(eid, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, y, KBEngine.KBE_FLT_MAX, r, -1);
+		KBEngine.app._updateVolatileData(eid, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, y, KBEngine.KBE_FLT_MAX, r, -1, false);
 	}
 	
 	this.Client_onUpdateData_pr = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
-		var p = stream.readInt8();
-		var r = stream.readInt8();
+		var p = stream.readFloat();
+		var r = stream.readFloat();
 		
-		KBEngine.app._updateVolatileData(eid, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, p, r, -1);
+		KBEngine.app._updateVolatileData(eid, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, p, r, -1, false);
 	}
 	
 	this.Client_onUpdateData_y = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
-		var y = stream.readInt8();
+		var y = stream.readFloat();
 		
-		KBEngine.app._updateVolatileData(eid, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, y, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, -1);
+		KBEngine.app._updateVolatileData(eid, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, y, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, -1, false);
 	}
 	
 	this.Client_onUpdateData_p = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
-		var p = stream.readInt8();
+		var p = stream.readFloat();
 		
-		KBEngine.app._updateVolatileData(eid, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, p, KBEngine.KBE_FLT_MAX, -1);
+		KBEngine.app._updateVolatileData(eid, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, p, KBEngine.KBE_FLT_MAX, -1, false);
 	}
 	
 	this.Client_onUpdateData_r = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
-		var r = stream.readInt8();
+		var r = stream.readFloat();
 		
-		KBEngine.app._updateVolatileData(eid, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, r, -1);
+		KBEngine.app._updateVolatileData(eid, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, r, -1, false);
 	}
 	
 	this.Client_onUpdateData_xz = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
-		var xz = stream.readPackXZ();
+		var x = stream.readFloat();
+		var z = stream.readFloat();
 		
-		KBEngine.app._updateVolatileData(eid, xz[0], KBEngine.KBE_FLT_MAX, xz[1], KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, 1);
+		KBEngine.app._updateVolatileData(eid, x, KBEngine.KBE_FLT_MAX, z, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, 1, false);
 	}
 	
 	this.Client_onUpdateData_xz_ypr = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
-		var xz = stream.readPackXZ();
+		var x = stream.readFloat();
+		var z = stream.readFloat();
 
-		var y = stream.readInt8();
-		var p = stream.readInt8();
-		var r = stream.readInt8();
+		var y = stream.readFloat();
+		var p = stream.readFloat();
+		var r = stream.readFloat();
 		
-		KBEngine.app._updateVolatileData(eid, xz[0], KBEngine.KBE_FLT_MAX, xz[1], y, p, r, 1);
+		KBEngine.app._updateVolatileData(eid, x, KBEngine.KBE_FLT_MAX, z, y, p, r, 1, false);
 	}
 	
 	this.Client_onUpdateData_xz_yp = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
-		var xz = stream.readPackXZ();
+		var x = stream.readFloat();
+		var z = stream.readFloat();
 
-		var y = stream.readInt8();
-		var p = stream.readInt8();
+		var y = stream.readFloat();
+		var p = stream.readFloat();
 		
-		KBEngine.app._updateVolatileData(eid, xz[0], KBEngine.KBE_FLT_MAX, xz[1], y, p, KBEngine.KBE_FLT_MAX, 1);
+		KBEngine.app._updateVolatileData(eid, x, KBEngine.KBE_FLT_MAX, z, y, p, KBEngine.KBE_FLT_MAX, 1, false);
 	}
 	
 	this.Client_onUpdateData_xz_yr = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
-		var xz = stream.readPackXZ();
+		var x = stream.readFloat();
+		var z = stream.readFloat();
 
-		var y = stream.readInt8();
-		var r = stream.readInt8();
+		var y = stream.readFloat();
+		var r = stream.readFloat();
 		
-		KBEngine.app._updateVolatileData(eid, xz[0], KBEngine.KBE_FLT_MAX, xz[1], y, KBEngine.KBE_FLT_MAX, r, 1);
+		KBEngine.app._updateVolatileData(eid, x, KBEngine.KBE_FLT_MAX, z, y, KBEngine.KBE_FLT_MAX, r, 1, false);
 	}
 	
 	this.Client_onUpdateData_xz_pr = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
+		var x = stream.readFloat();
+		var z = stream.readFloat();
+
+		var p = stream.readFloat();
+		var r = stream.readFloat();
+		
+		KBEngine.app._updateVolatileData(eid, x, KBEngine.KBE_FLT_MAX, z, KBEngine.KBE_FLT_MAX, p, r, 1, false);
+	}
+	
+	this.Client_onUpdateData_xz_y = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var x = stream.readFloat();
+		var z = stream.readFloat();
+
+		var y = stream.readFloat();
+		
+		KBEngine.app._updateVolatileData(eid, x, KBEngine.KBE_FLT_MAX, z, y, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, 1, false);
+	}
+	
+	this.Client_onUpdateData_xz_p = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var x = stream.readFloat();
+		var z = stream.readFloat();
+
+		var p = stream.readFloat();
+		
+		KBEngine.app._updateVolatileData(eid, xz[0], KBEngine.KBE_FLT_MAX, xz[1], KBEngine.KBE_FLT_MAX, p, KBEngine.KBE_FLT_MAX, 1, false);
+	}
+	
+	this.Client_onUpdateData_xz_r = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var x = stream.readFloat();
+		var z = stream.readFloat();
+
+		var r = stream.readFloat();
+		
+		KBEngine.app._updateVolatileData(eid, x, KBEngine.KBE_FLT_MAX, z, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, r, 1, false);
+	}
+	
+	this.Client_onUpdateData_xyz = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var x = stream.readFloat();
+		var y = stream.readFloat();
+		var z = stream.readFloat();
+		
+		KBEngine.app._updateVolatileData(eid, x, y, z, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, 0, false);
+	}
+	
+	this.Client_onUpdateData_xyz_ypr = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var x = stream.readFloat();
+		var y = stream.readFloat();
+		var z = stream.readFloat();
+		
+		var yaw = stream.readFloat();
+		var p = stream.readFloat();
+		var r = stream.readFloat();
+		
+		KBEngine.app._updateVolatileData(eid, x, y, z, yaw, p, r, 0, false);
+	}
+	
+	this.Client_onUpdateData_xyz_yp = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var x = stream.readFloat();
+		var y = stream.readFloat();
+		var z = stream.readFloat();
+		
+		var yaw = stream.readFloat();
+		var p = stream.readFloat();
+		
+		KBEngine.app._updateVolatileData(eid, x, y, z, yaw, p, KBEngine.KBE_FLT_MAX, 0, false);
+	}
+	
+	this.Client_onUpdateData_xyz_yr = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var x = stream.readFloat();
+		var y = stream.readFloat();
+		var z = stream.readFloat();
+		
+		var yaw = stream.readFloat();
+		var r = stream.readFloat();
+		
+		KBEngine.app._updateVolatileData(eid, x, y, z, yaw, KBEngine.KBE_FLT_MAX, r, 0, false);
+	}
+	
+	this.Client_onUpdateData_xyz_pr = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var x = stream.readFloat();
+		var y = stream.readFloat();
+		var z = stream.readFloat();
+		
+		var p = stream.readFloat();
+		var r = stream.readFloat();
+		
+		KBEngine.app._updateVolatileData(eid, x, y, z, KBEngine.KBE_FLT_MAX, p, r, 0, false);
+	}
+	
+	this.Client_onUpdateData_xyz_y = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var x = stream.readFloat();
+		var y = stream.readFloat();
+		var z = stream.readFloat();
+		
+		var yaw = stream.readFloat();
+		
+		KBEngine.app._updateVolatileData(eid, x, y, z, yaw, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, 0, false);
+	}
+	
+	this.Client_onUpdateData_xyz_p = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var x = stream.readFloat();
+		var y = stream.readFloat();
+		var z = stream.readFloat();
+		
+		var p = stream.readFloat();
+		
+		KBEngine.app._updateVolatileData(eid, x, y, z, KBEngine.KBE_FLT_MAX, p, KBEngine.KBE_FLT_MAX, 0, false);
+	}
+	
+	this.Client_onUpdateData_xyz_r = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var x = stream.readFloat();
+		var y = stream.readFloat();
+		var z = stream.readFloat();
+		
+		var p = stream.readFloat();
+		
+		KBEngine.app._updateVolatileData(eid, x, y, z, r, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, 0, false);
+	}
+	
+	//--------------------optiom------------------------//
+	this.Client_onUpdateData_ypr_optimized = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var y = stream.readInt8();
+		var p = stream.readInt8();
+		var r = stream.readInt8();
+		
+		KBEngine.app._updateVolatileData(eid, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, y, p, r, -1, true);
+	}
+	
+	this.Client_onUpdateData_yp_optimized = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var y = stream.readInt8();
+		var p = stream.readInt8();
+		
+		KBEngine.app._updateVolatileData(eid, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, y, p, KBEngine.KBE_FLT_MAX, -1, true);
+	}
+	
+	this.Client_onUpdateData_yr_optimized = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var y = stream.readInt8();
+		var r = stream.readInt8();
+		
+		KBEngine.app._updateVolatileData(eid, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, y, KBEngine.KBE_FLT_MAX, r, -1, true);
+	}
+	
+	this.Client_onUpdateData_pr_optimized = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var p = stream.readInt8();
+		var r = stream.readInt8();
+		
+		KBEngine.app._updateVolatileData(eid, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, p, r, -1, true);
+	}
+	
+	this.Client_onUpdateData_y_optimized = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var y = stream.readInt8();
+		
+		KBEngine.app._updateVolatileData(eid, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, y, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, -1, true);
+	}
+	
+	this.Client_onUpdateData_p_optimized = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var p = stream.readInt8();
+		
+		KBEngine.app._updateVolatileData(eid, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, p, KBEngine.KBE_FLT_MAX, -1, true);
+	}
+	
+	this.Client_onUpdateData_r_optimized = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var r = stream.readInt8();
+		
+		KBEngine.app._updateVolatileData(eid, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, r, -1, true);
+	}
+	
+	this.Client_onUpdateData_xz_optimized = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var xz = stream.readPackXZ();
+		
+		KBEngine.app._updateVolatileData(eid, xz[0], KBEngine.KBE_FLT_MAX, xz[1], KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, 1, true);
+	}
+	
+	this.Client_onUpdateData_xz_ypr_optimized = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var xz = stream.readPackXZ();
+
+		var y = stream.readInt8();
+		var p = stream.readInt8();
+		var r = stream.readInt8();
+		
+		KBEngine.app._updateVolatileData(eid, xz[0], KBEngine.KBE_FLT_MAX, xz[1], y, p, r, 1, true);
+	}
+	
+	this.Client_onUpdateData_xz_yp_optimized = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var xz = stream.readPackXZ();
+
+		var y = stream.readInt8();
+		var p = stream.readInt8();
+		
+		KBEngine.app._updateVolatileData(eid, xz[0], KBEngine.KBE_FLT_MAX, xz[1], y, p, KBEngine.KBE_FLT_MAX, 1, true);
+	}
+	
+	this.Client_onUpdateData_xz_yr_optimized = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
+		var xz = stream.readPackXZ();
+
+		var y = stream.readInt8();
+		var r = stream.readInt8();
+		
+		KBEngine.app._updateVolatileData(eid, xz[0], KBEngine.KBE_FLT_MAX, xz[1], y, KBEngine.KBE_FLT_MAX, r, 1, true);
+	}
+	
+	this.Client_onUpdateData_xz_pr_optimized = function(stream)
+	{
+		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
+		
 		var xz = stream.readPackXZ();
 
 		var p = stream.readInt8();
 		var r = stream.readInt8();
 		
-		KBEngine.app._updateVolatileData(eid, xz[0], KBEngine.KBE_FLT_MAX, xz[1], KBEngine.KBE_FLT_MAX, p, r, 1);
+		KBEngine.app._updateVolatileData(eid, xz[0], KBEngine.KBE_FLT_MAX, xz[1], KBEngine.KBE_FLT_MAX, p, r, 1, true);
 	}
 	
-	this.Client_onUpdateData_xz_y = function(stream)
+	this.Client_onUpdateData_xz_y_optimized = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
@@ -4945,10 +5351,10 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 
 		var y = stream.readInt8();
 		
-		KBEngine.app._updateVolatileData(eid, xz[0], KBEngine.KBE_FLT_MAX, xz[1], y, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, 1);
+		KBEngine.app._updateVolatileData(eid, xz[0], KBEngine.KBE_FLT_MAX, xz[1], y, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, 1, true);
 	}
 	
-	this.Client_onUpdateData_xz_p = function(stream)
+	this.Client_onUpdateData_xz_p_optimized = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
@@ -4956,10 +5362,10 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 
 		var p = stream.readInt8();
 		
-		KBEngine.app._updateVolatileData(eid, xz[0], KBEngine.KBE_FLT_MAX, xz[1], KBEngine.KBE_FLT_MAX, p, KBEngine.KBE_FLT_MAX, 1);
+		KBEngine.app._updateVolatileData(eid, xz[0], KBEngine.KBE_FLT_MAX, xz[1], KBEngine.KBE_FLT_MAX, p, KBEngine.KBE_FLT_MAX, 1, true);
 	}
 	
-	this.Client_onUpdateData_xz_r = function(stream)
+	this.Client_onUpdateData_xz_r_optimized = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
@@ -4967,20 +5373,20 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 
 		var r = stream.readInt8();
 		
-		KBEngine.app._updateVolatileData(eid, xz[0], KBEngine.KBE_FLT_MAX, xz[1], KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, r, 1);
+		KBEngine.app._updateVolatileData(eid, xz[0], KBEngine.KBE_FLT_MAX, xz[1], KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, r, 1, true);
 	}
 	
-	this.Client_onUpdateData_xyz = function(stream)
+	this.Client_onUpdateData_xyz_optimized = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
 		var xz = stream.readPackXZ();
 		var y = stream.readPackY();
 		
-		KBEngine.app._updateVolatileData(eid, xz[0], y, xz[1], KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, 0);
+		KBEngine.app._updateVolatileData(eid, xz[0], y, xz[1], KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, 0, true);
 	}
 	
-	this.Client_onUpdateData_xyz_ypr = function(stream)
+	this.Client_onUpdateData_xyz_ypr_optimized = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
@@ -4991,10 +5397,10 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		var p = stream.readInt8();
 		var r = stream.readInt8();
 		
-		KBEngine.app._updateVolatileData(eid, xz[0], y, xz[1], yaw, p, r, 0);
+		KBEngine.app._updateVolatileData(eid, xz[0], y, xz[1], yaw, p, r, 0, true);
 	}
 	
-	this.Client_onUpdateData_xyz_yp = function(stream)
+	this.Client_onUpdateData_xyz_yp_optimized = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
@@ -5004,10 +5410,10 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		var yaw = stream.readInt8();
 		var p = stream.readInt8();
 		
-		KBEngine.app._updateVolatileData(eid, xz[0], y, xz[1], yaw, p, KBEngine.KBE_FLT_MAX, 0);
+		KBEngine.app._updateVolatileData(eid, xz[0], y, xz[1], yaw, p, KBEngine.KBE_FLT_MAX, 0, true);
 	}
 	
-	this.Client_onUpdateData_xyz_yr = function(stream)
+	this.Client_onUpdateData_xyz_yr_optimized = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
@@ -5017,10 +5423,10 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		var yaw = stream.readInt8();
 		var r = stream.readInt8();
 		
-		KBEngine.app._updateVolatileData(eid, xz[0], y, xz[1], yaw, KBEngine.KBE_FLT_MAX, r, 0);
+		KBEngine.app._updateVolatileData(eid, xz[0], y, xz[1], yaw, KBEngine.KBE_FLT_MAX, r, 0, true);
 	}
 	
-	this.Client_onUpdateData_xyz_pr = function(stream)
+	this.Client_onUpdateData_xyz_pr_optimized = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
@@ -5030,10 +5436,10 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		var p = stream.readInt8();
 		var r = stream.readInt8();
 		
-		KBEngine.app._updateVolatileData(eid, x, y, z, KBEngine.KBE_FLT_MAX, p, r, 0);
+		KBEngine.app._updateVolatileData(eid, x, y, z, KBEngine.KBE_FLT_MAX, p, r, 0, true);
 	}
 	
-	this.Client_onUpdateData_xyz_y = function(stream)
+	this.Client_onUpdateData_xyz_y_optimized = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
@@ -5042,10 +5448,10 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		
 		var yaw = stream.readInt8();
 		
-		KBEngine.app._updateVolatileData(eid, xz[0], y, xz[1], yaw, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, 0);
+		KBEngine.app._updateVolatileData(eid, xz[0], y, xz[1], yaw, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, 0, true);
 	}
 	
-	this.Client_onUpdateData_xyz_p = function(stream)
+	this.Client_onUpdateData_xyz_p_optimized = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
@@ -5054,10 +5460,10 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		
 		var p = stream.readInt8();
 		
-		KBEngine.app._updateVolatileData(eid, xz[0], y, xz[1], KBEngine.KBE_FLT_MAX, p, KBEngine.KBE_FLT_MAX, 0);
+		KBEngine.app._updateVolatileData(eid, xz[0], y, xz[1], KBEngine.KBE_FLT_MAX, p, KBEngine.KBE_FLT_MAX, 0, true);
 	}
 	
-	this.Client_onUpdateData_xyz_r = function(stream)
+	this.Client_onUpdateData_xyz_r_optimized = function(stream)
 	{
 		var eid = KBEngine.app.getViewEntityIDFromStream(stream);
 		
@@ -5066,10 +5472,10 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		
 		var p = stream.readInt8();
 		
-		KBEngine.app._updateVolatileData(eid, xz[0], y, xz[1], r, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, 0);
+		KBEngine.app._updateVolatileData(eid, xz[0], y, xz[1], r, KBEngine.KBE_FLT_MAX, KBEngine.KBE_FLT_MAX, 0, true);
 	}
-	
-	this._updateVolatileData = function(entityID, x, y, z, yaw, pitch, roll, isOnGround)
+
+	this._updateVolatileData = function(entityID, x, y, z, yaw, pitch, roll, isOnGround, isOptimized)
 	{
 		var entity = KBEngine.app.entities[entityID];
 		if(entity == undefined)
@@ -5092,19 +5498,19 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		if(roll != KBEngine.KBE_FLT_MAX)
 		{
 			changeDirection = true;
-			entity.direction.x = KBEngine.int82angle(roll, false);
+			entity.direction.x = isOptimized ? KBEngine.int82angle(roll, false) : roll;
 		}
 
 		if(pitch != KBEngine.KBE_FLT_MAX)
 		{
 			changeDirection = true;
-			entity.direction.y = KBEngine.int82angle(pitch, false);
+			entity.direction.y = isOptimized ? KBEngine.int82angle(pitch, false) : pitch;
 		}
 		
 		if(yaw != KBEngine.KBE_FLT_MAX)
 		{
 			changeDirection = true;
-			entity.direction.z = KBEngine.int82angle(yaw, false);
+			entity.direction.z = isOptimized ? KBEngine.int82angle(yaw, false) : yaw;
 		}
 		
 		var done = false;
@@ -5118,15 +5524,24 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 		if(x != KBEngine.KBE_FLT_MAX || y != KBEngine.KBE_FLT_MAX || z != KBEngine.KBE_FLT_MAX)
 			positionChanged = true;
 
-		if (x == KBEngine.KBE_FLT_MAX) x = 0.0;
-		if (y == KBEngine.KBE_FLT_MAX) y = 0.0;
-		if (z == KBEngine.KBE_FLT_MAX) z = 0.0;
+		if (x == KBEngine.KBE_FLT_MAX) x = isOptimized ? 0.0 : entity.position.x;
+		if (y == KBEngine.KBE_FLT_MAX) y = isOptimized ? 0.0 : entity.position.y;
+		if (z == KBEngine.KBE_FLT_MAX) z = isOptimized ? 0.0 : entity.position.z;
         
 		if(positionChanged)
 		{
-			entity.position.x = x + KBEngine.app.entityServerPos.x;
-			entity.position.y = y + KBEngine.app.entityServerPos.y;
-			entity.position.z = z + KBEngine.app.entityServerPos.z;
+			if(isOptimized)
+			{
+				entity.position.x = x + KBEngine.app.entityServerPos.x;
+				entity.position.y = y + KBEngine.app.entityServerPos.y;
+				entity.position.z = z + KBEngine.app.entityServerPos.z;
+			}
+			else
+			{
+				entity.position.x = x;
+				entity.position.y = y;
+				entity.position.z = z;
+			}
 			
 			done = true;
 			KBEngine.Event.fire(KBEngine.EventTypes.updatePosition, entity);
@@ -5155,6 +5570,8 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 	
 	this.Client_onReqAccountResetPasswordCB = function(failedcode)
 	{
+		KBEngine.Event.fire(KBEngine.EventTypes.onResetPassword, failedcode);
+
 		if(failedcode != 0)
 		{
 			KBEngine.ERROR_MSG("KBEngineApp::Client_onReqAccountResetPasswordCB: " + KBEngine.app.username + " is failed! code=" + failedcode + "(" + KBEngine.app.serverErrs[failedcode].name + ")!");
@@ -5166,6 +5583,8 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 	
 	this.Client_onReqAccountBindEmailCB = function(failedcode)
 	{
+		KBEngine.Event.fire(KBEngine.EventTypes.onBindAccountEmail, failedcode);
+
 		if(failedcode != 0)
 		{
 			KBEngine.ERROR_MSG("KBEngineApp::Client_onReqAccountBindEmailCB: " + KBEngine.app.username + " is failed! code=" + failedcode +"(" + KBEngine.app.serverErrs[failedcode].name + ")!");
@@ -5177,6 +5596,8 @@ KBEngine.KBEngineApp = function(kbengineArgs)
 	
 	this.Client_onReqAccountNewPasswordCB = function(failedcode)
 	{
+		KBEngine.Event.fire(KBEngine.EventTypes.onNewPassword, failedcode);
+
 		if(failedcode != 0)
 		{
 			KBEngine.ERROR_MSG("KBEngineApp::Client_onReqAccountNewPasswordCB: " + KBEngine.app.username + " is failed! code=" + failedcode + "(" +KBEngine.app.serverErrs[failedcode].name + ")!");
@@ -5227,6 +5648,8 @@ KBEngine.destroy = function()
 	KBEngine.app.uninstallEvents();
 	KBEngine.app.reset();
 	KBEngine.app = undefined;
+
+	KBEngine.Event.clear();
 }
 
 try

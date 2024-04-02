@@ -25,7 +25,7 @@ namespace Network
 NetworkInterface::NetworkInterface(Network::EventDispatcher * pDispatcher,
 		int32 extlisteningTcpPort_min, int32 extlisteningTcpPort_max, int32 extlisteningUdpPort_min, int32 extlisteningUdpPort_max, const char * extlisteningInterface,
 		uint32 extrbuffer, uint32 extwbuffer,
-		int32 intlisteningPort, const char * intlisteningInterface,
+		int32 intlisteningPort_min, int32 intlisteningPort_max, const char * intlisteningInterface,
 		uint32 intrbuffer, uint32 intwbuffer):
 	extTcpEndpoint_(),
 	extUdpEndpoint_(),
@@ -65,16 +65,16 @@ NetworkInterface::NetworkInterface(Network::EventDispatcher * pDispatcher,
 		// 如果配置了对外端口范围， 如果范围过小这里extEndpoint_可能没有端口可用了
 		if (extlisteningUdpPort_min != -1)
 		{
-			KBE_ASSERT(extTcpEndpoint_.good() && "Channel::EXTERNAL-UDP: no available udp-port, "
+			KBE_ASSERT(extUdpEndpoint_.good() && "Channel::EXTERNAL-UDP: no available udp-port, "
 				"please check for kbengine[_defs].xml!\n");
 		}
 	}
 
-	if(intlisteningPort != -1)
+	if (intlisteningPort_min != -1)
 	{
 		pIntListenerReceiver_ = new ListenerTcpReceiver(intTcpEndpoint_, Channel::INTERNAL, *this);
 
-		this->initialize("INTERNAL-TCP", intlisteningPort, intlisteningPort,
+		this->initialize("INTERNAL-TCP", htons(intlisteningPort_min), htons(intlisteningPort_max),
 			intlisteningInterface, &intTcpEndpoint_, pIntListenerReceiver_, intrbuffer, intwbuffer);
 	}
 

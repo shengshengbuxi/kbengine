@@ -39,6 +39,9 @@ namespace MemoryStreamConverter
 	}
 }
 
+namespace KBEngine
+{
+
 template<typename T> inline void EndianConvert(T& val) 
 { 
 	if(!FGenericPlatformProperties::IsLittleEndian())
@@ -248,6 +251,13 @@ public:
 	MemoryStream &operator<<(const FString &value)
 	{
 		const TCHAR *serializedChar = value.GetCharArray().GetData();
+		
+		if(!serializedChar)
+		{
+			append((uint8)0);
+			return *this;
+		}
+
 		uint32 size = FCString::Strlen(serializedChar);
 
 		append(((uint8*)TCHAR_TO_ANSI(serializedChar)), size);
@@ -908,4 +918,6 @@ template<>
 inline void MemoryStream::read_skip<FString>()
 {
 	read_skip<char*>();
+}
+
 }

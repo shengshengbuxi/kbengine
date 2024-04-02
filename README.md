@@ -7,7 +7,7 @@ KBEngine
 
 ## Homepage
 
-	http://kbengine.org
+	https://kbengine.github.io/
 
 
 ## Releases
@@ -27,7 +27,7 @@ KBEngine
 
 ## Docs
 
-	Docs		: http://kbengine.org/docs/
+	Docs		: https://kbengine.github.io/docs/
 	API		: https://github.com/kbengine/kbengine/tree/master/docs
 
 
@@ -72,14 +72,14 @@ KBEngine
 
 ## 中文
 
-[官网](http://kbengine.org/cn)，[论坛](http://bbs.kbengine.org)，QQ交流群：716679842、367555003、461368412、16535321
+[官网](https://kbengine.github.io/cn/)，[论坛](https://github.com/kbengine/kbengine/discussions)，QQ交流群：461368412、16535321、716679842
 
 
 ## 什么是KBEngine?
 
 	一款开源的MMOG游戏服务端引擎，
 	仅Python脚本即可简单高效的完成任何游戏逻辑(支持热更新)，
-	使用配套客户端插件能够快速与(Unity3D、UE4、OGRE、HTML5、等等)结合形成一个完整的客户端。
+	使用配套客户端插件能够快速与（Unity3D、UE4、OGRE、HTML5、等等）结合形成一个完整的客户端。
 
 	引擎使用C++编写，开发者无需重复的实现游戏服务端通用的底层技术，
 	将精力真正集中到游戏开发层面上来，稳定可靠并且快速的打造各种网络游戏。

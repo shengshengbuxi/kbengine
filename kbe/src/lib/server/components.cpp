@@ -326,11 +326,11 @@ void Components::removeComponentByChannel(Network::Channel * pChannel, bool isSh
 
 				if (!isShutingdown && g_componentType != LOGGER_TYPE && g_componentType != INTERFACES_TYPE)
 				{
-					ERROR_MSG(fmt::format("Components::removeComponentByChannel: {} : {}, Abnormal exit! {}\n",
-						COMPONENT_NAME_EX(componentType), (*iter).cid, pChannel->condemnReason()));
+					ERROR_MSG(fmt::format("Components::removeComponentByChannel: {} : {}, Abnormal exit(reason={})! Channel(timestamp={}, lastReceivedTime={}, inactivityExceptionPeriod={})\n",
+						COMPONENT_NAME_EX(componentType), (*iter).cid, pChannel->condemnReason(), timestamp(), pChannel->lastReceivedTime(), pChannel->inactivityExceptionPeriod()));
 
 #if KBE_PLATFORM == PLATFORM_WIN32
-					printf("[ERROR]: %s.\n", (fmt::format("Components::removeComponentByChannel: {} : {}, Abnormal exit! {}\n",
+					printf("[ERROR]: %s.\n", (fmt::format("Components::removeComponentByChannel: {} : {}, Abnormal exit(reason={})!\n",
 						COMPONENT_NAME_EX(componentType), (*iter).cid, pChannel->condemnReason())).c_str());
 #endif
 				}
@@ -384,8 +384,51 @@ int Components::connectComponent(COMPONENT_TYPE componentType, int32 uid, COMPON
 		return -1;
 	}
 
+	int ret = -1;
+	pEndpoint->setnonblocking(true);
 	pEndpoint->addr(*pComponentInfos->pIntAddr);
-	int ret = pEndpoint->connect(pComponentInfos->pIntAddr->port, pComponentInfos->pIntAddr->ip);
+
+	for (int itry = 0; itry < 3; ++itry)
+	{
+		fd_set	frds, fwds;
+		struct timeval tv = { 0, 1000000 };
+
+		FD_ZERO(&frds);
+		FD_ZERO(&fwds);
+		FD_SET((int)(*pEndpoint), &frds);
+		FD_SET((int)(*pEndpoint), &fwds);
+
+		if (pEndpoint->connect(pComponentInfos->pIntAddr->port, pComponentInfos->pIntAddr->ip) == -1)
+		{
+			int selgot = select((*pEndpoint) + 1, &frds, &fwds, NULL, &tv);
+			if (selgot > 0)
+			{
+				if (FD_ISSET((*pEndpoint), &frds) || FD_ISSET((*pEndpoint), &fwds))
+				{
+					pEndpoint->connect(pComponentInfos->pIntAddr->port, pComponentInfos->pIntAddr->ip);
+
+					int error = kbe_lasterror();
+
+#if KBE_PLATFORM == PLATFORM_WIN32
+					if (error == WSAEISCONN || error == 0)
+#else
+					if (error == EISCONN)
+#endif
+					{
+						ret = 0;
+						break;
+					}
+				}
+
+				ret = -1;
+			}
+			else
+			{
+				ret = 0;
+				break;
+			}
+		}
+	}
 
 	if(ret == 0)
 	{
@@ -752,6 +795,10 @@ bool Components::updateComponentInfos(const Components::ComponentInfos* info)
 
 			return false;
 		}
+		else
+		{
+			break;
+		}
 	}
 	
 	epListen.setnodelay(true);
@@ -844,7 +891,7 @@ bool Components::updateComponentInfos(const Components::ComponentInfos* info)
 			return false;
 		}
 
-		Components::ComponentInfos* winfo = findComponent(info->cid);
+		Components::ComponentInfos* winfo = findComponent(info->componentType, info->cid);
 		if(winfo)
 		{
 			winfo->state = (COMPONENT_STATE)istate;

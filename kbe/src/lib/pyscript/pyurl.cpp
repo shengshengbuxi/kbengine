@@ -71,7 +71,7 @@ PyObject* PyUrl::__py_urlopen(PyObject* self, PyObject* args)
 	int argCount = (int)PyTuple_Size(args);
 	PyObject* pyCallback = NULL;
 	char* surl = NULL;
-	int ret = -1;
+	int ret = 0;
 	char* postData = NULL;
 	Py_ssize_t postDataLength = 0;
 	std::map<std::string, std::string> map_headers;
@@ -176,7 +176,7 @@ PyObject* PyUrl::__py_urlopen(PyObject* self, PyObject* args)
 		return NULL;
 	}
 
-	if (surl == NULL || ret == -1)
+	if (surl == NULL || !ret)
 	{
 		PyErr_Format(PyExc_AssertionError, "KBEngine::urlopen: args error!");
 		PyErr_PrintEx(0);
@@ -196,21 +196,31 @@ PyObject* PyUrl::__py_urlopen(PyObject* self, PyObject* args)
 	{
 		Network::Http::Request::Status result = pRequest->setHeader(map_headers);
 		if (Network::Http::Request::OK != result)
+		{
+			delete pRequest;
 			return PyLong_FromLong(result);
+		}
 	}
 
 	if (postDataLength > 0 && postData)
 	{
 		Network::Http::Request::Status result = pRequest->setPostData(postData, postDataLength);
 		if (Network::Http::Request::OK != result)
+		{
+			delete pRequest;
 			return PyLong_FromLong(result);
+		}
 	}
 
 	Network::Http::Request::Status result = pRequest->setURL(surl);
 	if (Network::Http::Request::OK != result)
+	{
+		delete pRequest;
 		return PyLong_FromLong(result);
+	}
 
-	return PyLong_FromLong(Network::Http::perform(pRequest));
+	Network::Http::Request::Status status = Network::Http::perform(pRequest);
+	return PyLong_FromLong(status);
 }
 
 //-------------------------------------------------------------------------------------

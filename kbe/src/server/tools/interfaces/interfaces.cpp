@@ -109,8 +109,9 @@ void Interfaces::handleTimeout(TimerHandle handle, void * arg)
 //-------------------------------------------------------------------------------------
 void Interfaces::handleMainTick()
 {
-	 //time_t t = ::time(NULL);
-	 //DEBUG_MSG("Interfaces::handleGameTick[%"PRTime"]:%u\n", t, time_);
+	// time_t t = ::time(NULL);
+	// static int kbeTime = 0;
+	// DEBUG_MSG(fmt::format("Interfaces::handleGameTick[{}]:{}\n", t, ++kbeTime));
 	
 	threadPool_.onMainThreadTick();
 	networkInterface().processChannels(&InterfacesInterface::messageHandlers);
@@ -126,6 +127,7 @@ bool Interfaces::initializeBegin()
 bool Interfaces::inInitialize()
 {
 	PythonApp::inInitialize();
+
 	// 广播自己的地址给网上上的所有kbemachine
 	Components::getSingleton().pHandler(this);
 	return true;
@@ -240,7 +242,7 @@ PyObject* Interfaces::__py_executeRawDatabaseCommand(PyObject* self, PyObject* a
 	int argCount = (int)PyTuple_Size(args);
 	PyObject* pycallback = NULL;
 	PyObject* pyDBInterfaceName = NULL;
-	int ret = -1;
+	int ret = 0;
 	ENTITY_ID eid = -1;
 
 	char* data = NULL;
@@ -255,7 +257,7 @@ PyObject* Interfaces::__py_executeRawDatabaseCommand(PyObject* self, PyObject* a
 	else if (argCount == 1)
 		ret = PyArg_ParseTuple(args, "s#", &data, &size);
 
-	if (ret == -1)
+	if (!ret)
 	{
 		PyErr_Format(PyExc_TypeError, "KBEngine::executeRawDatabaseCommand: args error!");
 		PyErr_PrintEx(0);
@@ -448,7 +450,7 @@ void Interfaces::onExecuteRawDatabaseCommandCB(Network::Channel* pChannel, KBEng
 		}
 		else
 		{
-			ERROR_MSG(fmt::format("Cellapp::onExecuteRawDatabaseCommandCB: can't found callback:{}.\n",
+			ERROR_MSG(fmt::format("Cellapp::onExecuteRawDatabaseCommandCB: not found callback:{}.\n",
 				callbackID));
 		}
 	}
@@ -653,7 +655,7 @@ void Interfaces::accountLoginResponse(std::string commitName, std::string realAc
 	if (iter == reqAccountLogin_requests_.end())
 	{
 		// 理论上不可能找不到，但如果真找不到，这是个很恐怖的事情，必须写日志记录下来
-		ERROR_MSG(fmt::format("Interfaces::accountLoginResponse: commitName '{}' not found!" \
+		ERROR_MSG(fmt::format("Interfaces::accountLoginResponse: commitName '{}' not found! " \
 			"realAccountName = '{}', extra datas = '{}', error code = '{}'\n", 
 			commitName, 
 			realAccountName, 

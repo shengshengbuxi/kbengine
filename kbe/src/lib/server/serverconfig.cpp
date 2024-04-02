@@ -24,7 +24,9 @@ ServerConfig::ServerConfig():
 	tick_max_sync_logs_(32),
 	channelCommon_(),
 	bitsPerSecondToClient_(0),
-	interfacesAddr_(),
+	interfacesAddress_(),
+	interfacesPort_min_(0),
+	interfacesPort_max_(0),
 	interfacesAddrs_(),
 	interfaces_orders_timeout_(0),
 	shutdown_time_(1.f),
@@ -443,27 +445,30 @@ bool ServerConfig::loadConfig(std::string fileName)
 	{
 		TiXmlNode* childnode = xml->enterNode(rootNode, "entryScriptFile");	
 		if(childnode != NULL)
-			strncpy((char*)&_interfacesInfo.entryScriptFile, xml->getValStr(childnode).c_str(), MAX_NAME);
+			strncpy((char*)&_interfacesInfo.entryScriptFile, xml->getValStr(childnode).c_str(), MAX_NAME - 1);
 
 		childnode = xml->enterNode(rootNode, "host");
 		if(childnode)
 		{
-			std::string ip = xml->getValStr(childnode);
-			Network::Address addr(ip, ntohs(interfacesAddr_.port));
-			interfacesAddr_ = addr;
+			interfacesAddress_ = xml->getValStr(childnode);
 		}
 
-		uint16 port = 0;
-		childnode = xml->enterNode(rootNode, "port");
+		childnode = xml->enterNode(rootNode, "port_min");
 		if(childnode)
 		{
-			port = xml->getValInt(childnode);
+			interfacesPort_min_ = xml->getValInt(childnode);
 
-			if(port <= 0)
-				port = KBE_INTERFACES_TCP_PORT;
+			if(interfacesPort_min_ <= 0)
+				interfacesPort_min_ = KBE_INTERFACES_TCP_PORT;
+		}
 
-			Network::Address addr(inet_ntoa((struct in_addr&)interfacesAddr_.ip), port);
-			interfacesAddr_ = addr;
+		childnode = xml->enterNode(rootNode, "port_max");
+		if (childnode)
+		{
+			interfacesPort_max_ = xml->getValInt(childnode);
+
+			if (interfacesPort_max_ <= 0)
+				interfacesPort_max_ = interfacesPort_min_;
 		}
 
 		node = xml->enterNode(rootNode, "SOMAXCONN");
@@ -504,11 +509,11 @@ bool ServerConfig::loadConfig(std::string fileName)
 	{
 		node = xml->enterNode(rootNode, "internalInterface");	
 		if(node != NULL)
-			strncpy((char*)&_cellAppInfo.internalInterface, xml->getValStr(node).c_str(), MAX_NAME);
+			strncpy((char*)&_cellAppInfo.internalInterface, xml->getValStr(node).c_str(), MAX_NAME - 1);
 
 		node = xml->enterNode(rootNode, "entryScriptFile");	
 		if(node != NULL)
-			strncpy((char*)&_cellAppInfo.entryScriptFile, xml->getValStr(node).c_str(), MAX_NAME);
+			strncpy((char*)&_cellAppInfo.entryScriptFile, xml->getValStr(node).c_str(), MAX_NAME - 1);
 		
 		TiXmlNode* viewNode = xml->enterNode(rootNode, "defaultViewRadius");
 		if(viewNode != NULL)
@@ -617,6 +622,18 @@ bool ServerConfig::loadConfig(std::string fileName)
 			{
 				_cellAppInfo.entity_posdir_additional_updates = xml->getValInt(childnode);
 			}
+
+			childnode = xml->enterNode(node, "entity_posdir_updates");
+			if (childnode)
+			{
+				TiXmlNode* node = xml->enterNode(childnode, "type");
+				if (node)
+					_cellAppInfo.entity_posdir_updates_type = xml->getValInt(node);
+
+				node = xml->enterNode(childnode, "smartThreshold");
+				if (node)
+					_cellAppInfo.entity_posdir_updates_smart_threshold = xml->getValInt(node);
+			}
 		}
 
 		node = xml->enterNode(rootNode, "telnet_service");
@@ -667,19 +684,19 @@ bool ServerConfig::loadConfig(std::string fileName)
 	{
 		node = xml->enterNode(rootNode, "entryScriptFile");	
 		if(node != NULL)
-			strncpy((char*)&_baseAppInfo.entryScriptFile, xml->getValStr(node).c_str(), MAX_NAME);
+			strncpy((char*)&_baseAppInfo.entryScriptFile, xml->getValStr(node).c_str(), MAX_NAME - 1);
 
 		node = xml->enterNode(rootNode, "internalInterface");	
 		if(node != NULL)
-			strncpy((char*)&_baseAppInfo.internalInterface, xml->getValStr(node).c_str(), MAX_NAME);
+			strncpy((char*)&_baseAppInfo.internalInterface, xml->getValStr(node).c_str(), MAX_NAME - 1);
 
 		node = xml->enterNode(rootNode, "externalInterface");	
 		if(node != NULL)
-			strncpy((char*)&_baseAppInfo.externalInterface, xml->getValStr(node).c_str(), MAX_NAME);
+			strncpy((char*)&_baseAppInfo.externalInterface, xml->getValStr(node).c_str(), MAX_NAME - 1);
 
 		node = xml->enterNode(rootNode, "externalAddress");	
 		if(node != NULL)
-			strncpy((char*)&_baseAppInfo.externalAddress, xml->getValStr(node).c_str(), MAX_NAME);
+			strncpy((char*)&_baseAppInfo.externalAddress, xml->getValStr(node).c_str(), MAX_NAME - 1);
 
 		node = xml->enterNode(rootNode, "externalTcpPorts_min");
 		if(node != NULL)	
@@ -845,7 +862,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 	{
 		node = xml->enterNode(rootNode, "entryScriptFile");
 		if (node != NULL)
-			strncpy((char*)&_dbmgrInfo.entryScriptFile, xml->getValStr(node).c_str(), MAX_NAME);
+			strncpy((char*)&_dbmgrInfo.entryScriptFile, xml->getValStr(node).c_str(), MAX_NAME - 1);
 		
 		node = xml->enterNode(rootNode, "telnet_service");
 		if (node != NULL)
@@ -932,7 +949,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 
 		node = xml->enterNode(rootNode, "internalInterface");	
 		if(node != NULL)
-			strncpy((char*)&_dbmgrInfo.internalInterface, xml->getValStr(node).c_str(), MAX_NAME);
+			strncpy((char*)&_dbmgrInfo.internalInterface, xml->getValStr(node).c_str(), MAX_NAME - 1);
 
 		TiXmlNode* databaseInterfacesNode = xml->enterNode(rootNode, "databaseInterfaces");	
 		if(databaseInterfacesNode != NULL)
@@ -943,6 +960,9 @@ bool ServerConfig::loadConfig(std::string fileName)
 				{
 					if (TiXmlNode::TINYXML_COMMENT == databaseInterfacesNode->Type())
 						continue;
+					
+					std::vector<std::string> missingFields;
+					missingFields.clear();
 
 					std::string name = databaseInterfacesNode->Value();
 
@@ -951,13 +971,15 @@ bool ServerConfig::loadConfig(std::string fileName)
 					if (!pDBInfo)
 						pDBInfo = &dbinfo;
 					
-					strncpy((char*)&pDBInfo->name, name.c_str(), MAX_NAME);
+					strncpy((char*)&pDBInfo->name, name.c_str(), MAX_NAME - 1);
 
 					TiXmlNode* interfaceNode = databaseInterfacesNode->FirstChild();
 					
 					node = xml->enterNode(interfaceNode, "pure");
 					if (node)
 						pDBInfo->isPure = xml->getValStr(node) == "true";
+					else
+						missingFields.push_back("pure");
 
 					// 默认库不允许是纯净库，引擎需要创建实体表
 					if (name == "default")
@@ -965,15 +987,26 @@ bool ServerConfig::loadConfig(std::string fileName)
 
 					node = xml->enterNode(interfaceNode, "type");
 					if(node != NULL)
-						strncpy((char*)&pDBInfo->db_type, xml->getValStr(node).c_str(), MAX_NAME);
+						strncpy((char*)&pDBInfo->db_type, xml->getValStr(node).c_str(), MAX_NAME - 1);
+					else
+						missingFields.push_back("type");
+
 					
 					node = xml->enterNode(interfaceNode, "host");
 					if(node != NULL)
-						strncpy((char*)&pDBInfo->db_ip, xml->getValStr(node).c_str(), MAX_IP);
+						strncpy((char*)&pDBInfo->db_ip, xml->getValStr(node).c_str(), MAX_IP - 1);
+					else
+						missingFields.push_back("host");
 
 					node = xml->enterNode(interfaceNode, "port");
 					if(node != NULL)
 						pDBInfo->db_port = xml->getValInt(node);
+					else
+						missingFields.push_back("port");
+
+					node = xml->enterNode(interfaceNode, "autoIncrementInit");
+					if (node != NULL)
+						strncpy((char*)&pDBInfo->db_autoIncrementInit, xml->getValStr(node).c_str(), MAX_BUF - 1);
 
 					node = xml->enterNode(interfaceNode, "auth");
 					if(node != NULL)
@@ -981,13 +1014,21 @@ bool ServerConfig::loadConfig(std::string fileName)
 						TiXmlNode* childnode = xml->enterNode(node, "password");
 						if(childnode)
 						{
-							strncpy((char*)&pDBInfo->db_password, xml->getValStr(childnode).c_str(), MAX_BUF * 10);
+							strncpy((char*)&pDBInfo->db_password, xml->getValStr(childnode).c_str(), MAX_BUF * 10 - 1);
+						}
+						else
+						{
+							missingFields.push_back("auth->password");
 						}
 
 						childnode = xml->enterNode(node, "username");
 						if(childnode)
 						{
-							strncpy((char*)&pDBInfo->db_username, xml->getValStr(childnode).c_str(), MAX_NAME);
+							strncpy((char*)&pDBInfo->db_username, xml->getValStr(childnode).c_str(), MAX_NAME - 1);
+						}
+						else
+						{
+							missingFields.push_back("auth->username");
 						}
 
 						childnode = xml->enterNode(node, "encrypt");
@@ -995,15 +1036,27 @@ bool ServerConfig::loadConfig(std::string fileName)
 						{
 							pDBInfo->db_passwordEncrypt = xml->getValStr(childnode) == "true";
 						}
+						else
+						{
+							missingFields.push_back("auth->encrypt");
+						}
+					}
+					else
+					{
+						missingFields.push_back("auth");
 					}
 						
 					node = xml->enterNode(interfaceNode, "databaseName");
 					if(node != NULL)
-						strncpy((char*)&pDBInfo->db_name, xml->getValStr(node).c_str(), MAX_NAME);
+						strncpy((char*)&pDBInfo->db_name, xml->getValStr(node).c_str(), MAX_NAME - 1);
+					else
+						missingFields.push_back("databaseName");
 
 					node = xml->enterNode(interfaceNode, "numConnections");
 					if(node != NULL)
 						pDBInfo->db_numConnections = xml->getValInt(node);
+					else
+						missingFields.push_back("numConnections");
 						
 					node = xml->enterNode(interfaceNode, "unicodeString");
 					if(node != NULL)
@@ -1013,12 +1066,24 @@ bool ServerConfig::loadConfig(std::string fileName)
 						{
 							pDBInfo->db_unicodeString_characterSet = xml->getValStr(childnode);
 						}
+						else
+						{
+							missingFields.push_back("unicodeString->characterSet");
+						}
 
 						childnode = xml->enterNode(node, "collation");
 						if(childnode)
 						{
 							pDBInfo->db_unicodeString_collation = xml->getValStr(childnode);
 						}
+						else
+						{
+							missingFields.push_back("unicodeString->collation");
+						}
+					}
+					else
+					{
+						missingFields.push_back("unicodeString");
 					}
 
 					if (pDBInfo->db_unicodeString_characterSet.size() == 0)
@@ -1038,11 +1103,22 @@ bool ServerConfig::loadConfig(std::string fileName)
 								(*dbinfo_iter).db_port == dbinfo.db_port &&
 								strcmp(dbinfo.db_name, (*dbinfo_iter).db_name) == 0)
 							{
-								ERROR_MSG(fmt::format("ServerConfig::loadConfig: databaseInterfaces, Conflict between \"{}\" and \"{}\", file={}!\n",
-									(*dbinfo_iter).name, dbinfo.name, fileName.c_str()));
+								ERROR_MSG(fmt::format("ServerConfig::loadConfig: databaseInterfaces, Conflict between \"{}=(databaseName={})\" and \"{}=(databaseName={})\", file={}!\n",
+									(*dbinfo_iter).name, (*dbinfo_iter).db_name, dbinfo.name, dbinfo.db_name, fileName.c_str()));
 
 								return false;
 							}
+						}
+
+						if (fileName == "server/kbengine_defaults.xml" && !missingFields.empty())
+						{
+							std::vector<std::string>::const_iterator iter = missingFields.begin();
+							for (; iter != missingFields.end(); iter++)
+							{
+								ERROR_MSG(fmt::format("ServerConfig::loadConfig: kbengine_defaults.xml error, databaseInterface({}) missing filed:{}.\n", name, *iter));
+							}
+
+							return false;
 						}
 
 						_dbmgrInfo.dbInterfaceInfos.push_back(dbinfo);
@@ -1067,6 +1143,11 @@ bool ServerConfig::loadConfig(std::string fileName)
 			_dbmgrInfo.allowEmptyDigest = (xml->getValStr(node) == "true");
 		}
 
+		node = xml->enterNode(rootNode, "shareDB");
+		if (node != NULL) {
+			_dbmgrInfo.isShareDB = (xml->getValStr(node) == "true");
+		}
+
 		node = xml->enterNode(rootNode, "account_system");
 		if(node != NULL)
 		{
@@ -1085,7 +1166,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 			childnode = xml->enterNode(node, "accountEntityScriptType");	
 			if(childnode != NULL)
 			{
-				strncpy((char*)&_dbmgrInfo.dbAccountEntityScriptType, xml->getValStr(childnode).c_str(), MAX_NAME);
+				strncpy((char*)&_dbmgrInfo.dbAccountEntityScriptType, xml->getValStr(childnode).c_str(), MAX_NAME - 1);
 			}
 
 			childnode = xml->enterNode(node, "account_registration");	
@@ -1120,7 +1201,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 	{
 		node = xml->enterNode(rootNode, "entryScriptFile");
 		if (node != NULL)
-			strncpy((char*)&_loginAppInfo.entryScriptFile, xml->getValStr(node).c_str(), MAX_NAME);
+			strncpy((char*)&_loginAppInfo.entryScriptFile, xml->getValStr(node).c_str(), MAX_NAME - 1);
 		
 		node = xml->enterNode(rootNode, "telnet_service");
 		if (node != NULL)
@@ -1146,15 +1227,15 @@ bool ServerConfig::loadConfig(std::string fileName)
 
 		node = xml->enterNode(rootNode, "internalInterface");	
 		if(node != NULL)
-			strncpy((char*)&_loginAppInfo.internalInterface, xml->getValStr(node).c_str(), MAX_NAME);
+			strncpy((char*)&_loginAppInfo.internalInterface, xml->getValStr(node).c_str(), MAX_NAME - 1);
 
 		node = xml->enterNode(rootNode, "externalInterface");	
 		if(node != NULL)
-			strncpy((char*)&_loginAppInfo.externalInterface, xml->getValStr(node).c_str(), MAX_NAME);
+			strncpy((char*)&_loginAppInfo.externalInterface, xml->getValStr(node).c_str(), MAX_NAME - 1);
 
 		node = xml->enterNode(rootNode, "externalAddress");	
 		if(node != NULL)
-			strncpy((char*)&_loginAppInfo.externalAddress, xml->getValStr(node).c_str(), MAX_NAME);
+			strncpy((char*)&_loginAppInfo.externalAddress, xml->getValStr(node).c_str(), MAX_NAME - 1);
 
 		node = xml->enterNode(rootNode, "externalTcpPorts_min");
 		if(node != NULL)	
@@ -1211,7 +1292,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 	{
 		node = xml->enterNode(rootNode, "internalInterface");	
 		if(node != NULL)
-			strncpy((char*)&_cellAppMgrInfo.internalInterface, xml->getValStr(node).c_str(), MAX_NAME);
+			strncpy((char*)&_cellAppMgrInfo.internalInterface, xml->getValStr(node).c_str(), MAX_NAME - 1);
 
 		node = xml->enterNode(rootNode, "SOMAXCONN");
 		if(node != NULL){
@@ -1224,7 +1305,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 	{
 		node = xml->enterNode(rootNode, "internalInterface");	
 		if(node != NULL)
-			strncpy((char*)&_baseAppMgrInfo.internalInterface, xml->getValStr(node).c_str(), MAX_NAME);
+			strncpy((char*)&_baseAppMgrInfo.internalInterface, xml->getValStr(node).c_str(), MAX_NAME - 1);
 
 		node = xml->enterNode(rootNode, "SOMAXCONN");
 		if(node != NULL){
@@ -1237,11 +1318,11 @@ bool ServerConfig::loadConfig(std::string fileName)
 	{
 		node = xml->enterNode(rootNode, "internalInterface");	
 		if(node != NULL)
-			strncpy((char*)&_kbMachineInfo.internalInterface, xml->getValStr(node).c_str(), MAX_NAME);
+			strncpy((char*)&_kbMachineInfo.internalInterface, xml->getValStr(node).c_str(), MAX_NAME - 1);
 
 		node = xml->enterNode(rootNode, "externalInterface");	
 		if(node != NULL)
-			strncpy((char*)&_kbMachineInfo.externalInterface, xml->getValStr(node).c_str(), MAX_NAME);
+			strncpy((char*)&_kbMachineInfo.externalInterface, xml->getValStr(node).c_str(), MAX_NAME - 1);
 
 		node = xml->enterNode(rootNode, "externalTcpPorts_min");
 		if(node != NULL)	
@@ -1300,19 +1381,31 @@ bool ServerConfig::loadConfig(std::string fileName)
 	{
 		node = xml->enterNode(rootNode, "entryScriptFile");	
 		if(node != NULL)
-			strncpy((char*)&_botsInfo.entryScriptFile, xml->getValStr(node).c_str(), MAX_NAME);
+			strncpy((char*)&_botsInfo.entryScriptFile, xml->getValStr(node).c_str(), MAX_NAME - 1);
 
 		node = xml->enterNode(rootNode, "internalInterface");	
 		if(node != NULL)
-			strncpy((char*)&_botsInfo.internalInterface, xml->getValStr(node).c_str(), MAX_NAME);
+			strncpy((char*)&_botsInfo.internalInterface, xml->getValStr(node).c_str(), MAX_NAME - 1);
 
 		node = xml->enterNode(rootNode, "host");	
 		if(node != NULL)
-			strncpy((char*)&_botsInfo.login_ip, xml->getValStr(node).c_str(), MAX_IP);
+			strncpy((char*)&_botsInfo.login_ip, xml->getValStr(node).c_str(), MAX_IP - 1);
 
-		node = xml->enterNode(rootNode, "port");	
+		node = xml->enterNode(rootNode, "port_min");	
 		if(node != NULL)
-			_botsInfo.login_port = xml->getValInt(node);
+			_botsInfo.login_port_min = xml->getValInt(node);
+
+		node = xml->enterNode(rootNode, "port_max");
+		if (node != NULL)
+			_botsInfo.login_port_max = xml->getValInt(node);
+
+		if (_botsInfo.login_port_min < 0)
+			_botsInfo.login_port_min = 0;
+			
+		if (_botsInfo.login_port_max < _botsInfo.login_port_min)
+			_botsInfo.login_port_max = _botsInfo.login_port_min;
+		
+		_botsInfo.login_port = _botsInfo.login_port_min;
 
 		node = xml->enterNode(rootNode, "isOnInitCallPropertysSetMethods");
 		if (node != NULL)
@@ -1400,11 +1493,11 @@ bool ServerConfig::loadConfig(std::string fileName)
 	{
 		node = xml->enterNode(rootNode, "internalInterface");	
 		if(node != NULL)
-			strncpy((char*)&_loggerInfo.internalInterface, xml->getValStr(node).c_str(), MAX_NAME);
+			strncpy((char*)&_loggerInfo.internalInterface, xml->getValStr(node).c_str(), MAX_NAME - 1);
 
 		node = xml->enterNode(rootNode, "entryScriptFile");
 		if (node != NULL)
-			strncpy((char*)&_loggerInfo.entryScriptFile, xml->getValStr(node).c_str(), MAX_NAME);
+			strncpy((char*)&_loggerInfo.entryScriptFile, xml->getValStr(node).c_str(), MAX_NAME - 1);
 
 		node = xml->enterNode(rootNode, "SOMAXCONN");
 		if(node != NULL){
@@ -1608,7 +1701,7 @@ void ServerConfig::updateExternalAddress(char* buf)
 			host = gethostbyname(buf);
 			if(host)
 			{
-				strncpy(buf, inet_ntoa(*(struct in_addr*)host->h_addr_list[0]), MAX_BUF);
+				strncpy(buf, inet_ntoa(*(struct in_addr*)host->h_addr_list[0]), MAX_BUF - 1);
 			}	
 		}
 	}
@@ -1625,7 +1718,8 @@ void ServerConfig::updateInfos(bool isPrint, COMPONENT_TYPE componentType, COMPO
 
 	if (g_dbmgr_addDefaultAddress)
 	{
-		interfacesAddrs_.insert(interfacesAddrs_.begin(), interfacesAddr_);
+		Network::Address interfacesAddr(interfacesAddress_, interfacesPort_min_);
+		interfacesAddrs_.insert(interfacesAddrs_.begin(), interfacesAddr);
 	}
 
 	//updateExternalAddress(getBaseApp().externalTcpAddr);
@@ -1726,7 +1820,7 @@ void ServerConfig::updateInfos(bool isPrint, COMPONENT_TYPE componentType, COMPO
 		{
 			INFO_MSG("server-configs:\n");
 			INFO_MSG(fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
-			//INFO_MSG("\texternalTcpAddr : %s\n", externalAddr.c_str()));
+			//INFO_MSG((fmt::format("\texternalTcpAddr : %s\n", externalTcpAddr.c_str())));
 			INFO_MSG(fmt::format("\tcomponentID : {}\n", info.componentID));
 
 			infostr += "server-configs:\n";
@@ -1745,7 +1839,7 @@ void ServerConfig::updateInfos(bool isPrint, COMPONENT_TYPE componentType, COMPO
 		{
 			INFO_MSG("server-configs:\n");
 			INFO_MSG(fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
-			//INFO_MSG("\texternalTcpAddr : %s\n", externalTcpAddr.c_str());
+			//INFO_MSG((fmt::format("\texternalTcpAddr : %s\n", externalTcpAddr.c_str())));
 			INFO_MSG(fmt::format("\tcomponentID : {}\n", info.componentID));
 
 			infostr += "server-configs:\n";
@@ -1771,7 +1865,7 @@ void ServerConfig::updateInfos(bool isPrint, COMPONENT_TYPE componentType, COMPO
 		{
 			INFO_MSG("server-configs:\n");
 			INFO_MSG(fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
-			//INFO_MSG("\texternalTcpAddr : %s\n", externalTcpAddr.c_str()));
+			//INFO_MSG((fmt::format("\texternalTcpAddr : %s\n", externalTcpAddr.c_str())));
 			INFO_MSG(fmt::format("\tcomponentID : {}\n", info.componentID));
 
 			infostr += "server-configs:\n";
@@ -1822,7 +1916,25 @@ void ServerConfig::updateInfos(bool isPrint, COMPONENT_TYPE componentType, COMPO
 		{
 			INFO_MSG("server-configs:\n");
 			INFO_MSG(fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
-			//INFO_MSG("\texternalTcpAddr : %s\n", externalTcpAddr.c_str()));
+			//INFO_MSG((fmt::format("\texternalTcpAddr : %s\n", externalTcpAddr.c_str())));
+			INFO_MSG(fmt::format("\tcomponentID : {}\n", info.componentID));
+
+			infostr += "server-configs:\n";
+			infostr += (fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
+			infostr += (fmt::format("\tcomponentID : {}\n", info.componentID));
+		}
+	}
+	else if (componentType == INTERFACES_TYPE)
+	{
+		ENGINE_COMPONENT_INFO info = getInterfaces();
+		info.internalTcpAddr = const_cast<Network::Address*>(&internalTcpAddr);
+		info.externalTcpAddr = const_cast<Network::Address*>(&externalTcpAddr);
+		info.componentID = componentID;
+		if (isPrint)
+		{
+			INFO_MSG("server-configs:\n");
+			INFO_MSG(fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
+			INFO_MSG((fmt::format("\texternalTcpAddr : %s\n", externalTcpAddr.c_str())));
 			INFO_MSG(fmt::format("\tcomponentID : {}\n", info.componentID));
 
 			infostr += "server-configs:\n";

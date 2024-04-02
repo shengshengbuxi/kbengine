@@ -1,3 +1,4 @@
+import sys
 import unittest
 from doctest import DocTestSuite
 from test import support
@@ -5,8 +6,8 @@ import weakref
 import gc
 
 # Modules under test
-_thread = support.import_module('_thread')
-threading = support.import_module('threading')
+import _thread
+import threading
 import _threading_local
 
 
@@ -64,14 +65,9 @@ class BaseLocalTest:
             # Simply check that the variable is correctly set
             self.assertEqual(local.x, i)
 
-        threads= []
-        for i in range(10):
-            t = threading.Thread(target=f, args=(i,))
-            t.start()
-            threads.append(t)
-
-        for t in threads:
-            t.join()
+        with support.start_threads(threading.Thread(target=f, args=(i,))
+                                   for i in range(10)):
+            pass
 
     def test_derived_cycle_dealloc(self):
         # http://bugs.python.org/issue6990
@@ -194,7 +190,7 @@ class BaseLocalTest:
         wr = weakref.ref(x)
         del x
         gc.collect()
-        self.assertIs(wr(), None)
+        self.assertIsNone(wr())
 
 
 class ThreadLocalTest(unittest.TestCase, BaseLocalTest):
