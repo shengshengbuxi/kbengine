@@ -490,6 +490,9 @@ bool EntityApp<E>::installPyModules()
 		}
 	}
 	
+	
+	onInstallPyModules();
+
 	// 安装入口模块
 	std::string entryScriptFileName = "";
 	if (componentType() == BASEAPP_TYPE)
@@ -503,15 +506,15 @@ bool EntityApp<E>::installPyModules()
 		entryScriptFileName = info.entryScriptFile;
 	}
 
-	if(entryScriptFileName.size() > 0)
+	if (entryScriptFileName.size() > 0)
 	{
-		PyObject *pyEntryScriptFileName = PyUnicode_FromString(entryScriptFileName.c_str());
+		PyObject* pyEntryScriptFileName = PyUnicode_FromString(entryScriptFileName.c_str());
 		entryScript_ = PyImport_Import(pyEntryScriptFileName);
 
 		if (PyErr_Occurred())
 		{
-			INFO_MSG(fmt::format("EntityApp::installPyModules: importing scripts/{}{}.py...\n", 
-				(componentType() == BASEAPP_TYPE ? "base/" : "cell/"), 
+			INFO_MSG(fmt::format("EntityApp::installPyModules: importing scripts/{}{}.py...\n",
+				(componentType() == BASEAPP_TYPE ? "base/" : "cell/"),
 				entryScriptFileName));
 
 			PyErr_PrintEx(0);
@@ -519,13 +522,12 @@ bool EntityApp<E>::installPyModules()
 
 		S_RELEASE(pyEntryScriptFileName);
 
-		if(entryScript_.get() == NULL)
+		if (entryScript_.get() == NULL)
 		{
 			return false;
 		}
 	}
 
-	onInstallPyModules();
 	return true;
 }
 
