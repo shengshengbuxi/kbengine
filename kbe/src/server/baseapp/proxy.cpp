@@ -234,7 +234,7 @@ void Proxy::onClientDeath(void)
 	addr(Network::Address::NONE);
 
 	clientEnabled_ = false;
-	CALL_ENTITY_AND_COMPONENTS_METHOD(this, SCRIPT_OBJECT_CALL_ARGS0(pyTempObj, const_cast<char*>("onClientDeath"), GETERR));
+	CALL_COMPONENTS_AND_ENTITY_METHOD(this, SCRIPT_OBJECT_CALL_ARGS0(pyTempObj, const_cast<char*>("onClientDeath"), GETERR));
 }
 
 //-------------------------------------------------------------------------------------
