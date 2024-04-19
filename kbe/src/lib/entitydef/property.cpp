@@ -522,6 +522,11 @@ PyObject* EntityComponentDescription::createFromStream(MemoryStream* mstream)
 {
 	EntityComponent* pEntityComponent = static_cast<EntityComponent*>(PropertyDescription::createFromStream(mstream));
 	pEntityComponent->pPropertyDescription(this);
+
+	if (EntityDef::context().currClientappID > 0) {
+		pEntityComponent->onAttached();
+	}
+		
 	return pEntityComponent;
 }
 

@@ -1206,13 +1206,8 @@ PyObject* EntityComponent::createFromStream(MemoryStream* mstream)
 	(*mstream) >> componentType_ >> ownerID_ >> ComponentDescrsType >> count;
 
 	bool isClientApp = clientappID_ > 0;
-
-	if (isClientApp)
-	{
-		// 如果是该进程实体的组件，此处需要绑定一次关系
-		onAttached();
-	}
-	else if (!owner_ && g_componentType == CELLAPP_TYPE)
+	
+	if (!owner_ && g_componentType == CELLAPP_TYPE)
 	{
 		// 这种情况是因为实体跨进程迁移导致，需要重新绑定一下owner
 		owner(true);
