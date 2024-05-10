@@ -325,15 +325,26 @@ PyObject* EntityCall::__py_pyGetComponent(PyObject* self, PyObject* args)
 	}
 
 	char* componentName = NULL;
+	PyObject* pyComponentType = NULL;
 	if (currargsSize == 1)
 	{
-		if (!PyArg_ParseTuple(args, "s", &componentName))
+		
+		if (!PyArg_ParseTuple(args, "O", &pyComponentType))
 		{
 			PyErr_Format(PyExc_AssertionError, "EntityCall::getComponent:: args error!");
 			PyErr_PrintEx(0);
 			Py_RETURN_NONE;
 		}
 
+		if (PyUnicode_Check(pyComponentType)) {
+			componentName = const_cast<char*>(PyUnicode_AsUTF8AndSize(pyComponentType, NULL));
+		}
+		else if (PyType_Check(pyComponentType))
+		{
+			PyObject* pyName = PyObject_GetAttrString(pyComponentType, "__name__");
+			componentName = const_cast<char*>(PyUnicode_AsUTF8AndSize(pyName, NULL));
+		}
+		
 		if (!componentName)
 		{
 			PyErr_Format(PyExc_AssertionError, "EntityCall::getComponent:: componentName error!");
@@ -345,12 +356,22 @@ PyObject* EntityCall::__py_pyGetComponent(PyObject* self, PyObject* args)
 	}
 	else if (currargsSize == 2)
 	{
+
 		PyObject* pyobj = NULL;
-		if (!PyArg_ParseTuple(args, "sO", &componentName, &pyobj))
+		if (!PyArg_ParseTuple(args, "OO", &pyComponentType, &pyobj))
 		{
 			PyErr_Format(PyExc_AssertionError, "EntityCall::getComponent:: args error!");
 			PyErr_PrintEx(0);
 			Py_RETURN_NONE;
+		}
+
+		if (PyUnicode_Check(pyComponentType)) {
+			componentName = const_cast<char*>(PyUnicode_AsUTF8AndSize(pyComponentType, NULL));
+		}
+		else if (PyType_Check(pyComponentType))
+		{
+			PyObject* pyName = PyObject_GetAttrString(pyComponentType, "__name__");
+			componentName = const_cast<char*>(PyUnicode_AsUTF8AndSize(pyName, NULL));
 		}
 
 		if (!componentName)
@@ -359,6 +380,7 @@ PyObject* EntityCall::__py_pyGetComponent(PyObject* self, PyObject* args)
 			PyErr_PrintEx(0);
 			Py_RETURN_NONE;
 		}
+
 
 		return pobj->pyGetComponent(componentName, (pyobj == Py_True));
 	}
