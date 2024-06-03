@@ -955,9 +955,12 @@ void Cellapp::onCreateCellEntityInNewSpaceFromBaseapp(Network::Channel* pChannel
 		sha.Result(digest);
 		e->setDirty((uint32*)&digest[0]);
 
+		e->createNamespace(cellData, true);
+
 		space->addEntity(e);
-		e->spaceID(space->id());
-		e->initializeEntity(cellData, true);
+		//e->spaceID(space->id());
+		//e->initializeEntity(cellData, true);
+		e->initializeScript();
 		Py_XDECREF(cellData);
 
 		// Ìí¼Óµ½space
