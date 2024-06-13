@@ -1,4 +1,6 @@
+import textwrap
 import types
+import typing
 import unittest
 
 
@@ -73,6 +75,37 @@ class FunctionPropertiesTest(FuncAttrsTest):
         self.cannot_set_attr(self.b, '__globals__', 2,
                              (AttributeError, TypeError))
 
+    def test___builtins__(self):
+        self.assertIs(self.b.__builtins__, __builtins__)
+        self.cannot_set_attr(self.b, '__builtins__', 2,
+                             (AttributeError, TypeError))
+
+        # bpo-42990: If globals is specified and has no "__builtins__" key,
+        # a function inherits the current builtins namespace.
+        def func(s): return len(s)
+        ns = {}
+        func2 = type(func)(func.__code__, ns)
+        self.assertIs(func2.__globals__, ns)
+        self.assertIs(func2.__builtins__, __builtins__)
+
+        # Make sure that the function actually works.
+        self.assertEqual(func2("abc"), 3)
+        self.assertEqual(ns, {})
+
+        # Define functions using exec() with different builtins,
+        # and test inheritance when globals has no "__builtins__" key
+        code = textwrap.dedent("""
+            def func3(s): pass
+            func4 = type(func3)(func3.__code__, {})
+        """)
+        safe_builtins = {'None': None}
+        ns = {'type': type, '__builtins__': safe_builtins}
+        exec(code, ns)
+        self.assertIs(ns['func3'].__builtins__, safe_builtins)
+        self.assertIs(ns['func4'].__builtins__, safe_builtins)
+        self.assertIs(ns['func3'].__globals__['__builtins__'], safe_builtins)
+        self.assertNotIn('__builtins__', ns['func4'].__globals__)
+
     def test___closure__(self):
         a = 12
         def f(): print(a)
@@ -82,6 +115,15 @@ class FunctionPropertiesTest(FuncAttrsTest):
         # don't have a type object handy
         self.assertEqual(c[0].__class__.__name__, "cell")
         self.cannot_set_attr(f, "__closure__", c, AttributeError)
+
+    def test_cell_new(self):
+        cell_obj = types.CellType(1)
+        self.assertEqual(cell_obj.cell_contents, 1)
+
+        cell_obj = types.CellType()
+        msg = "shouldn't be able to read an empty cell"
+        with self.assertRaises(ValueError, msg=msg):
+            cell_obj.cell_contents
 
     def test_empty_cell(self):
         def f(): print(a)
@@ -148,6 +190,23 @@ class FunctionPropertiesTest(FuncAttrsTest):
         self.assertEqual(self.b.__qualname__, 'd')
         # __qualname__ must be a string
         self.cannot_set_attr(self.b, '__qualname__', 7, TypeError)
+
+    def test___type_params__(self):
+        def generic[T](): pass
+        def not_generic(): pass
+        lambda_ = lambda: ...
+        T, = generic.__type_params__
+        self.assertIsInstance(T, typing.TypeVar)
+        self.assertEqual(generic.__type_params__, (T,))
+        for func in (not_generic, lambda_):
+            with self.subTest(func=func):
+                self.assertEqual(func.__type_params__, ())
+                with self.assertRaises(TypeError):
+                    del func.__type_params__
+                with self.assertRaises(TypeError):
+                    func.__type_params__ = 42
+                func.__type_params__ = (T,)
+                self.assertEqual(func.__type_params__, (T,))
 
     def test___code__(self):
         num_one, num_two = 7, 8

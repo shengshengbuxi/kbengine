@@ -5,7 +5,7 @@
    :platform: Unix
    :synopsis: GNU readline support for Python.
 
-.. sectionauthor:: Skip Montanaro <skip@pobox.com>
+.. sectionauthor:: Skip Montanaro <skip.montanaro@gmail.com>
 
 --------------
 
@@ -19,7 +19,7 @@ function.
 
 Readline keybindings may be configured via an initialization file, typically
 ``.inputrc`` in your home directory.  See `Readline Init File
-<https://cnswww.cns.cwru.edu/php/chet/readline/rluserman.html#SEC9>`_
+<https://tiswww.cwru.edu/php/chet/readline/rluserman.html#Readline-Init-File>`_
 in the GNU Readline manual for information about the format and
 allowable constructs of that file, and the capabilities of the
 Readline library in general.
@@ -213,6 +213,8 @@ Startup hooks
    if Python was compiled for a version of the library that supports it.
 
 
+.. _readline-completion:
+
 Completion
 ----------
 
@@ -258,7 +260,9 @@ with a custom completer, a different set of word delimiters should be set.
    Get the beginning or ending index of the completion scope.
    These indexes are the *start* and *end* arguments passed to the
    :c:data:`rl_attempted_completion_function` callback of the
-   underlying library.
+   underlying library.  The values may be different in the same
+   input editing scenario based on the underlying C readline implementation.
+   Ex: libedit is known to behave differently than libreadline.
 
 
 .. function:: set_completer_delims(string)

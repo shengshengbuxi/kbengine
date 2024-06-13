@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <ProjectOutputs>
+    <ProjectOutput>
+      <FullPath>H:\kbe\kbe\src\lib\python\PCbuild\amd64\python312_d.dll</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>H:\kbe\kbe\src\lib\python\PCbuild\amd64\_testembed_d.exe</FullPath>
+    </ProjectOutput>
+  </ProjectOutputs>
+  <ContentFiles />
+  <SatelliteDlls />
+  <NonRecipeFileRefs />
+</Project>
