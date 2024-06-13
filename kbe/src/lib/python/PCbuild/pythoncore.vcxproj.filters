@@ -54,9 +54,6 @@
     <ClInclude Include="..\Include\ceval.h">
       <Filter>Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\Include\code.h">
-      <Filter>Include</Filter>
-    </ClInclude>
     <ClInclude Include="..\Include\codecs.h">
       <Filter>Include</Filter>
     </ClInclude>
@@ -753,6 +750,9 @@
     <ClInclude Include="..\Include\internal\pycore_structseq.h">
       <Filter>Include\internal</Filter>
     </ClInclude>
+    <ClInclude Include="..\Include\internal\pycore_cfg.h" />
+    <ClInclude Include="..\Include\internal\pycore_frame.h" />
+    <ClInclude Include="..\Include\opcode.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Modules\_abc.c">
@@ -960,9 +960,6 @@
       <Filter>Modules\cjkcodecs</Filter>
     </ClCompile>
     <ClCompile Include="..\Objects\abstract.c">
-      <Filter>Objects</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Objects\accu.c">
       <Filter>Objects</Filter>
     </ClCompile>
     <ClCompile Include="..\Objects\boolobject.c">
@@ -1184,15 +1181,6 @@
     <ClCompile Include="..\Python\initconfig.c">
       <Filter>Python</Filter>
     </ClCompile>
-    <ClCompile Include="..\Python\intrinsics.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Python\instrumentation.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Python\legacy_tracing.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\Python\marshal.c">
       <Filter>Python</Filter>
     </ClCompile>
@@ -1394,6 +1382,10 @@
     <ClCompile Include="..\Modules\getbuildinfo.c">
       <Filter>Modules</Filter>
     </ClCompile>
+    <ClCompile Include="..\Python\intrinsics.c" />
+    <ClCompile Include="..\Python\instrumentation.c" />
+    <ClCompile Include="..\Python\legacy_tracing.c" />
+    <ClCompile Include="..\Python\deepfreeze\deepfreeze.c" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\PC\python_nt.rc">

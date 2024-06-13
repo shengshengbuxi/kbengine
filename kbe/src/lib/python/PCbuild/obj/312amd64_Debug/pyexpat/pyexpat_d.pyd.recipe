@@ -2,7 +2,7 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-      <FullPath>H:\kbe\kbe\src\lib\python\PCbuild\amd64\python312_d.dll</FullPath>
+      <FullPath>H:\kbe\kbe\bin\server\python312_d.dll</FullPath>
     </ProjectOutput>
     <ProjectOutput>
       <FullPath>H:\kbe\kbe\src\lib\python\PCbuild\amd64\pyexpat_d.pyd</FullPath>
