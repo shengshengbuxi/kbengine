@@ -2,7 +2,7 @@
 
 #ifndef KBENGINE_SCRIPT_LOCK_H
 #define KBENGINE_SCRIPT_LOCK_H
-
+#define PY_SSIZE_T_CLEAN
 #include "Python.h"
 
 namespace KBEngine{ namespace script{

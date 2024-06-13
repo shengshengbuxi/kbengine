@@ -4,7 +4,7 @@
 #define KBE_KBEMAIN_H
 
 #include "helper/memory_helper.h"
-
+#define PY_SSIZE_T_CLEAN
 #include "serverapp.h"
 #include "Python.h"
 #include "common/common.h"

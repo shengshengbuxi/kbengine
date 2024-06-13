@@ -2,7 +2,7 @@
 
 #ifndef KBE_SCRIPTOBJECT_H
 #define KBE_SCRIPTOBJECT_H
-
+#define PY_SSIZE_T_CLEAN
 #include <vector>	
 #include "Python.h"     
 #include "py_macros.h" 
