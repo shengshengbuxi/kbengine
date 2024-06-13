@@ -9,7 +9,6 @@ logs/
 *.plg
 *.opt
 *.aps
-*.aps
 *.sdf
 *.opensdf
 *.exp
@@ -7776,8 +7775,6 @@ kbengine_demos_assets/_tmp/ue4/Source/KBEnginePlugins/Engine/TestNoBaseBase.h
 kbengine_demos_assets/_tmp/ue4/Source/KBEnginePlugins/KBEnginePlugins.Build.cs
 kbengine_demos_assets/kbengine_ue4_plugins/Source/KBEnginePlugins/Engine/ClientSDKUpdater.cpp
 kbengine_demos_assets/kbengine_ue4_plugins/Source/KBEnginePlugins/Engine/ClientSDKUpdater.h
-kbengine_demos_assets/kbengine_ue4_plugins/Source/KBEnginePlugins/Engine/ClientSDKUpdater.cpp
-kbengine_demos_assets/kbengine_ue4_plugins/Source/KBEnginePlugins/Engine/ClientSDKUpdater.h
 kbe/src/.vs/config/applicationhost.config
 kbengine_demos_assets/kbengine_ue4_plugins/Source/KBEnginePlugins/Engine/KBETicker.cpp
 kbengine_demos_assets/kbengine_ue4_plugins/Source/KBEnginePlugins/Engine/KBETicker.h
@@ -8159,3 +8156,4 @@ kbengine_demos_assets-def/.vscode/ipch/d572960409cfb3fb/mmap_address.bin
 kbengine_demos_assets-def/.vscode/ipch/f0fe369686ea1e4c/mmap_address.bin
 kbengine_demos_assets-def/.vscode/ipch/6f826720859d1530/mmap_address.bin
 kbengine_demos_assets-def/.vscode/ipch/803b7eea0fbefcc9/mmap_address.bin
+*.log
