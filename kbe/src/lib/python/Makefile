@@ -11,7 +11,7 @@ else
 endif
 
 ifeq ($(pythonbuild), release)
-	CONFIG_ARGS += --enable-optimizations --with-openssl=/usr/local/openssl --disable-shared
+	CONFIG_ARGS += --with-openssl=/usr/local/openssl --disable-shared
 else
 ifneq (,$(findstring 64,$(KBE_CONFIG)))
 	CONFIG_ARGS += --enable-optimizations 
