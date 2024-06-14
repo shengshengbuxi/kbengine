@@ -22,6 +22,7 @@ namespace KBEngine{
 	SCRIPT_METHOD_DECLARE("deregisterEvent",				pyDeregisterEvent,					METH_VARARGS | METH_KEYWORDS,	0)	\
 	SCRIPT_METHOD_DECLARE("fireEvent",						pyFireEvent,						METH_VARARGS | METH_KEYWORDS,	0)	\
 	SCRIPT_METHOD_DECLARE("getComponent",					pyGetComponent,						METH_VARARGS | METH_KEYWORDS,	0)	\
+	SCRIPT_METHOD_DECLARE("getComponents",					pyGetComponents,					METH_VARARGS | METH_KEYWORDS,	0)	\
 
 	
 #define ENTITY_METHOD_DECLARE_END()																									\
@@ -1376,7 +1377,48 @@ public:																										\
 																											\
 		Py_RETURN_NONE;																						\
 	}																										\
-
+																											\
+	PyObject* pyGetComponents()																				\
+	{																										\
+		const ScriptDefModule::COMPONENTDESCRIPTION_MAP* pComponentDescrs =									\
+		& pScriptModule_->getComponentDescrs();																\
+		PyObject* pyObj = PyList_New(0);																	\
+																											\
+		ScriptDefModule::COMPONENTDESCRIPTION_MAP::const_iterator iter1 = pComponentDescrs->begin();		\
+		for (; iter1 != pComponentDescrs->end(); ++iter1)													\
+		{																									\
+			PyObject* pComponentProperty = PyObject_GetAttrString(this, iter1->first.c_str());				\
+			if (pComponentProperty)																			\
+			{																								\
+				if (PyObject_TypeCheck(pComponentProperty, EntityComponent::getScriptType()))				\
+				{																							\
+					PyList_Append(pyObj, pComponentProperty);												\
+				}																							\
+				else																						\
+				{																							\
+					PyErr_Format(PyExc_AssertionError, "%s.%s is not property of EntityComponent!",			\
+						scriptName(), iter1->first.c_str());												\
+					PyErr_PrintEx(0);																		\
+				}																							\
+																											\
+				Py_DECREF(pComponentProperty);																\
+			}																								\
+			else																							\
+			{																								\
+				PyErr_Clear();																				\
+			}																								\
+		}																									\
+																											\
+		return pyObj;																						\
+	}																										\
+																											\
+    static PyObject* __py_pyGetComponents(PyObject* self, PyObject* args)									\
+	{																										\
+		CLASS* pobj = static_cast<CLASS*>(self);															\
+																											\
+		return pobj->pyGetComponents();																		\
+	}																										\
+																											\
 
 #define ENTITY_CPP_IMPL(APP, CLASS)																			\
 	class EntityScriptTimerHandler : public TimerHandler													\
