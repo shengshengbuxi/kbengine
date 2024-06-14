@@ -4,14 +4,14 @@ all:: config.status
 CONFIG_ARGS =
 
 
-ifneq ("$(wildcard /usr/lib/x86_64-linux-gnu/libssl.a)", "")
-	CONFIG_SSL =
+ifneq ("$(wildcard /usr/local/openssl/lib/libssl.a)", "")
+	CONFIG_SSL = 
 else
 	CONFIG_SSL = --with-openssl=$(KBE_ROOT)/kbe/src/lib/dependencies/openssl
 endif
 
 ifeq ($(pythonbuild), release)
-	CONFIG_ARGS += --enable-optimizations 
+	CONFIG_ARGS += --enable-optimizations --with-openssl=/usr/local/openssl --disable-shared
 else
 ifneq (,$(findstring 64,$(KBE_CONFIG)))
 	CONFIG_ARGS += --enable-optimizations 
