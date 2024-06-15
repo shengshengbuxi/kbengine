@@ -11,7 +11,8 @@ PyAPI_FUNC(PyObject *) PySys_GetObject(const char *);
 PyAPI_FUNC(int) PySys_SetObject(const char *, PyObject *);
 
 Py_DEPRECATED(3.11) PyAPI_FUNC(void) PySys_SetArgv(int, wchar_t **);
-Py_DEPRECATED(3.11) PyAPI_FUNC(void) PySys_SetArgvEx(int, wchar_t **, int);
+//Py_DEPRECATED(3.11) PyAPI_FUNC(void) PySys_SetArgvEx(int, wchar_t **, int);
+PyAPI_FUNC(void) PySys_SetArgvEx(int, wchar_t**, int);
 //Py_DEPRECATED(3.11) PyAPI_FUNC(void) PySys_SetPath(const wchar_t *);
 PyAPI_FUNC(void) PySys_SetPath(const wchar_t*);
 
