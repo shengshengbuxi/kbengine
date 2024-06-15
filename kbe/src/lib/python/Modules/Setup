@@ -198,7 +198,7 @@ PYTHONPATH=$(COREPYTHONPATH)
 # Modules that require external libraries.
 
 #_bz2 _bz2module.c -lbz2
-_ctypes _ctypes/_ctypes.c _ctypes/callbacks.c _ctypes/callproc.c _ctypes/stgdict.c _ctypes/cfield.c -ldl -lffi -DHAVE_FFI_PREP_CIF_VAR -DHAVE_FFI_PREP_CLOSURE_LOC -DHAVE_FFI_CLOSURE_ALLOC
+# _ctypes _ctypes/_ctypes.c _ctypes/callbacks.c _ctypes/callproc.c _ctypes/stgdict.c _ctypes/cfield.c -ldl -lffi -DHAVE_FFI_PREP_CIF_VAR -DHAVE_FFI_PREP_CLOSURE_LOC -DHAVE_FFI_CLOSURE_ALLOC
 # The _dbm module supports NDBM, GDBM with compat module, and Berkeley DB.
 #_dbm _dbmmodule.c -lgdbm_compat -DUSE_GDBM_COMPAT
 #_gdbm _gdbmmodule.c -lgdbm
@@ -211,15 +211,15 @@ _ctypes _ctypes/_ctypes.c _ctypes/callbacks.c _ctypes/callproc.c _ctypes/stgdict
 #readline readline.c -lreadline -ltermcap
 
 # OpenSSL bindings
-_ssl _ssl.c $(OPENSSL_INCLUDES) $(OPENSSL_LDFLAGS) $(OPENSSL_LIBS)
-_hashlib _hashopenssl.c $(OPENSSL_INCLUDES) $(OPENSSL_LDFLAGS) -lcrypto
+# _ssl _ssl.c $(OPENSSL_INCLUDES) $(OPENSSL_LDFLAGS) $(OPENSSL_LIBS)
+# _hashlib _hashopenssl.c $(OPENSSL_INCLUDES) $(OPENSSL_LDFLAGS) -lcrypto
 
 # To statically link OpenSSL:
-_ssl _ssl.c $(OPENSSL_INCLUDES) $(OPENSSL_LDFLAGS) \
-    -l:libssl.a -Wl,--exclude-libs,libssl.a \
-    -l:libcrypto.a -Wl,--exclude-libs,libcrypto.a
-_hashlib _hashopenssl.c $(OPENSSL_INCLUDES) $(OPENSSL_LDFLAGS) \
-    -l:libcrypto.a -Wl,--exclude-libs,libcrypto.a
+# _ssl _ssl.c $(OPENSSL_INCLUDES) $(OPENSSL_LDFLAGS) \
+#     -l:libssl.a -Wl,--exclude-libs,libssl.a \
+#     -l:libcrypto.a -Wl,--exclude-libs,libcrypto.a
+# _hashlib _hashopenssl.c $(OPENSSL_INCLUDES) $(OPENSSL_LDFLAGS) \
+#     -l:libcrypto.a -Wl,--exclude-libs,libcrypto.a
 
 # The _tkinter module.
 #
@@ -287,11 +287,11 @@ _hashlib _hashopenssl.c $(OPENSSL_INCLUDES) $(OPENSSL_LDFLAGS) \
 # Some testing modules MUST be built as shared libraries.
 
 #*shared*
-_ctypes_test _ctypes/_ctypes_test.c
-_testcapi _testcapimodule.c
-_testimportmultiple _testimportmultiple.c
-_testmultiphase _testmultiphase.c
-_testsinglephase _testsinglephase.c
+# _ctypes_test _ctypes/_ctypes_test.c
+# _testcapi _testcapimodule.c
+# _testimportmultiple _testimportmultiple.c
+# _testmultiphase _testmultiphase.c
+# _testsinglephase _testsinglephase.c
 
 # ---
 # Uncommenting the following line tells makesetup that all following modules
