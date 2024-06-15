@@ -1995,7 +1995,7 @@ static bool execPython(COMPONENT_TYPE componentType)
 	strutil::kbe_replace(pyPaths.second, L";", L":");
 #endif
 
-	PySys_SetPath(pyPaths.second.c_str());
+	Py_SetPath(pyPaths.second.c_str());
 
 	PyObject* modulesNew = PySys_GetObject("modules");
 	PyDict_Merge(modulesNew, Script::getSingleton().getSysInitModules(), 0);
