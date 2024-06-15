@@ -211,15 +211,15 @@ _ctypes _ctypes/_ctypes.c _ctypes/callbacks.c _ctypes/callproc.c _ctypes/stgdict
 readline readline.c -lreadline -ltermcap
 
 # OpenSSL bindings
-#_ssl _ssl.c $(OPENSSL_INCLUDES) $(OPENSSL_LDFLAGS) $(OPENSSL_LIBS)
-#_hashlib _hashopenssl.c $(OPENSSL_INCLUDES) $(OPENSSL_LDFLAGS) -lcrypto
+_ssl _ssl.c $(OPENSSL_INCLUDES) $(OPENSSL_LDFLAGS) $(OPENSSL_LIBS)
+_hashlib _hashopenssl.c $(OPENSSL_INCLUDES) $(OPENSSL_LDFLAGS) -lcrypto
 
 # To statically link OpenSSL:
-# _ssl _ssl.c $(OPENSSL_INCLUDES) $(OPENSSL_LDFLAGS) \
-#     -l:libssl.a -Wl,--exclude-libs,libssl.a \
-#     -l:libcrypto.a -Wl,--exclude-libs,libcrypto.a
-# _hashlib _hashopenssl.c $(OPENSSL_INCLUDES) $(OPENSSL_LDFLAGS) \
-#     -l:libcrypto.a -Wl,--exclude-libs,libcrypto.a
+_ssl _ssl.c $(OPENSSL_INCLUDES) $(OPENSSL_LDFLAGS) \
+    -l:libssl.a -Wl,--exclude-libs,libssl.a \
+    -l:libcrypto.a -Wl,--exclude-libs,libcrypto.a
+_hashlib _hashopenssl.c $(OPENSSL_INCLUDES) $(OPENSSL_LDFLAGS) \
+    -l:libcrypto.a -Wl,--exclude-libs,libcrypto.a
 
 # The _tkinter module.
 #
