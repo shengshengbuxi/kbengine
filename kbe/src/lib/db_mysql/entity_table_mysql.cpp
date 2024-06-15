@@ -694,8 +694,9 @@ EntityTableItem* EntityTableMysql::createItem(std::string type, std::string defa
 	}
 	else if(type == "UNICODE")
 	{
-		return new EntityTableItemMysql_UNICODE(fmt::format("varchar(@DATALEN@) not null DEFAULT '{}'", defaultVal), 
-			0, NOT_NULL_FLAG | BINARY_FLAG, FIELD_TYPE_VAR_STRING);
+		return new EntityTableItemMysql_UNICODE("blob", 0, NOT_NULL_FLAG | BINARY_FLAG, FIELD_TYPE_VAR_STRING);
+		/*return new EntityTableItemMysql_UNICODE(fmt::format("varchar(@DATALEN@) not null DEFAULT '{}'", defaultVal), 
+			0, NOT_NULL_FLAG | BINARY_FLAG, FIELD_TYPE_VAR_STRING);*/
 	}
 	else if(type == "PYTHON")
 	{
