@@ -489,7 +489,7 @@ inline const T & max( const T & a, const T & b )
 #define MAX_BUF 256
 
 // �����buf����
-#define SQL_BUF 131070 
+#define SQL_BUF 262140 
 
 #ifndef MAX_PATH
 #define MAX_PATH 260
