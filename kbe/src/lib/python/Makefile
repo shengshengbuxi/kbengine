@@ -4,7 +4,7 @@ all:: config.status
 CONFIG_ARGS =
 
 
-ifneq ("$(wildcard /usr/local/openssl/lib/libssl.a)", "")
+ifneq ("$(wildcard /usr/local/openssl/lib64/libssl.a)", "")
 	CONFIG_SSL = 
 else
 	CONFIG_SSL = --with-openssl=$(KBE_ROOT)/kbe/src/lib/dependencies/openssl

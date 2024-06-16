@@ -28066,7 +28066,7 @@ fi
 printf %s "checking for include/openssl/ssl.h in $ssldir... " >&6; }
             if test -f "$ssldir/include/openssl/ssl.h"; then
                 OPENSSL_INCLUDES="-I$ssldir/include"
-                OPENSSL_LDFLAGS="-L$ssldir/lib"
+                OPENSSL_LDFLAGS="-L${KBE_ROOT}/kbe/src/libs"
                 OPENSSL_LIBS="-lssl -lcrypto"
                 found=true
                 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
