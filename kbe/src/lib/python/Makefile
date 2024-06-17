@@ -13,10 +13,10 @@ else
 endif
 
 ifeq ($(pythonbuild), release)
-	CONFIG_ARGS += --with-openssl=/usr/local/openssl --disable-shared --enable-optimizations
+	CONFIG_ARGS += --with-openssl=/usr/local/openssl --enable-optimizations
 else
 ifneq (,$(findstring 64,$(KBE_CONFIG)))
-	CONFIG_ARGS += --enable-optimizations --with-openssl=/usr/local/openssl --disable-shared
+	CONFIG_ARGS += --enable-optimizations --with-openssl=/usr/local/openssl
 endif
 endif
 

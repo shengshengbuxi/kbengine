@@ -1995,7 +1995,6 @@ static bool execPython(COMPONENT_TYPE componentType)
 	strutil::kbe_replace(pyPaths.second, L";", L":");
 #endif
 
-	//Py_SetPath(pyPaths.second.c_str());
 	PySys_SetPath(pyPaths.second.c_str());
 
 	PyObject* modulesNew = PySys_GetObject("modules");
