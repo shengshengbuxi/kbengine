@@ -21,13 +21,13 @@
     <_SSLDLL Include="$(opensslOutDir)\libssl$(_DLLSuffix).dll" />
     <_SSLDLL Include="$(opensslOutDir)\libssl$(_DLLSuffix).pdb" />
   </ItemGroup>
-  <Target Name="_CopySSLDLL"
+  <!--<Target Name="_CopySSLDLL"
           Inputs="@(_SSLDLL)"
           Outputs="@(_SSLDLL->'$(OutDir)%(Filename)%(Extension)')"
           Condition="$(SkipCopySSLDLL) == ''"
           AfterTargets="Build">
     <Copy SourceFiles="@(_SSLDLL)" DestinationFolder="$(OutDir)" />
-  </Target>
+  </Target>-->
   <Target Name="_CleanSSLDLL" Condition="$(SkipCopySSLDLL) == ''" BeforeTargets="Clean">
     <Delete Files="@(_SSLDLL->'$(OutDir)%(Filename)%(Extension)')" TreatErrorsAsWarnings="true" />
   </Target>
