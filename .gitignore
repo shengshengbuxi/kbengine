@@ -289,7 +289,7 @@ Thumbs.db
 /kbe/src/lib/python/config.status
 /kbe/src/lib/python/pybuilddir.txt
 /kbe/src/lib/python/pyconfig.h
-/kbe/src/lib/python/python
+# /kbe/src/lib/python/python
 /kbe/src/lib/python/python-config
 /kbe/src/lib/python/python-config.py
 /kbe/src/lib/python/python-gdb.py
