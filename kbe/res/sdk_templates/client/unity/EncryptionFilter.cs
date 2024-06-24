@@ -7,12 +7,12 @@
 
     public abstract class EncryptionFilter
     {
-        public abstract void encrypt(MemoryStream stream);
+        public abstract void encrypt(KBEMemoryStream stream);
 
-        public abstract void decrypt(MemoryStream stream);
+        public abstract void decrypt(KBEMemoryStream stream);
         public abstract void decrypt(byte[] buffer, int startIndex, int length);
 
-        public abstract bool send(PacketSenderBase sender, MemoryStream stream);
+        public abstract bool send(PacketSenderBase sender, KBEMemoryStream stream);
         public abstract bool recv(MessageReaderBase reader, byte[] buffer, UInt32 rpos, UInt32 len);
     }
 
@@ -21,8 +21,8 @@
     {
         private Blowfish _blowfish = new Blowfish();
         
-        private MemoryStream _packet = new MemoryStream();
-        MemoryStream _enctyptStrem = new MemoryStream();
+        private KBEMemoryStream _packet = new KBEMemoryStream();
+        KBEMemoryStream _enctyptStrem = new KBEMemoryStream();
 
         private UINT8 _padSize = 0;
         private UInt16 _packLen = 0;
@@ -42,7 +42,7 @@
             return _blowfish.key();
         }
 
-        public override void encrypt(MemoryStream stream)
+        public override void encrypt(KBEMemoryStream stream)
         {
             int padSize = 0;
             if (stream.length() % BLOCK_SIZE != 0)
@@ -50,8 +50,8 @@
                 padSize = (int)(BLOCK_SIZE - (stream.length() % BLOCK_SIZE));
                 stream.wpos += padSize;
 
-				if(stream.wpos > MemoryStream.BUFFER_MAX)
-					Debug.LogError("BlowfishFilter::encrypt: stream.wpos(" + stream.wpos + ") > MemoryStream.BUFFER_MAX(" + MemoryStream.BUFFER_MAX + ")!");
+				if(stream.wpos > KBEMemoryStream.BUFFER_MAX)
+					Debug.LogError("BlowfishFilter::encrypt: stream.wpos(" + stream.wpos + ") > KBEMemoryStream.BUFFER_MAX(" + KBEMemoryStream.BUFFER_MAX + ")!");
             }
 
             _blowfish.encipher(stream.data(), (int)stream.length());
@@ -65,7 +65,7 @@
             _enctyptStrem.clear();
         }
 
-        public override void decrypt(MemoryStream stream)
+        public override void decrypt(KBEMemoryStream stream)
         {
             _blowfish.decipher(stream.data(), stream.rpos, (int)stream.length());
         }
@@ -75,7 +75,7 @@
             _blowfish.decipher(buffer, startIndex, length);
         }
 
-        public override bool send(PacketSenderBase sender, MemoryStream stream)
+        public override bool send(PacketSenderBase sender, KBEMemoryStream stream)
         {
             if(!_blowfish.isGood())
             {

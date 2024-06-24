@@ -171,7 +171,7 @@ bool ClientSDK::saveFile()
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDK::create(const std::string& path)
+bool ClientSDK::create(const std::string& path, const std::string& spaceName)
 {
 	basepath_ = path;
 
@@ -192,7 +192,7 @@ bool ClientSDK::create(const std::string& path)
 		return false;
 	}
 
-	if (!copyPluginsSourceToPath(getpath))
+	if (!copyPluginsSourceToPath(getpath, spaceName))
 		return false;
 
 	if (!writeServerErrorDescrsModule())
@@ -241,7 +241,7 @@ void ClientSDK::onCreateServerErrorDescrsModuleFileName()
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDK::copyPluginsSourceToPath(const std::string& path)
+bool ClientSDK::copyPluginsSourceToPath(const std::string& path, const std::string& spaceName_)
 {
 	wchar_t* wpath = strutil::char2wchar(path.c_str());
 	std::wstring sourcePath = wpath;
@@ -324,6 +324,11 @@ bool ClientSDK::copyPluginsSourceToPath(const std::string& path)
 		strutil::kbe_replace(filebody, "@{KBE_UPDATEHZ}", fmt::format("{}", g_kbeSrvConfig.gameUpdateHertz()));
 		strutil::kbe_replace(filebody, "@{KBE_LOGIN_PORT}", fmt::format("{}", g_kbeSrvConfig.getLoginApp().externalTcpPorts_min));
 		strutil::kbe_replace(filebody, "@{KBE_SERVER_EXTERNAL_TIMEOUT}", fmt::format("{}", (int)g_kbeSrvConfig.channelExternalTimeout()));
+		strutil::kbe_replace(filebody, "namespace KBEngine", "namespace " + spaceName_);
+		strutil::kbe_replace(filebody, "KBEngine.Event.", spaceName_ + ".Event.");
+		strutil::kbe_replace(filebody, "KBEngine.NetworkInterfaceBase.", spaceName_ + ".NetworkInterfaceBase.");
+		strutil::kbe_replace(filebody, "using KBEngine;", "");
+		strutil::kbe_replace(filebody, "KBEngine.", spaceName_ + ".");
 		output << filebody;
 
 		output.close();
@@ -1181,138 +1186,139 @@ bool ClientSDK::writeTypes()
 				std::string type = itemIter->second->dataType->getName();
 				std::string itemTypeName = itemIter->first;
 				std::string itemTypeAliasName = itemIter->second->dataType->aliasName();
+				std::string des = itemIter->second->des;
 
 				if (type == "INT8")
 				{
-					if (!writeTypeItemType_INT8(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_INT8(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 				else if (type == "INT16")
 				{
-					if (!writeTypeItemType_INT16(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_INT16(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 				else if (type == "INT32")
 				{
-					if (!writeTypeItemType_INT32(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_INT32(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 				else if (type == "INT64")
 				{
-					if (!writeTypeItemType_INT64(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_INT64(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 				else if (type == "UINT8")
 				{
-					if (!writeTypeItemType_UINT8(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_UINT8(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 				else if (type == "UINT16")
 				{
-					if (!writeTypeItemType_UINT16(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_UINT16(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 				else if (type == "UINT32")
 				{
-					if (!writeTypeItemType_UINT32(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_UINT32(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 				else if (type == "UINT64")
 				{
-					if (!writeTypeItemType_UINT64(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_UINT64(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 				else if (type == "FLOAT")
 				{
-					if (!writeTypeItemType_FLOAT(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_FLOAT(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 				else if (type == "DOUBLE")
 				{
-					if (!writeTypeItemType_DOUBLE(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_DOUBLE(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 				else if (type == "STRING")
 				{
-					if (!writeTypeItemType_STRING(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_STRING(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 				else if (type == "UNICODE")
 				{
-					if (!writeTypeItemType_UNICODE(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_UNICODE(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 				else if (type == "PYTHON")
 				{
-					if (!writeTypeItemType_PYTHON(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_PYTHON(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 				else if (type == "PY_DICT")
 				{
-					if (!writeTypeItemType_PY_DICT(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_PY_DICT(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 				else if (type == "PY_TUPLE")
 				{
-					if (!writeTypeItemType_PY_TUPLE(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_PY_TUPLE(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 				else if (type == "PY_LIST")
 				{
-					if (!writeTypeItemType_PY_LIST(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_PY_LIST(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 				else if (type == "BLOB")
 				{
-					if (!writeTypeItemType_BLOB(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_BLOB(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 				else if (type == "ARRAY")
 				{
-					if (!writeTypeItemType_ARRAY(itemTypeName, itemTypeAliasName, itemIter->second->dataType))
+					if (!writeTypeItemType_ARRAY(itemTypeName, itemTypeAliasName, itemIter->second->dataType, des))
 						return false;
 				}
 				else if (type == "FIXED_DICT")
 				{
-					if (!writeTypeItemType_FIXED_DICT(itemTypeName, itemTypeAliasName, itemIter->second->dataType))
+					if (!writeTypeItemType_FIXED_DICT(itemTypeName, itemTypeAliasName, itemIter->second->dataType, des))
 						return false;
 				}
 #ifdef CLIENT_NO_FLOAT
 				else if (type == "VECTOR2")
 				{
-					if (!writeTypeItemType_VECTOR2(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_VECTOR2(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 				else if (type == "VECTOR3")
 				{
-					if (!writeTypeItemType_VECTOR3(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_VECTOR3(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 				else if (type == "VECTOR4")
 				{
-					if (!writeTypeItemType_VECTOR4(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_VECTOR4(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 #else
 				else if (type == "VECTOR2")
 				{
-					if (!writeTypeItemType_VECTOR2(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_VECTOR2(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 				else if (type == "VECTOR3")
 				{
-					if (!writeTypeItemType_VECTOR3(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_VECTOR3(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 				else if (type == "VECTOR4")
 				{
-					if (!writeTypeItemType_VECTOR4(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_VECTOR4(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 #endif
 				else if (type == "ENTITYCALL")
 				{
-					if (!writeTypeItemType_ENTITYCALL(itemTypeName, itemTypeAliasName))
+					if (!writeTypeItemType_ENTITYCALL(itemTypeName, itemTypeAliasName, des))
 						return false;
 				}
 			}
@@ -1361,7 +1367,7 @@ bool ClientSDK::writeTypes()
 			if (!writeTypeBegin(typeName, pDataType))
 				return false;
 
-			if(!writeTypeItemType_AliasName(typeName, pDataType->getName()))
+			if(!writeTypeItemType_AliasName(typeName, pDataType->getName(), ""))
 				return false;
 
 			if (!writeTypeEnd(typeName, pDataType))

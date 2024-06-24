@@ -64,12 +64,12 @@
 			return id == KBEngineApp.app.entity_id;
 		}
 		
-		public virtual void onRemoteMethodCall(MemoryStream stream)
+		public virtual void onRemoteMethodCall(KBEMemoryStream stream)
 		{
 			// 动态生成
 		}
 
-		public virtual void onUpdatePropertys(MemoryStream stream)
+		public virtual void onUpdatePropertys(KBEMemoryStream stream)
 		{
 			// 动态生成
 		}
@@ -391,9 +391,9 @@
 		
 		}
 
-		public virtual List<EntityComponent> getComponents(string componentName, bool all)
+		public virtual List<KBEEntityComponent> getComponents(string componentName, bool all)
 		{
-			List<EntityComponent> founds = new List<EntityComponent>();
+			List<KBEEntityComponent> founds = new List<KBEEntityComponent>();
 			return founds;
 		}
     }

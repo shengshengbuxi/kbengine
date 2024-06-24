@@ -33,7 +33,7 @@
 		protected EncryptionFilter _filter = null;
 
 		public bool connected = false;
-		
+
 		public class ConnectState
 		{
 			// for connect
@@ -46,7 +46,7 @@
 			public NetworkInterfaceBase networkInterface = null;
 			public string error = "";
 		}
-		
+
 		public NetworkInterfaceBase()
 		{
 			reset();
@@ -62,7 +62,7 @@
 		{
 			return _socket;
 		}
-		
+
 		public virtual void reset()
 		{
 			_packetReceiver = null;
@@ -79,14 +79,14 @@
 				}
 				catch (Exception e)
 				{
-
+					Dbg.ERROR_MSG(string.Format("NetworkInterfaceBase::reset(), close socket error: {0}", e.ToString()));
 				}
 
 				_socket.Close(0);
 				_socket = null;
 			}
 		}
-		
+
 
 		public virtual void close()
 		{
@@ -120,7 +120,7 @@
 		{
 			return ((_socket != null) && (_socket.Connected == true));
 		}
-		
+
 		public void _onConnectionState(ConnectState state)
 		{
 			KBEngine.Event.deregisterIn(this);
@@ -148,8 +148,8 @@
 		private static void connectCB(IAsyncResult ar)
 		{
 			ConnectState state = null;
-			
-			try 
+
+			try
 			{
 				// Retrieve the socket from the state object.
 				state = (ConnectState) ar.AsyncState;
@@ -158,8 +158,8 @@
 				state.socket.EndConnect(ar);
 
 				Event.fireIn("_onConnectionState", new object[] { state });
-			} 
-			catch (Exception e) 
+			}
+			catch (Exception e)
 			{
 				state.error = e.ToString();
 				Event.fireIn("_onConnectionState", new object[] { state });
@@ -186,7 +186,7 @@
 		private void _asyncConnectCB(IAsyncResult ar)
 		{
 			ConnectState state = (ConnectState)ar.AsyncState;
-			
+
 			onAsyncConnectCB(state);
 
 			Dbg.DEBUG_MSG(string.Format("NetworkInterfaceBase::_asyncConnectCB(), connect to '{0}:{1}' finish. error = '{2}'", state.connectIP, state.connectPort, state.error));
@@ -222,14 +222,14 @@
 
 			Dbg.DEBUG_MSG("connect to " + ip + ":" + port + " ...");
 			connected = false;
-			
+
 			// 先注册一个事件回调，该事件在当前线程触发
 			Event.registerIn("_onConnectionState", this, "_onConnectionState");
 
 			asyncConnectMethod.BeginInvoke(state, new AsyncCallback(this._asyncConnectCB), state);
 		}
 
-		public virtual bool send(MemoryStream stream)
+		public virtual bool send(KBEMemoryStream stream)
 		{
 			if (!valid())
 			{

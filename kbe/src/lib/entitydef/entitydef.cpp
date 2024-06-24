@@ -1,6 +1,6 @@
 // Copyright 2008-2018 Yolo Technologies, Inc. All Rights Reserved. https://www.comblockengine.com
 
-
+#define PY_SSIZE_T_CLEAN
 #include "entitydef.h"
 #include "scriptdef_module.h"
 #include "datatypes.h"

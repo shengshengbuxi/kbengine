@@ -40,7 +40,7 @@
 			return _networkInterface;
 		}
 
-		public abstract bool send(MemoryStream stream);
+		public abstract bool send(KBEMemoryStream stream);
 
 		protected void _startSend()
 		{

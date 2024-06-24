@@ -104,7 +104,7 @@
 			return kcp_;
 		}
 
-		public override bool send(MemoryStream stream)
+		public override bool send(KBEMemoryStream stream)
 		{
 			if (!valid())
 			{
@@ -170,7 +170,7 @@
 					}
                     else
                     {
-                        MemoryStream stream = new MemoryStream();
+                        KBEMemoryStream stream = new KBEMemoryStream();
                         Array.Copy(buffer, 0, stream.data(), stream.wpos, length);
                         stream.wpos = length;
                         string helloAck = stream.readString();
