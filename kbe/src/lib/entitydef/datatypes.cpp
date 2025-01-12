@@ -98,7 +98,35 @@ bool DataTypes::loadTypes(std::string& file)
 		return true;
 
 	SmartPointer<XML> xml(new XML(Resmgr::getSingleton().matchRes(file).c_str()));
-	return loadTypes(xml);
+
+	//return loadTypes(xml);
+
+	// file = "../xxx/types.xml"，获取该路径下的子目录user_types的所有xml文件
+	std::string path = file.substr(0, file.find_last_of("/\\") + 1) + "user_types/";
+	if (access(path.c_str(), 0) != 0)
+		return loadTypes(xml);
+	bool baseXML = loadTypes(xml);
+	if (!baseXML)
+		return false;
+	std::vector<std::wstring> files;
+	std::wstring wpath = string_to_wstring(path);
+	Resmgr::getSingleton().listPathRes(wpath, L"xml", files);
+	for (size_t i = 0; i < files.size(); ++i)
+	{
+		ERROR_MSG(fmt::format("DataTypes::loadTypes: load user_types file {}.\n", std::string(files[i].begin(), files[i].end()).c_str()));
+		std::string file = std::string(files[i].begin(), files[i].end());
+		SmartPointer<XML> xml2(new XML(Resmgr::getSingleton().matchRes(file).c_str()));
+		if (!loadTypes(xml2))
+			return false;
+	}
+	return baseXML;
+}
+
+std::wstring DataTypes::string_to_wstring(const std::string& str) {
+	std::wstring wstr;
+	wstr.resize(str.size());
+	std::copy(str.begin(), str.end(), wstr.begin());
+	return wstr;
 }
 
 //-------------------------------------------------------------------------------------

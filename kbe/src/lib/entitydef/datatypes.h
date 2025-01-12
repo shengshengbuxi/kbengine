@@ -49,6 +49,8 @@ public:
 
 	static std::vector< std::string > getBaseTypeNames();
 
+	static std::wstring string_to_wstring(const std::string& str);
+
 protected:
 	static DATATYPE_MAP dataTypes_;
 	static DATATYPE_MAP dataTypesLowerName_;
