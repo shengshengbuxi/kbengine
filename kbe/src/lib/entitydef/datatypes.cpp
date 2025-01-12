@@ -113,7 +113,7 @@ bool DataTypes::loadTypes(std::string& file)
 	Resmgr::getSingleton().listPathRes(wpath, L"xml", files);
 	for (size_t i = 0; i < files.size(); ++i)
 	{
-		ERROR_MSG(fmt::format("DataTypes::loadTypes: load user_types file {}.\n", std::string(files[i].begin(), files[i].end()).c_str()));
+		//ERROR_MSG(fmt::format("DataTypes::loadTypes: load user_types file {}.\n", std::string(files[i].begin(), files[i].end()).c_str()));
 		std::string file = std::string(files[i].begin(), files[i].end());
 		SmartPointer<XML> xml2(new XML(Resmgr::getSingleton().matchRes(file).c_str()));
 		if (!loadTypes(xml2))
