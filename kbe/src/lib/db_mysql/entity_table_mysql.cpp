@@ -15,6 +15,7 @@
 #ifndef CODE_INLINE
 #include "entity_table_mysql.inl"
 #endif
+#include <string>
 
 namespace KBEngine { 
 
@@ -382,10 +383,19 @@ bool EntityTableMysql::syncToDB(DBInterface* pdbi)
 		kbe_snprintf(autoIncrement_str, SQL_BUF, " AUTO_INCREMENT=%s", autoIncrementInit);
 	}
 
-	kbe_snprintf(sql_str, SQL_BUF, "CREATE TABLE IF NOT EXISTS " ENTITY_TABLE_PERFIX "_%s "
-			"(id bigint(20) unsigned AUTO_INCREMENT, PRIMARY KEY idKey (id)%s)"
-		"ENGINE=" MYSQL_ENGINE_TYPE "%s", 
-		tableName(), exItems.c_str(), autoIncrement_str);
+	std::string sqlStr = "CREATE TABLE IF NOT EXISTS " ENTITY_TABLE_PERFIX "_";
+	sqlStr += tableName();
+	sqlStr += " (id bigint(20) unsigned AUTO_INCREMENT, PRIMARY KEY idKey (id)";
+	sqlStr += exItems;
+	sqlStr += ") ENGINE=" MYSQL_ENGINE_TYPE;
+	sqlStr += autoIncrement_str;
+
+	kbe_snprintf(sql_str, SQL_BUF, "%s", sqlStr.c_str());
+
+	//kbe_snprintf(sql_str, SQL_BUF, "CREATE TABLE IF NOT EXISTS " ENTITY_TABLE_PERFIX "_%s "
+	//		"(id bigint(20) unsigned AUTO_INCREMENT, PRIMARY KEY idKey (id)%s)"
+	//	"ENGINE=" MYSQL_ENGINE_TYPE "%s", 
+	//	tableName(), exItems.c_str(), autoIncrement_str);
 
 	try
 	{
@@ -684,8 +694,9 @@ EntityTableItem* EntityTableMysql::createItem(std::string type, std::string defa
 	}
 	else if(type == "UNICODE")
 	{
-		return new EntityTableItemMysql_UNICODE(fmt::format("varchar(@DATALEN@) not null DEFAULT '{}'", defaultVal), 
-			0, NOT_NULL_FLAG | BINARY_FLAG, FIELD_TYPE_VAR_STRING);
+		return new EntityTableItemMysql_UNICODE("blob", 0, NOT_NULL_FLAG | BINARY_FLAG, FIELD_TYPE_VAR_STRING);
+		/*return new EntityTableItemMysql_UNICODE(fmt::format("varchar(@DATALEN@) not null DEFAULT '{}'", defaultVal), 
+			0, NOT_NULL_FLAG | BINARY_FLAG, FIELD_TYPE_VAR_STRING);*/
 	}
 	else if(type == "PYTHON")
 	{

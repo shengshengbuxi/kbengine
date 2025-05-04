@@ -1,0 +1,2 @@
+^H:\KBE\KBE\SRC\LIB\PYTHON\MODULES\_DECIMAL\LIBMPDEC\VCDIV64.ASM
+ml64 /nologo /c /Zi /Fo "H:\kbe\kbe\src\lib\python\PCbuild\obj\312amd64_Debug\_decimal\vcdiv64.obj" "H:\kbe\kbe\src\lib\python\Modules\_decimal\libmpdec\vcdiv64.asm"

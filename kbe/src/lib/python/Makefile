@@ -3,18 +3,20 @@ all:: config.status
 
 CONFIG_ARGS =
 
+CFLAGS += -I/usr/include/openssl
+LDFLAGS += -L/usr/local/openssl/lib64 -lssl -lcrypto -ldl
 
-ifneq ("$(wildcard /usr/lib/x86_64-linux-gnu/libssl.a)", "")
-	CONFIG_SSL =
+ifneq ("$(wildcard /usr/local/openssl/lib64/libssl.a)", "")
+	CONFIG_SSL = 
 else
 	CONFIG_SSL = --with-openssl=$(KBE_ROOT)/kbe/src/lib/dependencies/openssl
 endif
 
 ifeq ($(pythonbuild), release)
-	CONFIG_ARGS += --enable-optimizations 
+	CONFIG_ARGS += --with-openssl=/usr/local/openssl --enable-optimizations
 else
 ifneq (,$(findstring 64,$(KBE_CONFIG)))
-	CONFIG_ARGS += --enable-optimizations 
+	CONFIG_ARGS += --enable-optimizations --with-openssl=/usr/local/openssl
 endif
 endif
 
@@ -40,4 +42,3 @@ clean::
 # 4: setup.py
 #       system_lib_dirs = ['/lib64', '/usr/lib64', '/lib', '/usr/lib', '$(KBE_ROOT)/kbe/src/libs']
 #       system_include_dirs = ['/usr/include', '$(KBE_ROOT)/kbe/src/lib/dependencies/zlib']
-

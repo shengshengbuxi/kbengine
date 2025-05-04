@@ -1,8 +1,8 @@
 # Simple test suite for http/cookies.py
 
 import copy
-from test.support import run_unittest, run_doctest
 import unittest
+import doctest
 from http import cookies
 import pickle
 
@@ -120,6 +120,19 @@ class CookieTests(unittest.TestCase):
         C['Customer']['httponly'] = True
         self.assertEqual(C.output(),
             'Set-Cookie: Customer="WILE_E_COYOTE"; HttpOnly; Secure')
+
+    def test_samesite_attrs(self):
+        samesite_values = ['Strict', 'Lax', 'strict', 'lax']
+        for val in samesite_values:
+            with self.subTest(val=val):
+                C = cookies.SimpleCookie('Customer="WILE_E_COYOTE"')
+                C['Customer']['samesite'] = val
+                self.assertEqual(C.output(),
+                    'Set-Cookie: Customer="WILE_E_COYOTE"; SameSite=%s' % val)
+
+                C = cookies.SimpleCookie()
+                C.load('Customer="WILL_E_COYOTE"; SameSite=%s' % val)
+                self.assertEqual(C['Customer']['samesite'], val)
 
     def test_secure_httponly_false_if_not_present(self):
         C = cookies.SimpleCookie()
@@ -466,9 +479,11 @@ class MorselTests(unittest.TestCase):
                 r'Set-Cookie: key=coded_val; '
                 r'expires=\w+, \d+ \w+ \d+ \d+:\d+:\d+ \w+')
 
-def test_main():
-    run_unittest(CookieTests, MorselTests)
-    run_doctest(cookies)
+
+def load_tests(loader, tests, pattern):
+    tests.addTest(doctest.DocTestSuite(cookies))
+    return tests
+
 
 if __name__ == '__main__':
-    test_main()
+    unittest.main()

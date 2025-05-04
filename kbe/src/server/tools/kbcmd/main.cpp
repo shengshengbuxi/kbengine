@@ -199,10 +199,16 @@ int process_make_client_sdk(int argc, char* argv[], const std::string clientType
 	std::string path = "";
 	std::string compressionfile = "";
 	int compressionType = 0;
+	std::string spaceName = "";
 
 	PARSE_COMMAND_ARG_BEGIN();
 	PARSE_COMMAND_ARG_GET_VALUE("--outpath=", path);
 	PARSE_COMMAND_ARG_END();
+
+	PARSE_COMMAND_ARG_BEGIN();
+	PARSE_COMMAND_ARG_GET_VALUE("--spaceName=", spaceName);
+	PARSE_COMMAND_ARG_END();
+
 
 	PARSE_COMMAND_ARG_BEGIN();
 	PARSE_COMMAND_ARG_GET_VALUE("--zip=", compressionfile);
@@ -235,6 +241,7 @@ int process_make_client_sdk(int argc, char* argv[], const std::string clientType
 	}
 
 	ClientSDK* pClientSDK = ClientSDK::createClientSDK(clientType);
+	pClientSDK->setSpaceName(spaceName);
 	
 	int ret = 0;
 
@@ -242,7 +249,7 @@ int process_make_client_sdk(int argc, char* argv[], const std::string clientType
 	{
 		try
 		{
-			if (!pClientSDK->create(path))
+			if (!pClientSDK->create(path, spaceName))
 			{
 				ret = -1;
 			}

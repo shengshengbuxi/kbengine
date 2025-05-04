@@ -28,7 +28,16 @@ public:
 		return "unknown";
 	}
 
-	virtual bool create(const std::string& path);
+	virtual std::string spaceName() {
+		return spaceName_;
+	};
+
+	virtual void setSpaceName(const std::string& name) {
+		spaceName_ = name;
+	}
+
+
+	virtual bool create(const std::string& path, const std::string& spaceName);
 
 	virtual void onCreateEntityModuleFileName(const std::string& moduleName);
 	virtual void onCreateServerErrorDescrsModuleFileName();
@@ -37,7 +46,7 @@ public:
 	virtual void onCreateDefsCustomTypesModuleFileName();
 	virtual void onEntityCallModuleFileName(const std::string& moduleName);
 
-	virtual bool copyPluginsSourceToPath(const std::string& path);
+	virtual bool copyPluginsSourceToPath(const std::string& path, const std::string& spaceName_);
 
 	virtual bool writeServerErrorDescrsModule();
 	virtual bool writeServerErrorDescrsModuleBegin();
@@ -110,122 +119,122 @@ public:
 		return false;
 	}
 
-	virtual bool writeTypeItemType_INT8(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_INT8(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_INT16(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_INT16(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_INT32(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_INT32(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_INT64(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_INT64(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_UINT8(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_UINT8(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_UINT16(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_UINT16(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_UINT32(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_UINT32(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_UINT64(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_UINT64(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_FLOAT(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_FLOAT(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_DOUBLE(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_DOUBLE(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_STRING(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_STRING(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_UNICODE(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_UNICODE(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_PYTHON(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_PYTHON(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_PY_DICT(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_PY_DICT(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_PY_TUPLE(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_PY_TUPLE(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_PY_LIST(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_PY_LIST(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_BLOB(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_BLOB(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_ARRAY(const std::string& itemName, const std::string& childItemName, DataType* pDataType)
+	virtual bool writeTypeItemType_ARRAY(const std::string& itemName, const std::string& childItemName, DataType* pDataType, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_FIXED_DICT(const std::string& itemName, const std::string& childItemName, DataType* pDataType)
+	virtual bool writeTypeItemType_FIXED_DICT(const std::string& itemName, const std::string& childItemName, DataType* pDataType, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_VECTOR2(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_VECTOR2(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_VECTOR3(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_VECTOR3(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_VECTOR4(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_VECTOR4(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_ENTITYCALL(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_ENTITYCALL(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
 
-	virtual bool writeTypeItemType_AliasName(const std::string& itemName, const std::string& childItemName)
+	virtual bool writeTypeItemType_AliasName(const std::string& itemName, const std::string& childItemName, const std::string& des)
 	{
 		return false;
 	}
@@ -381,6 +390,7 @@ protected:
 	std::string sourcefileName_;
 	std::string headerfileName_;
 	std::string headerfileBody_;
+	std::string spaceName_;
 };
 
 }

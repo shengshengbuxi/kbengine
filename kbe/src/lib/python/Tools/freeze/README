@@ -222,6 +222,11 @@ source tree).
 It is possible to create frozen programs that don't have a console
 window, by specifying the option '-s windows'. See the Usage below.
 
+Usage under macOS
+-----------------
+
+On macOS the freeze tool is not supported for framework builds.
+
 Usage
 -----
 
@@ -293,4 +298,4 @@ module ...:   Additional Python modules (referenced by pathname)
 
 
 
---Guido van Rossum (home page: http://www.python.org/~guido/)
+--Guido van Rossum (home page: https://www.python.org/~guido/)

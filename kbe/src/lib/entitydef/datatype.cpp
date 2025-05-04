@@ -15,6 +15,7 @@
 #include "pyscript/vector4.h"
 #include "pyscript/copy.h"
 #include "pyscript/py_memorystream.h"
+#include <string>
 
 #ifndef CODE_INLINE
 #include "datatype.inl"
@@ -1629,6 +1630,8 @@ PyObject* FixedArrayType::createNewItemFromObj(PyObject* pyobj)
 {
 	if(!isSameItemType(pyobj))
 	{
+		PyErr_Format(PyExc_TypeError, "FixedArrayType::createNewItemFromObj error, aliasName: %s!", this->aliasName());
+		PyErr_PrintEx(0);
 		Py_RETURN_NONE;
 	}
 
@@ -1640,6 +1643,8 @@ PyObject* FixedArrayType::createNewFromObj(PyObject* pyobj)
 {
 	if(!isSameType(pyobj))
 	{
+		PyErr_Format(PyExc_TypeError, "createNewFromObj FIXED_DICT(%s) error!",this->aliasName());
+		PyErr_PrintEx(0);
 		Py_RETURN_NONE;
 	}
 
@@ -1787,7 +1792,13 @@ bool FixedArrayType::initialize(script::entitydef::DefContext* pDefContext, cons
 //-------------------------------------------------------------------------------------
 bool FixedArrayType::isSameItemType(PyObject* pyValue)
 {
-	return dataType_->isSameType(pyValue);
+	bool result = dataType_->isSameType(pyValue);
+	if (!result) {
+		PyErr_Format(PyExc_TypeError, "FixedArrayType error, %s pyVal: %" PRIu64 ", dataTypeID: %s!", this->aliasName(), pyValue, dataType_->id());
+		PyErr_PrintEx(0);
+	}
+	return result;
+	//return dataType_->isSameType(pyValue);
 }
 
 //-------------------------------------------------------------------------------------
@@ -1812,8 +1823,11 @@ bool FixedArrayType::isSameType(PyObject* pyValue)
 		bool ok = dataType_->isSameType(pyVal);
 		Py_DECREF(pyVal);
 
-		if(!ok)
+		if (!ok) {
+			PyErr_Format(PyExc_TypeError, "not same type, aliasName: %s, value: %s!", this->aliasName(), pyVal);
+			PyErr_PrintEx(0);
 			return false;
+		}
 	}
 
 	return true;
@@ -2003,6 +2017,8 @@ PyObject* FixedDictType::createNewItemFromObj(const char* keyName, PyObject* pyo
 	DataType* dataType = isSameItemType(keyName, pyobj);
 	if(!dataType)
 	{
+		PyErr_Format(PyExc_TypeError, "FixedDictType::createNewItemFromObj error, aliasName: %s!", this->aliasName());
+		PyErr_PrintEx(0);
 		Py_RETURN_NONE;
 	}
 
@@ -2023,6 +2039,8 @@ PyObject* FixedDictType::createNewFromObj(PyObject* pyobj)
 {
 	if(!isSameType(pyobj))
 	{
+		PyErr_Format(PyExc_TypeError, "FixedDictType createNewFromObj not same type, aliasName: %s!", this->aliasName());
+		PyErr_PrintEx(0);
 		Py_RETURN_NONE;
 	}
 
@@ -2063,6 +2081,13 @@ bool FixedDictType::initialize(XML* xml, TiXmlNode* node, std::string& parentNam
 		TiXmlNode* typeNode = xml->enterNode(propertiesNode->FirstChild(), "Type");
 		TiXmlNode* PersistentNode = xml->enterNode(propertiesNode->FirstChild(), "Persistent");
 		TiXmlNode* DatabaseLengthNode = xml->enterNode(propertiesNode->FirstChild(), "DatabaseLength");
+		
+		//TiXmlNode* desNode = xml->enterNode(propertiesNode->FirstChild(), "Des");
+		//if (desNode)
+		//{
+		//	dataTypeDes = xml->getValStr(desNode);
+		//	DEBUG_MSG(fmt::format("dataTypeDes = {}\n", dataTypeDes));
+		//}
 
 		bool persistent = true;
 		if(PersistentNode)
@@ -2145,6 +2170,10 @@ bool FixedDictType::initialize(XML* xml, TiXmlNode* node, std::string& parentNam
 
 					pDictItemDataType->persistent = persistent;
 					pDictItemDataType->databaseLength = databaseLength;
+					TiXmlNode* desNode = xml->enterNode(propertiesNode->FirstChild(), "Des");
+					if (desNode) {
+						pDictItemDataType->des = xml->getValStr(desNode);
+					}
 					EntityDef::md5().append((void*)&persistent, sizeof(bool));
 					EntityDef::md5().append((void*)&databaseLength, sizeof(uint32));
 				}
@@ -2399,6 +2428,8 @@ bool FixedDictType::setImplModule(PyObject* pyobj)
 	pyisSameType_ = PyObject_GetAttrString(implObj_, "isSameType");
 	if (!pyisSameType_)
 	{
+		PyErr_Format(PyExc_TypeError, "FixedDictType::setImplModule not same type, aliasName: %s!", this->aliasName());
+		PyErr_PrintEx(0);
 		SCRIPT_ERROR_CHECK()
 		return false;
 	}
@@ -2637,6 +2668,8 @@ void FixedDictType::addToStreamEx(MemoryStream* mstream, PyObject* pyValue, bool
 		
 		if(!iter->second->dataType->isSameType(pyObject))
 		{
+			PyErr_Format(PyExc_TypeError, "FixedDictType::addToStreamEx error, %s pyVal: %" PRIu64 "!", this->aliasName(), pyValue);
+			PyErr_PrintEx(0);
 			// KBE_ASSERT(pyObject != NULL);
 			PyObject* pobj = iter->second->dataType->parseDefaultStr("");
 

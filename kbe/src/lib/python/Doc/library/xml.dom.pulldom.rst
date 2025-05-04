@@ -114,6 +114,8 @@ DOMEventStream Objects
 
 .. class:: DOMEventStream(stream, parser, bufsize)
 
+   .. versionchanged:: 3.11
+      Support for :meth:`~object.__getitem__` method has been removed.
 
    .. method:: getEvent()
 
@@ -142,4 +144,3 @@ DOMEventStream Objects
                   print(node.toxml())
 
    .. method:: DOMEventStream.reset()
-

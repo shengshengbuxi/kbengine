@@ -16,6 +16,7 @@ def _iterdump(connection):
     directly but instead called from the Connection method, iterdump().
     """
 
+    writeable_schema = False
     cu = connection.cursor()
     yield('BEGIN TRANSACTION;')
 
@@ -28,20 +29,29 @@ def _iterdump(connection):
             ORDER BY "name"
         """
     schema_res = cu.execute(q)
+    sqlite_sequence = []
     for table_name, type, sql in schema_res.fetchall():
         if table_name == 'sqlite_sequence':
-            yield('DELETE FROM "sqlite_sequence";')
+            rows = cu.execute('SELECT * FROM "sqlite_sequence";').fetchall()
+            sqlite_sequence = ['DELETE FROM "sqlite_sequence"']
+            sqlite_sequence += [
+                f'INSERT INTO "sqlite_sequence" VALUES(\'{row[0]}\',{row[1]})'
+                for row in rows
+            ]
+            continue
         elif table_name == 'sqlite_stat1':
             yield('ANALYZE "sqlite_master";')
         elif table_name.startswith('sqlite_'):
             continue
-        # NOTE: Virtual table support not implemented
-        #elif sql.startswith('CREATE VIRTUAL TABLE'):
-        #    qtable = table_name.replace("'", "''")
-        #    yield("INSERT INTO sqlite_master(type,name,tbl_name,rootpage,sql)"\
-        #        "VALUES('table','{0}','{0}',0,'{1}');".format(
-        #        qtable,
-        #        sql.replace("''")))
+        elif sql.startswith('CREATE VIRTUAL TABLE'):
+            if not writeable_schema:
+                writeable_schema = True
+                yield('PRAGMA writable_schema=ON;')
+            yield("INSERT INTO sqlite_master(type,name,tbl_name,rootpage,sql)"
+                  "VALUES('table','{0}','{0}',0,'{1}');".format(
+                      table_name.replace("'", "''"),
+                      sql.replace("'", "''"),
+                  ))
         else:
             yield('{0};'.format(sql))
 
@@ -66,5 +76,13 @@ def _iterdump(connection):
     schema_res = cu.execute(q)
     for name, type, sql in schema_res.fetchall():
         yield('{0};'.format(sql))
+
+    if writeable_schema:
+        yield('PRAGMA writable_schema=OFF;')
+
+    # gh-79009: Yield statements concerning the sqlite_sequence table at the
+    # end of the transaction.
+    for row in sqlite_sequence:
+        yield('{0};'.format(row))
 
     yield('COMMIT;')

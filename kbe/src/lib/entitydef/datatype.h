@@ -685,6 +685,7 @@ public:
 
 		// 这个属性在数据库中的长度
 		uint32 databaseLength;
+		std::string des;
 	};
 
 	typedef KBEShared_ptr< DictItemDataType > DictItemDataTypePtr;
