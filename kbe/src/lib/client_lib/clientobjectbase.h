@@ -104,6 +104,11 @@ public:
 	}
 
 	static PyObject* __py_getPlayer(PyObject *self, void *args);
+
+	/** Timer²Ù×÷
+	*/
+	static PyObject* __py_addTimer(PyObject *self, PyObject *args);
+	static PyObject* __py_delTimer(PyObject *self, PyObject *args);
 	
 	static PyObject* __py_callback(PyObject* self, PyObject* args);
 	static PyObject* __py_cancelCallback(PyObject* self, PyObject* args);
@@ -439,6 +444,8 @@ public:
 		ÔÊÐí½Å±¾assertµ×²ã
 	*/
 	static PyObject* __py_assert(PyObject* self, PyObject* args);
+
+	DECLARE_PY_GET_MOTHOD(pyGetAccountName);
 
 protected:				
 	int32													appID_;

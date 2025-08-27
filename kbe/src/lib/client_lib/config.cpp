@@ -40,7 +40,7 @@ Config::~Config()
 bool Config::loadConfig(std::string fileName)
 {
 	fileName_ = fileName;
-	TiXmlNode* rootNode = NULL;
+	tinyxml2::XMLNode* rootNode = NULL;
 	SmartPointer<XML> xml(new XML(Resmgr::getSingleton().matchRes(fileName_).c_str()));
 
 	if(!xml->isGood())
@@ -65,7 +65,7 @@ bool Config::loadConfig(std::string fileName)
 	rootNode = xml->getRootNode("trace_packet");
 	if(rootNode != NULL)
 	{
-		TiXmlNode* childnode = xml->enterNode(rootNode, "debug_type");
+		tinyxml2::XMLNode* childnode = xml->enterNode(rootNode, "debug_type");
 		if(childnode)
 			Network::g_trace_packet = xml->getValInt(childnode);
 
@@ -107,7 +107,7 @@ bool Config::loadConfig(std::string fileName)
 	rootNode = xml->getRootNode("publish");
 	if(rootNode != NULL)
 	{
-		TiXmlNode* childnode = xml->enterNode(rootNode, "state");
+		tinyxml2::XMLNode* childnode = xml->enterNode(rootNode, "state");
 		if(childnode)
 		{
 			g_appPublish = xml->getValInt(childnode);
@@ -123,10 +123,10 @@ bool Config::loadConfig(std::string fileName)
 	rootNode = xml->getRootNode("channelCommon");
 	if(rootNode != NULL)
 	{
-		TiXmlNode* childnode = xml->enterNode(rootNode, "timeout");
+		tinyxml2::XMLNode* childnode = xml->enterNode(rootNode, "timeout");
 		if(childnode)
 		{
-			TiXmlNode* childnode1 = xml->enterNode(childnode, "internal");
+			tinyxml2::XMLNode* childnode1 = xml->enterNode(childnode, "internal");
 			if(childnode1)
 			{
 				channelInternalTimeout_ = KBE_MAX(0.f, float(xml->getValFloat(childnode1)));
@@ -144,10 +144,10 @@ bool Config::loadConfig(std::string fileName)
 		childnode = xml->enterNode(rootNode, "resend");
 		if(childnode)
 		{
-			TiXmlNode* childnode1 = xml->enterNode(childnode, "internal");
+			tinyxml2::XMLNode* childnode1 = xml->enterNode(childnode, "internal");
 			if(childnode1)
 			{
-				TiXmlNode* childnode2 = xml->enterNode(childnode1, "interval");
+				tinyxml2::XMLNode* childnode2 = xml->enterNode(childnode1, "interval");
 				if(childnode2)
 				{
 					Network::g_intReSendInterval = uint32(xml->getValInt(childnode2));
@@ -163,7 +163,7 @@ bool Config::loadConfig(std::string fileName)
 			childnode1 = xml->enterNode(childnode, "external");
 			if(childnode)
 			{
-				TiXmlNode* childnode2 = xml->enterNode(childnode1, "interval");
+				tinyxml2::XMLNode* childnode2 = xml->enterNode(childnode1, "interval");
 				if(childnode2)
 				{
 					Network::g_extReSendInterval = uint32(xml->getValInt(childnode2));
@@ -180,13 +180,13 @@ bool Config::loadConfig(std::string fileName)
 		childnode = xml->enterNode(rootNode, "windowOverflow");
 		if(childnode)
 		{
-			TiXmlNode* sendNode = xml->enterNode(childnode, "send");
+			tinyxml2::XMLNode* sendNode = xml->enterNode(childnode, "send");
 			if(sendNode)
 			{
-				TiXmlNode* childnode1 = xml->enterNode(sendNode, "messages");
+				tinyxml2::XMLNode* childnode1 = xml->enterNode(sendNode, "messages");
 				if(childnode1)
 				{
-					TiXmlNode* childnode2 = xml->enterNode(childnode1, "internal");
+					tinyxml2::XMLNode* childnode2 = xml->enterNode(childnode1, "internal");
 					if(childnode2)
 						Network::g_intSendWindowMessagesOverflow = KBE_MAX(0, xml->getValInt(childnode2));
 
@@ -202,7 +202,7 @@ bool Config::loadConfig(std::string fileName)
 				childnode1 = xml->enterNode(sendNode, "bytes");
 				if(childnode1)
 				{
-					TiXmlNode* childnode2 = xml->enterNode(childnode1, "internal");
+					tinyxml2::XMLNode* childnode2 = xml->enterNode(childnode1, "internal");
 					if(childnode2)
 						Network::g_intSendWindowBytesOverflow = KBE_MAX(0, xml->getValInt(childnode2));
 				
@@ -214,7 +214,7 @@ bool Config::loadConfig(std::string fileName)
 				childnode1 = xml->enterNode(sendNode, "tickSentBytes");
 				if (childnode1)
 				{
-					TiXmlNode* childnode2 = xml->enterNode(childnode1, "internal");
+					tinyxml2::XMLNode* childnode2 = xml->enterNode(childnode1, "internal");
 					if (childnode2)
 						Network::g_intSentWindowBytesOverflow = KBE_MAX(0, xml->getValInt(childnode2));
 
@@ -224,13 +224,13 @@ bool Config::loadConfig(std::string fileName)
 				}
 			}
 
-			TiXmlNode* recvNode = xml->enterNode(childnode, "receive");
+			tinyxml2::XMLNode* recvNode = xml->enterNode(childnode, "receive");
 			if(recvNode)
 			{
-				TiXmlNode* childnode1 = xml->enterNode(recvNode, "messages");
+				tinyxml2::XMLNode* childnode1 = xml->enterNode(recvNode, "messages");
 				if(childnode1)
 				{
-					TiXmlNode* childnode2 = xml->enterNode(childnode1, "internal");
+					tinyxml2::XMLNode* childnode2 = xml->enterNode(childnode1, "internal");
 					if(childnode2)
 						Network::g_intReceiveWindowMessagesOverflow = KBE_MAX(0, xml->getValInt(childnode2));
 
@@ -246,7 +246,7 @@ bool Config::loadConfig(std::string fileName)
 				childnode1 = xml->enterNode(recvNode, "bytes");
 				if(childnode1)
 				{
-					TiXmlNode* childnode2 = xml->enterNode(childnode1, "internal");
+					tinyxml2::XMLNode* childnode2 = xml->enterNode(childnode1, "internal");
 					if(childnode2)
 						Network::g_intReceiveWindowBytesOverflow = KBE_MAX(0, xml->getValInt(childnode2));
 				
@@ -263,13 +263,13 @@ bool Config::loadConfig(std::string fileName)
 			Network::g_channelExternalEncryptType = xml->getValInt(childnode);
 		}
 
-		TiXmlNode* rudpChildnode = xml->enterNode(rootNode, "reliableUDP");
+		tinyxml2::XMLNode* rudpChildnode = xml->enterNode(rootNode, "reliableUDP");
 		if (rudpChildnode)
 		{
 			childnode = xml->enterNode(rudpChildnode, "readPacketsQueueSize");
 			if (childnode)
 			{
-				TiXmlNode* childnode1 = xml->enterNode(childnode, "internal");
+				tinyxml2::XMLNode* childnode1 = xml->enterNode(childnode, "internal");
 				if (childnode1)
 					Network::g_rudp_intReadPacketsQueueSize = KBE_MAX(0, xml->getValInt(childnode1));
 
@@ -281,7 +281,7 @@ bool Config::loadConfig(std::string fileName)
 			childnode = xml->enterNode(rudpChildnode, "writePacketsQueueSize");
 			if (childnode)
 			{
-				TiXmlNode* childnode1 = xml->enterNode(childnode, "internal");
+				tinyxml2::XMLNode* childnode1 = xml->enterNode(childnode, "internal");
 				if (childnode1)
 					Network::g_rudp_intWritePacketsQueueSize = KBE_MAX(0, xml->getValInt(childnode1));
 
@@ -331,7 +331,7 @@ bool Config::loadConfig(std::string fileName)
 	rootNode = xml->getRootNode("telnet_service");
 	if(rootNode != NULL)
 	{
-		TiXmlNode* childnode = xml->enterNode(rootNode, "port");
+		tinyxml2::XMLNode* childnode = xml->enterNode(rootNode, "port");
 		if(childnode)
 		{
 			telnet_port = xml->getValInt(childnode);
@@ -420,7 +420,7 @@ void Config::writeAccountName(const char* name)
 	if(!useLastAccountName_)
 		return;
 
-	TiXmlNode* rootNode = NULL;
+	tinyxml2::XMLNode* rootNode = NULL;
 	XML* xml = new XML(Resmgr::getSingleton().matchRes(fileName_).c_str());
 
 	if(!xml->isGood())

@@ -204,6 +204,16 @@ public:
 		return ClientObjectBase::__py_disconnect(&ClientApp::getSingleton(), args);	
 	}
 
+	static PyObject* __py_addTimer(PyObject *self, PyObject* args)
+	{
+		return ClientObjectBase::__py_addTimer(&ClientApp::getSingleton(), args);	
+	}
+
+	static PyObject* __py_delTimer(PyObject *self, PyObject* args)
+	{
+		return ClientObjectBase::__py_delTimer(&ClientApp::getSingleton(), args);	
+	}
+
 	/**
 		通过相对路径获取资源的全路径
 	*/

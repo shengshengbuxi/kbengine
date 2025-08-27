@@ -408,10 +408,26 @@ void Entity::onUpdatePropertys(MemoryStream& s)
 
 			return;
 		}
-
-		PyObject* pyobj = pPropertyDescription->createFromStream(&s);
-
+		
 		PyObject* pyOld = PyObject_GetAttrString(setToObj, pPropertyDescription->getName());
+
+		PyObject* pyobj = NULL;
+		if (pPropertyDescription->getDataType()->type() == DATA_TYPE_ENTITY_COMPONENT) 
+		{
+
+			pyobj = static_cast<EntityComponentDescription*>(pPropertyDescription)->createFromStream(&s, pyOld);
+			if (!pyOld) 
+				PyObject_SetAttrString(setToObj, pPropertyDescription->getName(), pyobj);
+			else
+				Py_INCREF(pyOld);
+		}
+		else 
+		{
+			pyobj = pPropertyDescription->createFromStream(&s);
+			PyObject_SetAttrString(setToObj, pPropertyDescription->getName(), pyobj);
+		}
+
+	
 		if (!pyOld)
 		{
 			SCRIPT_ERROR_CHECK();
@@ -419,7 +435,6 @@ void Entity::onUpdatePropertys(MemoryStream& s)
 			Py_INCREF(pyOld);
 		}
 
-		PyObject_SetAttrString(setToObj, pPropertyDescription->getName(), pyobj);
 
 		bool willCallScript = pPropertyDescription->hasBase() ? inited_ : enterworld_;
 		if (willCallScript)
@@ -740,11 +755,13 @@ void Entity::onMoveOver(uint32 controllerId, int layer, const Position3D& oldPos
 	if(this->isDestroyed())
 		return;
 
-	stopMove();
-
 	SCOPED_PROFILE(SCRIPTCALL_PROFILE);
 	CALL_ENTITY_AND_COMPONENTS_METHOD(this, SCRIPT_OBJECT_CALL_ARGS2(pyTempObj, const_cast<char*>("onMoveOver"),
 		const_cast<char*>("IO"), controllerId, userarg, GETERR));
+
+	
+	stopMove();
+
 }
 
 //-------------------------------------------------------------------------------------
@@ -753,11 +770,12 @@ void Entity::onMoveFailure(uint32 controllerId, PyObject* userarg)
 	if(this->isDestroyed())
 		return;
 
-	stopMove();
 
 	SCOPED_PROFILE(SCRIPTCALL_PROFILE);
 	CALL_ENTITY_AND_COMPONENTS_METHOD(this, SCRIPT_OBJECT_CALL_ARGS2(pyTempObj, const_cast<char*>("onMoveFailure"),
 		const_cast<char*>("IO"), controllerId, userarg, GETERR));
+	
+	stopMove();
 }
 
 //-------------------------------------------------------------------------------------

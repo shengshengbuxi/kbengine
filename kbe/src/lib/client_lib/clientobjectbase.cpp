@@ -26,6 +26,8 @@ SCRIPT_DIRECT_METHOD_DECLARE("getWatcherDir",		__py_getWatcherDir,			METH_VARARG
 SCRIPT_DIRECT_METHOD_DECLARE("disconnect",			__py_disconnect,			METH_VARARGS,					0)
 SCRIPT_DIRECT_METHOD_DECLARE("kbassert",			__py_assert,				METH_VARARGS,					0)
 SCRIPT_DIRECT_METHOD_DECLARE("player",				__py_getPlayer,				METH_VARARGS,					0)
+SCRIPT_DIRECT_METHOD_DECLARE("addTimer",			__py_addTimer,				METH_VARARGS,					0)
+SCRIPT_DIRECT_METHOD_DECLARE("delTimer",			__py_delTimer,				METH_VARARGS,					0)
 SCRIPT_METHOD_DECLARE_END()
 
 SCRIPT_MEMBER_DECLARE_BEGIN(ClientObjectBase)
@@ -34,6 +36,7 @@ SCRIPT_MEMBER_DECLARE_END()
 SCRIPT_GETSET_DECLARE_BEGIN(ClientObjectBase)
 SCRIPT_GET_DECLARE("id",							pyGetID,					0,								0)
 SCRIPT_GET_DECLARE("entities",						pyGetEntities,				0,								0)
+SCRIPT_GET_DECLARE("accountName",							pyGetAccountName,			0,					0)
 SCRIPT_GETSET_DECLARE_END()
 SCRIPT_INIT(ClientObjectBase, 0, 0, 0, 0, 0)		
 
@@ -1169,6 +1172,59 @@ PyObject* ClientObjectBase::__py_getPlayer(PyObject *self, void *args) {
 
 	S_Return;
 }
+
+
+//-------------------------------------------------------------------------------------	
+PyObject* ClientObjectBase::__py_addTimer(PyObject* self, PyObject* args)
+{
+	float interval, repeat;
+	PyObject *pyCallback;
+
+	if (!PyArg_ParseTuple(args, "ffO", &interval, &repeat, &pyCallback))
+		S_Return;
+
+	if (!PyCallable_Check(pyCallback))
+	{
+		PyErr_Format(PyExc_TypeError, "KBEngine::addTimer: '%.200s' object is not callable", 
+			(pyCallback ? pyCallback->ob_type->tp_name : "NULL"));
+
+		PyErr_PrintEx(0);
+		S_Return;
+	}
+
+	
+	ClientObjectBase* pClientObjectBase = static_cast<ClientObjectBase*>(self);
+	Py_INCREF(pyCallback);
+	ScriptID id = pClientObjectBase->scriptCallbacks().addCallback(interval, repeat, new ScriptCallbackHandler(pClientObjectBase->scriptCallbacks(), pyCallback));
+	return PyLong_FromLong(id);
+}
+
+//-------------------------------------------------------------------------------------	
+PyObject* ClientObjectBase::__py_delTimer(PyObject* self, PyObject* args)
+{
+	if(PyTuple_Size(args) != 1)
+	{
+		PyErr_Format(PyExc_TypeError, "KBEngine::cancelCallback: (argssize != (callbackID)) error!");
+		PyErr_PrintEx(0);
+		S_Return;
+	}
+	
+	ClientObjectBase* pClientObjectBase = static_cast<ClientObjectBase*>(self);
+
+	ScriptID id = 0;
+
+	if(!PyArg_ParseTuple(args, "i",  &id))
+	{
+		PyErr_Format(PyExc_TypeError, "KBEngine::cancelCallback: args error!");
+		PyErr_PrintEx(0);
+		S_Return;
+	}
+
+	pClientObjectBase->scriptCallbacks().delCallback(id);
+	S_Return;
+}
+
+
 
 //-------------------------------------------------------------------------------------
 ENTITY_ID ClientObjectBase::readEntityIDFromStream(MemoryStream& s)
@@ -2655,6 +2711,12 @@ PyObject* ClientObjectBase::__py_assert(PyObject* self, PyObject* args)
 {
 	KBE_ASSERT(false && "kbassert");
 	return NULL;
+}
+
+//-------------------------------------------------------------------------------------
+PyObject* ClientObjectBase::pyGetAccountName()
+{ 
+	return PyUnicode_FromString(name_.c_str());
 }
 
 //-------------------------------------------------------------------------------------		
