@@ -33,6 +33,7 @@ class MemoryStream;
 #define TABLE_ITEM_TYPE_ENTITYCALL	10
 #define TABLE_ITEM_TYPE_PYTHON		11
 #define TABLE_ITEM_TYPE_COMPONENT	12
+#define TABLE_ITEM_TYPE_TEXT		13
 
 #define KBE_TABLE_PERFIX						"kbe"
 #define ENTITY_TABLE_PERFIX						"tbl"
@@ -42,6 +43,8 @@ class MemoryStream;
 #define TABLE_ARRAY_ITEM_VALUE_CONST_STR		"value"
 #define TABLE_ARRAY_ITEM_VALUES_CONST_STR		"values"
 #define TABLE_AUTOLOAD_CONST_STR				"autoLoad"
+#define TABLE_VERSION_CONST_STR					"version"
+#define TABLE_UPDATE_TIME_CONST_STR             "update_time"
 
 /**
 	db表操作
@@ -50,7 +53,8 @@ enum DB_TABLE_OP
 {
 	TABLE_OP_INSERT					= 1,
 	TABLE_OP_UPDATE					= 2,
-	TABLE_OP_DELETE					= 3
+	TABLE_OP_DELETE					= 3,
+	TABLE_OP_UPSERT					= 4,
 };
 
 struct ACCOUNT_INFOS
@@ -70,6 +74,46 @@ struct ACCOUNT_INFOS
 
 	uint32 flags;
 	uint64 deadline;
+};
+
+struct ENTITY_DBID_VERSION_DATA
+{
+	ENTITY_DBID_VERSION_DATA()
+	{
+
+	}
+
+	ENTITY_DBID_VERSION_DATA(KBEUnordered_map<DBID, std::string>& versions, KBEUnordered_map<DBID, std::vector<DBID> >& dbids)
+	{
+		this->versions = versions;
+		this->dbids = dbids;
+	}
+
+	ENTITY_DBID_VERSION_DATA(KBEUnordered_map<DBID, std::string>& versions, KBEUnordered_map<DBID, std::vector<DBID> >& dbids, KBEUnordered_map<std::string, ENTITY_DBID_VERSION_DATA*> entityDBIDVersionChildTableDatas)
+	{
+		this->versions = versions;
+		this->dbids = dbids;
+		this->entityDBIDVersionChildTableDatas = entityDBIDVersionChildTableDatas;
+	}
+
+
+	ENTITY_DBID_VERSION_DATA& operator=(const ENTITY_DBID_VERSION_DATA& data) 
+	{
+		versions = data.versions;
+		dbids = data.dbids;
+		entityDBIDVersionChildTableDatas = data.entityDBIDVersionChildTableDatas;
+
+		return *this;
+	}
+
+	KBEUnordered_map<DBID, std::string> versions;
+
+	KBEUnordered_map<DBID, std::vector<DBID> > dbids;
+
+	KBEUnordered_map<std::string, ENTITY_DBID_VERSION_DATA*> entityDBIDVersionChildTableDatas;
+
+
+
 };
 
 /**
@@ -227,7 +271,7 @@ public:
 	/**
 		更新表
 	*/
-	virtual DBID writeTable(DBInterface* pdbi, DBID dbid, int8 shouldAutoLoad, MemoryStream* s, ScriptDefModule* pModule);
+	virtual DBID writeTable(DBInterface* pdbi, DBID dbid, int8 shouldAutoLoad, MemoryStream* s, ScriptDefModule* pModule, ENTITY_DBID_VERSION_DATA* pEntityDBIDVersionData=NULL);
 
 	/**
 		从数据库删除entity
@@ -237,7 +281,7 @@ public:
 	/**
 		获取所有的数据放到流中
 	*/
-	virtual bool queryTable(DBInterface* pdbi, DBID dbid, MemoryStream* s, ScriptDefModule* pModule);
+	virtual bool queryTable(DBInterface* pdbi, DBID dbid, MemoryStream* s, ScriptDefModule* pModule, ENTITY_DBID_VERSION_DATA* pEntityDBIDVersionData=NULL);
 
 	/**
 		设置是否自动加载
@@ -327,7 +371,7 @@ public:
 	/**
 		写entity到数据库
 	*/
-	DBID writeEntity(DBInterface* pdbi, DBID dbid, int8 shouldAutoLoad, MemoryStream* s, ScriptDefModule* pModule);
+	DBID writeEntity(DBInterface* pdbi, DBID dbid, int8 shouldAutoLoad, MemoryStream* s, ScriptDefModule* pModule, ENTITY_DBID_VERSION_DATA* pEntityDBVersionData=NULL);
 
 	/**
 		从数据库删除entity
@@ -337,7 +381,7 @@ public:
 	/**
 		获取某个表所有的数据放到流中
 	*/
-	bool queryEntity(DBInterface* pdbi, DBID dbid, MemoryStream* s, ScriptDefModule* pModule);
+	bool queryEntity(DBInterface* pdbi, DBID dbid, MemoryStream* s, ScriptDefModule* pModule, ENTITY_DBID_VERSION_DATA* pEntityDBIDVersionData=NULL);
 
 	void onTableSyncSuccessfully(KBEShared_ptr<EntityTable> pEntityTable, bool error);
 

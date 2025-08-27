@@ -30,7 +30,7 @@ EntityTableItem* EntityTable::findItem(int32/*ENTITY_PROPERTY_UID*/ utype)
 }
 
 //-------------------------------------------------------------------------------------
-DBID EntityTable::writeTable(DBInterface* pdbi, DBID dbid, int8 shouldAutoLoad, MemoryStream* s, ScriptDefModule* pModule)
+DBID EntityTable::writeTable(DBInterface* pdbi, DBID dbid, int8 shouldAutoLoad, MemoryStream* s, ScriptDefModule* pModule, ENTITY_DBID_VERSION_DATA* pEntityDBIDVersionData)
 {
 	while(s->length() > 0)
 	{
@@ -68,7 +68,7 @@ bool EntityTable::removeEntity(DBInterface* pdbi, DBID dbid, ScriptDefModule* pM
 }
 
 //-------------------------------------------------------------------------------------
-bool EntityTable::queryTable(DBInterface* pdbi, DBID dbid, MemoryStream* s, ScriptDefModule* pModule)
+bool EntityTable::queryTable(DBInterface* pdbi, DBID dbid, MemoryStream* s, ScriptDefModule* pModule, ENTITY_DBID_VERSION_DATA* pEntityDBIDVersionData)
 {
 	std::vector<EntityTableItem*>::iterator iter = tableFixedOrderItems_.begin();
 	for(; iter != tableFixedOrderItems_.end(); ++iter)
@@ -293,12 +293,12 @@ EntityTable* EntityTables::findKBETable(std::string name)
 };
 
 //-------------------------------------------------------------------------------------
-DBID EntityTables::writeEntity(DBInterface* pdbi, DBID dbid, int8 shouldAutoLoad, MemoryStream* s, ScriptDefModule* pModule)
+DBID EntityTables::writeEntity(DBInterface* pdbi, DBID dbid, int8 shouldAutoLoad, MemoryStream* s, ScriptDefModule* pModule, ENTITY_DBID_VERSION_DATA* pEntityDBVersionData)
 {
 	EntityTable* pTable = this->findTable(pModule->getName());
 	KBE_ASSERT(pTable != NULL);
 
-	return pTable->writeTable(pdbi, dbid, shouldAutoLoad, s, pModule);
+	return pTable->writeTable(pdbi, dbid, shouldAutoLoad, s, pModule, pEntityDBVersionData);
 }
 
 //-------------------------------------------------------------------------------------
@@ -311,12 +311,12 @@ bool EntityTables::removeEntity(DBInterface* pdbi, DBID dbid, ScriptDefModule* p
 }
 
 //-------------------------------------------------------------------------------------
-bool EntityTables::queryEntity(DBInterface* pdbi, DBID dbid, MemoryStream* s, ScriptDefModule* pModule)
+bool EntityTables::queryEntity(DBInterface* pdbi, DBID dbid, MemoryStream* s, ScriptDefModule* pModule, ENTITY_DBID_VERSION_DATA* pEntityDBIDVersionData)
 {
 	EntityTable* pTable = this->findTable(pModule->getName());
 	KBE_ASSERT(pTable != NULL);
 
-	return pTable->queryTable(pdbi, dbid, s, pModule);
+	return pTable->queryTable(pdbi, dbid, s, pModule, pEntityDBIDVersionData);
 }
 
 //-------------------------------------------------------------------------------------
