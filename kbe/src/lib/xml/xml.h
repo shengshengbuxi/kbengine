@@ -11,7 +11,7 @@
 				</root>
 		    	--------------------------------------------------------------------------------
 				XML* xml = new XML("KBEngine.xml");
-				TiXmlNode* node = xml->getRootNode("server");
+				XMLNode* node = xml->getRootNode("server");
 
 				XML_FOR_BEGIN(node)
 				{
@@ -27,9 +27,9 @@
 
 		例子2:
 				XML* xml = new XML("KBEngine.xml");
-				TiXmlNode* serverNode = xml->getRootNode("server");
+				XMLNode* serverNode = xml->getRootNode("server");
 				
-				TiXmlNode* node;
+				XMLNode* node;
 				node = xml->enterNode(serverNode, "ip");	
 				printf("%s\n", xml->getValStr(node).c_str() );	
 
@@ -48,14 +48,14 @@
 #include "helper/debug_helper.h"
 #include "common/common.h"
 #include "common/smartpointer.h"
-#include "dependencies/tinyxml/tinyxml.h"
+#include "dependencies/tinyxml2/tinyxml2.h"
 
 namespace KBEngine{
 
 #define XML_FOR_BEGIN(node)																\
 		do																				\
 		{																				\
-		if(node->Type() != TiXmlNode::TINYXML_ELEMENT)									\
+		if(!node->ToElement())									\
 				continue;																\
 			
 #define XML_FOR_END(node)																\
@@ -95,16 +95,17 @@ public:
 		char pathbuf[MAX_PATH];
 		kbe_snprintf(pathbuf, MAX_PATH, "%s", xmlFile);
 
-		txdoc_ = new TiXmlDocument((char*)&pathbuf);
+		txdoc_ = new tinyxml2::XMLDocument();
 
-		if(!txdoc_->LoadFile())
+
+		if(tinyxml2::XML_SUCCESS != txdoc_->LoadFile((char*)&pathbuf))
 		{
 #if KBE_PLATFORM == PLATFORM_WIN32
-			printf("%s", (fmt::format("TiXmlNode::openXML: {}, error!\n", pathbuf)).c_str());
+			printf("%s", (fmt::format("XMLNode::openXML: {}, error!\n", pathbuf)).c_str());
 #endif
 			if(DebugHelper::isInit())
 			{
-				ERROR_MSG(fmt::format("TiXmlNode::openXML: {}, error!\n", pathbuf));
+				ERROR_MSG(fmt::format("XMLNode::openXML: {}, error!\n", pathbuf));
 			}
 
 			isGood_ = false;
@@ -117,16 +118,16 @@ public:
 	}
 
 	/**获取根元素*/
-	TiXmlElement* getRootElement(void){return rootElement_;}
+	tinyxml2::XMLElement* getRootElement(void){return rootElement_;}
 
 	/**获取根节点， 带参数key为范围根节点下的某个子节点根*/
-	TiXmlNode* getRootNode(const char* key = "")
+	tinyxml2::XMLNode* getRootNode(const char* key = "")
 	{
 		if(rootElement_ == NULL)
 			return rootElement_;
 
 		if(strlen(key) > 0){
-			TiXmlNode* node = rootElement_->FirstChild(key);
+			tinyxml2::XMLNode* node = rootElement_->FirstChildElement(key);
 			if(node == NULL)
 				return NULL;
 			return node->FirstChild();
@@ -135,19 +136,21 @@ public:
 	}
 
 	/**直接返回要进入的key节点指针*/
-	TiXmlNode* enterNode(TiXmlNode* node, const char* key)
+	tinyxml2::XMLNode* enterNode(tinyxml2::XMLNode* node, const char* key)
 	{
 		do
 		{
-			if(node->Type() != TiXmlNode::TINYXML_ELEMENT)
+			//if(node->Type() != tinyxml2::XMLNode::TINYXML_ELEMENT)
+			if (!node->ToElement())
 				continue;
 
 			if (getKey(node) == key)
 			{
-				TiXmlNode* childNode = node->FirstChild();
+				tinyxml2::XMLNode* childNode = node->FirstChild();
 				do
 				{
-					if (!childNode || childNode->Type() != TiXmlNode::TINYXML_COMMENT)
+					if (!childNode || !childNode->ToComment())
+						//childNode->Type() != tinyxml2::XMLNode::TINYXML_COMMENT)
 						break;
 				}
 				while ((childNode = childNode->NextSibling()));
@@ -162,10 +165,11 @@ public:
 	}
 
 	/**是否存在这样一个key*/
-	bool hasNode(TiXmlNode* node, const char* key)
+	bool hasNode(tinyxml2::XMLNode* node, const char* key)
 	{
 		do{
-			if(node->Type() != TiXmlNode::TINYXML_ELEMENT)
+			//if(node->Type() != tinyxml2::XMLNode::TINYXML_ELEMENT)
+			if (!node->ToElement())
 				continue;
 
 			if(getKey(node) == key)
@@ -176,9 +180,9 @@ public:
 		return false;	
 	}
 	
-	TiXmlDocument* getTxdoc() const { return txdoc_; }
+	tinyxml2::XMLDocument* getTxdoc() const { return txdoc_; }
 
-	std::string getKey(const TiXmlNode* node)
+	std::string getKey(const tinyxml2::XMLNode* node)
 	{
 		if(node == NULL)
 			return "";
@@ -186,43 +190,43 @@ public:
 		return strutil::kbe_trim(node->Value());
 	}
 
-	std::string getValStr(const TiXmlNode* node)
+	std::string getValStr(const tinyxml2::XMLNode* node)
 	{
-		const TiXmlText* ptext = node->ToText();
+		const tinyxml2::XMLText* ptext = node->ToText();
 		if(ptext == NULL)
 			return "";
 
 		return strutil::kbe_trim(ptext->Value());
 	}
 
-	std::string getVal(const TiXmlNode* node)
+	std::string getVal(const tinyxml2::XMLNode* node)
 	{
-		const TiXmlText* ptext = node->ToText();
+		const tinyxml2::XMLText* ptext = node->ToText();
 		if(ptext == NULL)
 			return "";
 
 		return ptext->Value();
 	}
 
-	int getValInt(const TiXmlNode* node)
+	int getValInt(const tinyxml2::XMLNode* node)
 	{
-		const TiXmlText* ptext = node->ToText();
+		const tinyxml2::XMLText* ptext = node->ToText();
 		if(ptext == NULL)
 			return 0;
 
 		return atoi(strutil::kbe_trim(ptext->Value()).c_str());
 	}
 
-	double getValFloat(const TiXmlNode* node)
+	double getValFloat(const tinyxml2::XMLNode* node)
 	{
-		const TiXmlText* ptext = node->ToText();
+		const tinyxml2::XMLText* ptext = node->ToText();
 		if(ptext == NULL)
 			return 0.f;
 
 		return atof(strutil::kbe_trim(ptext->Value()).c_str());
 	}
 
-	bool getBool(const TiXmlNode* node)
+	bool getBool(const tinyxml2::XMLNode* node)
 	{
 		std::string s = strutil::toUpper(getValStr(node));
 
@@ -239,8 +243,9 @@ public:
 	}
 
 protected:
-	TiXmlDocument* txdoc_;
-	TiXmlElement* rootElement_;
+
+	tinyxml2::XMLDocument* txdoc_;
+	tinyxml2::XMLElement* rootElement_;
 	bool isGood_;
 
 };

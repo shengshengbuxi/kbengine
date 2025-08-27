@@ -173,15 +173,11 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\dependencies\tinyxml2\tinyxml2.cpp" />
     <ClCompile Include="xml.cpp" />
-    <ClCompile Include="..\dependencies\tinyxml\tinystr.cpp" />
-    <ClCompile Include="..\dependencies\tinyxml\tinyxml.cpp" />
-    <ClCompile Include="..\dependencies\tinyxml\tinyxmlerror.cpp" />
-    <ClCompile Include="..\dependencies\tinyxml\tinyxmlparser.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\dependencies\tinyxml\tinystr.h" />
-    <ClInclude Include="..\dependencies\tinyxml\tinyxml.h" />
+    <ClInclude Include="..\dependencies\tinyxml2\tinyxml2.h" />
     <ClInclude Include="xml.h" />
   </ItemGroup>
   <ItemGroup>
