@@ -32,7 +32,7 @@ void EventHistoryStats::trackEvent(const std::string& type, const std::string& n
 		}
 		else
 		{
-			ERROR_MSG(fmt::format("EventHistoryStats::trackEvent[{}]: message size({}) > NETWORK_MESSAGE_MAX_SIZE({}).\n",
+			WARNING_MSG(fmt::format("EventHistoryStats::trackEvent[{}]: message size({}) > NETWORK_MESSAGE_MAX_SIZE({}).\n",
 				fullname, size, NETWORK_MESSAGE_MAX_SIZE));
 		}
 	}
