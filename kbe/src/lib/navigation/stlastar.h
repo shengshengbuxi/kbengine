@@ -33,18 +33,22 @@ given where due.
 
 // stl includes
 #include <algorithm>
-#include <set>
+#include <unordered_set>
 #include <vector>
 #include <cfloat>
 
-using namespace std;
-
 // fast fixed size memory allocator, used for fast node memory management
+#if USE_FSA_MEMORY
 #include "stlstarfsa.h"
+#else
+#include "stlstardsa.h"
+#endif
+
+
 
 // Fixed size memory allocator can be disabled to compare performance
 // Uses std new and delete instead if you turn it off
-#define USE_FSA_MEMORY 1
+// #define USE_FSA_MEMORY 1
 
 // disable warning that debugging information has lines that are truncated
 // occurs in stl headers
@@ -83,7 +87,7 @@ public: // data
 			Node *parent; // used during the search to record the parent of successor nodes
 			Node *child; // used after the search for the application to view the search in reverse
 			
-			float g; // cost of this node + it's predecessors
+			float g; // cost of this node + its predecessors
 			float h; // heuristic estimate of distance to goal
 			float f; // sum of cumulative cost of predecessors and self and heuristic
 
@@ -96,9 +100,13 @@ public: // data
 			{			
 			}
 
+			bool operator==(const Node& otherNode) const
+			{
+				return this->m_UserState.IsSameState(otherNode->m_UserState);
+			}
+
 			UserState m_UserState;
 	};
-
 
 	// For sorting the heap the STL needs compare function that lets us compare
 	// the f value of two nodes
@@ -123,6 +131,8 @@ public: // methods
 		m_CurrentSolutionNode( NULL ),
 #if USE_FSA_MEMORY
 		m_FixedSizeAllocator( 1000 ),
+#else
+		m_DynamicSizeAllocator(1000),
 #endif
 		m_AllocateNodeCount(0),
 		m_CancelRequest( false )
@@ -134,6 +144,8 @@ public: // methods
 		m_CurrentSolutionNode( NULL ),
 #if USE_FSA_MEMORY
 		m_FixedSizeAllocator( MaxNodes ),
+#else
+		m_DynamicSizeAllocator(MaxNodes),
 #endif
 		m_AllocateNodeCount(0),
 		m_CancelRequest( false )
@@ -266,7 +278,7 @@ public: // methods
 			if( !ret )
 			{
 
-			    typename vector< Node * >::iterator successor;
+			    typename std::vector< Node * >::iterator successor;
 
 				// free the nodes that may previously have been added 
 				for( successor = m_Successors.begin(); successor != m_Successors.end(); successor ++ )
@@ -285,9 +297,8 @@ public: // methods
 			}
 			
 			// Now handle each successor to the current node ...
-			for( typename vector< Node * >::iterator successor = m_Successors.begin(); successor != m_Successors.end(); successor ++ )
+			for( typename std::vector< Node * >::iterator successor = m_Successors.begin(); successor != m_Successors.end(); successor ++ )
 			{
-
 				// 	The g value for this successor ...
 				float newg = n->g + n->m_UserState.GetCost( (*successor)->m_UserState );
 
@@ -297,7 +308,7 @@ public: // methods
 
 				// First linear search of open list to find node
 
-				typename vector< Node * >::iterator openlist_result;
+				typename std::vector< Node * >::iterator openlist_result;
 
 				for( openlist_result = m_OpenList.begin(); openlist_result != m_OpenList.end(); openlist_result ++ )
 				{
@@ -320,16 +331,9 @@ public: // methods
 						continue;
 					}
 				}
+		        typename std::unordered_set<Node*, NodeHash, NodeEqual>::iterator closedlist_result;
 
-				typename vector< Node * >::iterator closedlist_result;
-
-				for( closedlist_result = m_ClosedList.begin(); closedlist_result != m_ClosedList.end(); closedlist_result ++ )
-				{
-					if( (*closedlist_result)->m_UserState.IsSameState( (*successor)->m_UserState ) )
-					{
-						break;					
-					}
-				}
+		        closedlist_result = m_ClosedList.find(*successor);
 
 				if( closedlist_result != m_ClosedList.end() )
 				{
@@ -426,7 +430,7 @@ public: // methods
 
 			// push n onto Closed, as we have expanded it now
 
-			m_ClosedList.push_back( n );
+			m_ClosedList.insert( n );
 
 		} // end else (not goal so expand)
 
@@ -670,7 +674,7 @@ private: // methods
 	void FreeAllNodes()
 	{
 		// iterate open list and delete all nodes
-		typename vector< Node * >::iterator iterOpen = m_OpenList.begin();
+		typename std::vector< Node * >::iterator iterOpen = m_OpenList.begin();
 
 		while( iterOpen != m_OpenList.end() )
 		{
@@ -683,7 +687,7 @@ private: // methods
 		m_OpenList.clear();
 
 		// iterate closed list and delete unused nodes
-		typename vector< Node * >::iterator iterClosed;
+		typename std::unordered_set<Node*, NodeHash, NodeEqual>::iterator iterClosed;
 
 		for( iterClosed = m_ClosedList.begin(); iterClosed != m_ClosedList.end(); iterClosed ++ )
 		{
@@ -705,7 +709,7 @@ private: // methods
 	void FreeUnusedNodes()
 	{
 		// iterate open list and delete unused nodes
-		typename vector< Node * >::iterator iterOpen = m_OpenList.begin();
+		typename std::vector< Node * >::iterator iterOpen = m_OpenList.begin();
 
 		while( iterOpen != m_OpenList.end() )
 		{
@@ -724,7 +728,7 @@ private: // methods
 		m_OpenList.clear();
 
 		// iterate closed list and delete unused nodes
-		typename vector< Node * >::iterator iterClosed;
+		typename std::unordered_set<Node*, NodeHash, NodeEqual>::iterator iterClosed;
 
 		for( iterClosed = m_ClosedList.begin(); iterClosed != m_ClosedList.end(); iterClosed ++ )
 		{
@@ -748,7 +752,11 @@ private: // methods
 
 #if !USE_FSA_MEMORY
 		m_AllocateNodeCount ++;
-		Node *p = new Node;
+		//Node *p = new Node;
+		Node* address = m_DynamicSizeAllocator.alloc();
+		
+		Node *p = new (address) Node;
+
 		return p;
 #else
 		Node *address = m_FixedSizeAllocator.alloc();
@@ -769,7 +777,9 @@ private: // methods
 		m_AllocateNodeCount --;
 
 #if !USE_FSA_MEMORY
-		delete node;
+		//delete node;
+		node->~Node();
+		m_DynamicSizeAllocator.free( node );
 #else
 		node->~Node();
 		m_FixedSizeAllocator.free( node );
@@ -779,14 +789,25 @@ private: // methods
 private: // data
 
 	// Heap (simple vector but used as a heap, cf. Steve Rabin's game gems article)
-	vector< Node *> m_OpenList;
+	std::vector< Node *> m_OpenList;
 
-	// Closed list is a vector.
-	vector< Node * > m_ClosedList; 
+	// Closed is an unordered_set
+	struct NodeHash {
+		size_t operator() (Node* const& n) const {
+			return n->m_UserState.Hash();
+		}
+	};
+	struct NodeEqual {
+		bool operator()(Node* a, Node* b) const {
+			return a->m_UserState.IsSameState(b->m_UserState);
+  	}
+	};
+	std::unordered_set<Node*, NodeHash, NodeEqual> m_ClosedList;
+
 
 	// Successors is a vector filled out by the user each type successors to a node
 	// are generated
-	vector< Node * > m_Successors;
+	std::vector< Node * > m_Successors;
 
 	// State
 	unsigned int m_State;
@@ -803,12 +824,14 @@ private: // data
 #if USE_FSA_MEMORY
 	// Memory
  	FixedSizeAllocator<Node> m_FixedSizeAllocator;
+#else
+	DynamicSizeAllocator<Node> m_DynamicSizeAllocator;
 #endif
 	
 	//Debug : need to keep these two iterators around
 	// for the user Dbg functions
-	typename vector< Node * >::iterator iterDbgOpen;
-	typename vector< Node * >::iterator iterDbgClosed;
+	typename std::vector< Node * >::iterator iterDbgOpen;
+	typename std::vector< Node * >::iterator iterDbgClosed;
 
 	// debugging : count memory allocation and free's
 	int m_AllocateNodeCount;
@@ -826,6 +849,7 @@ public:
 	virtual bool GetSuccessors( AStarSearch<T> *astarsearch, T *parent_node ) = 0; // Retrieves all successors to this node and adds them via astarsearch.addSuccessor()
 	virtual float GetCost( T &successor ) = 0; // Computes the cost of travelling from this node to the successor node
 	virtual bool IsSameState( T &rhs ) = 0; // Returns true if this node is the same as the rhs node
+	virtual size_t Hash() = 0; // Returns a hash for the state
 };
 
 #endif
