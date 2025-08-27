@@ -107,7 +107,8 @@ public:
 	virtual void onReclaimObject();
 
     const static size_t DEFAULT_SIZE = 0x100;
-	const static size_t MAX_SIZE = 10000000;
+	//const static size_t MAX_SIZE = 10000000;
+    const static size_t MAX_SIZE = 4294967295;
 
     MemoryStream(): rpos_(0), wpos_(0)
     {

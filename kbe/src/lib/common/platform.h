@@ -80,6 +80,10 @@
 
 #include <signal.h>
 
+#include <random>  
+#include <mutex>
+#include <atomic>
+
 #if !defined( _WIN32 )
 # include <pwd.h>
 #else
@@ -534,10 +538,15 @@ inline int kbe_lasterror()
 #endif
 }
 
+
 /** 获取用户UID */
-inline int32 getUserUID()
+inline int32 getUserUID(int32 setuid)
 {
+	
 	static int32 iuid = 0;
+
+	if (iuid == 0 && setuid != 0) 
+		iuid = setuid;
 
 	if(iuid == 0)
 	{
@@ -565,6 +574,14 @@ inline int32 getUserUID()
 
 	return iuid;
 }
+
+
+/** 获取用户UID */
+inline int32 getUserUID()
+{	
+	return getUserUID(0);
+}
+
 
 /** 获取用户名 */
 inline const char * getUsername()
@@ -700,51 +717,6 @@ inline uint64 getTimeMs()
 #endif
 }
 
-/* 产生一个64位的uuid 
-*/
-extern COMPONENT_ORDER g_componentGlobalOrder;
-extern COMPONENT_ORDER g_componentGroupOrder;
-
-extern COMPONENT_GUS g_genuuid_sections;
-
-inline uint64 genUUID64()
-{
-	static uint64 tv = (uint64)(time(NULL));
-	uint64 now = (uint64)(time(NULL));
-
-	static uint16 lastNum = 0;
-
-	if(now != tv)
-	{
-		tv = now;
-		lastNum = 0;
-	}
-	
-	if(g_genuuid_sections <= 0)
-	{
-		// 时间戳32位，随机数16位，16位迭代数（最大为65535-1）
-		static uint32 rnd = 0;
-		if(rnd == 0)
-		{
-			srand(getSystemTime());
-			rnd = (uint32)(rand() << 16);
-		}
-		
-		assert(lastNum < 65535 && "genUUID64(): overflow!");
-		
-		return (tv << 32) | rnd | lastNum++;
-	}
-	else
-	{
-		// 时间戳32位，app组ID16位，16位迭代数（最大为65535-1）
-		static uint32 sections = g_genuuid_sections << 16;
-		
-		assert(lastNum < 65535 && "genUUID64(): overflow!");
-		
-		return (tv << 32) | sections | lastNum++;
-	}
-}
-
 /** sleep 跨平台 */
 #if KBE_PLATFORM == PLATFORM_WIN32
 	inline void sleep(uint32 ms)
@@ -760,6 +732,118 @@ inline uint64 genUUID64()
 	  select(0, NULL, NULL, NULL, &tval);
 	}	
 #endif
+
+/* 产生一个64位的uuid 
+*/
+extern COMPONENT_ORDER g_componentGlobalOrder;
+extern COMPONENT_ORDER g_componentGroupOrder;
+
+extern COMPONENT_GUS g_genuuid_sections;
+//
+//inline uint64 genUUID64()
+//{
+//	static uint64 tv = (uint64)(time(NULL));
+//	uint64 now = (uint64)(time(NULL));
+//
+//	static uint32 lastNum = 0;
+//
+//	if(now != tv)
+//	{
+//		tv = now;
+//		lastNum = 0;
+//	}
+//	
+//	if(g_genuuid_sections <= 0)
+//	{
+//		// 时间戳32位，随机数16位，16位迭代数（最大为65535-1）
+//		// 新的结构：时间戳32位，随机数13位，19位迭代数（最大为524287-1）
+//		static uint32 rnd = 0;
+//		if(rnd == 0)
+//		{
+//			srand(getSystemTime());
+//			rnd = (uint32)(rand() << 19);
+//		}
+//		
+//		//assert(lastNum < 65535 && "genUUID64(): overflow!");
+//		assert(lastNum < 524287 && "genUUID64(): overflow!");
+//		
+//		return (tv << 32) | rnd | lastNum++;
+//	}
+//	else
+//	{
+//		// 时间戳32位，app组ID16位，16位迭代数（最大为65535-1）
+//		// 
+//		// 新的结构：时间戳32位，app组ID13位，19位迭代数（最大为524287-1）
+//
+//		static uint32 sections = g_genuuid_sections << 19;
+//		
+//		assert(lastNum < 524287 && "genUUID64(): overflow!");
+//		
+//		return (tv << 32) | sections | lastNum++;
+//	}
+//}
+ 
+// 支持高性能多线程方案
+inline uint64 genUUID64() {  
+    // tv（时间戳）、lastNum（序列号）、rnd（随机数）  
+    static std::atomic<uint64> tv{0};  
+    static std::atomic<uint32> lastNum{0};  
+    static std::atomic<uint32> rnd{0};  
+    static std::once_flag rnd_init_flag;
+
+	static uint8 tvbit = 32;
+	static uint8 numbit = 16;
+	static uint8 sectionbit = 16;
+
+_Regenerate:
+ 
+    const uint64 now = static_cast<uint64>(time(nullptr));  
+    uint64 current_tv = tv.load(std::memory_order_relaxed);   
+ 
+    // 时间戳更新逻辑  
+    if (now != current_tv) 
+	{  
+        tv.store(now,  std::memory_order_relaxed);  
+        lastNum.store(0,  std::memory_order_relaxed);  
+        current_tv = now;  
+    }  
+ 
+    // 随机数初始化
+    if (g_genuuid_sections <= 0 && rnd.load(std::memory_order_relaxed)  == 0) 
+	{  
+        std::call_once(rnd_init_flag, [] {  
+            std::random_device rd;  
+            std::mt19937 gen(rd());  
+            std::uniform_int_distribution<uint32> dis(0, (1 << sectionbit) - 1);  
+            rnd.store(dis(gen)  << numbit, std::memory_order_relaxed);  
+        });  
+    }  
+ 
+    // 序列号递增
+    const uint32 num = lastNum.fetch_add(1,  std::memory_order_relaxed);  
+	//assert(num < 524287 && "genUUID64(): overflow!");  
+	
+ 
+    // 组装UUID
+    if (g_genuuid_sections <= 0) 
+	{  
+        return (current_tv << tvbit) | rnd.load(std::memory_order_relaxed)  | num;  
+    } 
+	else 
+	{  
+		if (num >= (uint32)((1 << numbit)-1))
+		{
+			// 超出的情况，暂时方案是直接sleep 1秒，可以考虑是否要改成uid为96位的
+
+			sleep(1000);
+			goto _Regenerate;
+		}
+
+        const uint32 sections = g_genuuid_sections << numbit;  
+        return (current_tv << tvbit) | sections | num;  
+    }  
+}  
+
 
 /** 判断平台是否为小端字节序 */
 inline bool isPlatformLittleEndian()
