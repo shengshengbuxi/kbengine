@@ -184,5 +184,8 @@
     <ClInclude Include="DetourMath.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="stlstardsa.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

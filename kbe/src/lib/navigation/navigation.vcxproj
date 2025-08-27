@@ -275,6 +275,7 @@
     <ClInclude Include="RecastAlloc.h" />
     <ClInclude Include="RecastAssert.h" />
     <ClInclude Include="stlastar.h" />
+    <ClInclude Include="stlstardsa.h" />
     <ClInclude Include="stlstarfsa.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

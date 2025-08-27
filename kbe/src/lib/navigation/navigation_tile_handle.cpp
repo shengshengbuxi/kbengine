@@ -38,7 +38,10 @@ NavigationHandle(),
 pTilemap(0),
 direction8_(navTileHandle.direction8_)
 {
-	pTilemap = new Tmx::Map(*navTileHandle.pTilemap);
+	//pTilemap = new Tmx::Map(*navTileHandle.pTilemap);
+
+	pTilemap = new Tmx::Map();
+	pTilemap->ParseFile(navTileHandle.pTilemap->GetFilename());
 }
 
 //-------------------------------------------------------------------------------------
@@ -363,7 +366,7 @@ NavTileHandle* NavTileHandle::_create(const std::string& res)
 		DEBUG_MSG(fmt::format("\t==> image Width : {}\n", tileset->GetImage()->GetWidth()));
 		DEBUG_MSG(fmt::format("\t==> image Height : {}\n", tileset->GetImage()->GetHeight()));
 		DEBUG_MSG(fmt::format("\t==> image Source : {}\n", tileset->GetImage()->GetSource().c_str()));
-		DEBUG_MSG(fmt::format("\t==> transparent Color (hex) : {}\n", tileset->GetImage()->GetTransparentColor()));
+		DEBUG_MSG(fmt::format("\t==> transparent Color (hex) : {}\n", tileset->GetImage()->GetTransparentColor().ToString()));
 		DEBUG_MSG(fmt::format("\t==> tiles Size : {}\n", tileset->GetTiles().size()));
 		
 		if (tileset->GetTiles().size() > 0) 
@@ -427,6 +430,16 @@ bool NavTileHandle::MapSearchNode::IsSameState(MapSearchNode &rhs)
 }
 
 //-------------------------------------------------------------------------------------
+size_t NavTileHandle::MapSearchNode::MapSearchNode::Hash()
+{
+#ifndef X64
+	return x << 16 | y;
+#endif
+
+	return (size_t)x << 32 | y;
+}
+
+//-------------------------------------------------------------------------------------
 void NavTileHandle::MapSearchNode::PrintNodeInfo()
 {
 	char str[100];
@@ -442,10 +455,7 @@ void NavTileHandle::MapSearchNode::PrintNodeInfo()
 
 float NavTileHandle::MapSearchNode::GoalDistanceEstimate(MapSearchNode &nodeGoal)
 {
-	float xd = float(((float)x - (float)nodeGoal.x));
-	float yd = float(((float)y - (float)nodeGoal.y));
-
-	return xd + yd;
+	return abs((float)x - (float)nodeGoal.x) + abs((float)y - (float)nodeGoal.y);
 }
 
 //-------------------------------------------------------------------------------------
