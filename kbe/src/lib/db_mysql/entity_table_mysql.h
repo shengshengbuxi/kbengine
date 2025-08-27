@@ -553,7 +553,7 @@ public:
 	*/
 	virtual EntityTableItem* createItem(std::string type, std::string defaultVal);
 
-	DBID writeTable(DBInterface* pdbi, DBID dbid, int8 shouldAutoLoad, MemoryStream* s, ScriptDefModule* pModule);
+	DBID writeTable(DBInterface* pdbi, DBID dbid, int8 shouldAutoLoad, MemoryStream* s, ScriptDefModule* pModule, ENTITY_DBID_VERSION_DATA* pEntityDBIDVersionData=NULL);
 
 	/**
 		从数据库删除entity
@@ -563,7 +563,7 @@ public:
 	/**
 		获取所有的数据放到流中
 	*/
-	virtual bool queryTable(DBInterface* pdbi, DBID dbid, MemoryStream* s, ScriptDefModule* pModule);
+	virtual bool queryTable(DBInterface* pdbi, DBID dbid, MemoryStream* s, ScriptDefModule* pModule, ENTITY_DBID_VERSION_DATA* pEntityDBIDVersionData=NULL);
 
 	/**
 		设置是否自动加载
@@ -584,15 +584,50 @@ public:
 	/**
 		获取需要存储的表名， 字段名和转换为sql存储时的字符串值
 	*/
-	virtual void getWriteSqlItem(DBInterface* pdbi, MemoryStream* s, mysql::DBContext& context);
+	virtual void getWriteSqlItem(DBInterface* pdbi, MemoryStream* s, mysql::DBContext& context, uint64 dbid=0);
+	//virtual void getWriteSqlItem(DBInterface* pdbi, MemoryStream* s, mysql::DBContext& parentContext);
 	virtual void getReadSqlItem(mysql::DBContext& context);
 
 	void init_db_item_name();
 
-protected:
-	
-};
 
+protected:
+	/*std::map<DBID, std::pair<KBEShared_ptr<mysql::DBContext>, KBEShared_ptr<mysql::DBContext> > > dbid_contexts_;*/
+	//std::map<DBID, KBEShared_ptr<mysql::DBContext> > dbid_contexts_;
+
+	//std::map<DBID, ENTITY_DBID_VERSION_DATA*> entityDBIDsVersions_;
+	//std::map<DBID, KBEShared_ptr<mysql::DBContext> > checkout_contexts;
+	//std::unordered_map<DBID, std::string> dbid_versions_;
+};
+class EntityTableItemMysql_TEXT : public EntityTableItemMysqlBase
+{
+public:
+	EntityTableItemMysql_TEXT(std::string itemDBType, 
+		uint32 datalength, uint32 flags, enum_field_types mysqlItemtype):
+	  EntityTableItemMysqlBase(itemDBType, datalength, flags, mysqlItemtype)
+	  {
+	  }
+
+	virtual ~EntityTableItemMysql_TEXT(){};
+
+	uint8 type() const{ return TABLE_ITEM_TYPE_TEXT; }
+
+	/**
+		同步entity表到数据库中
+	*/
+	virtual bool syncToDB(DBInterface* pdbi, void* pData = NULL);
+
+	/**
+		获取某个表所有的数据放到流中
+	*/
+	void addToStream(MemoryStream* s, mysql::DBContext& context, DBID resultDBID);
+
+	/**
+		获取需要存储的表名， 字段名和转换为sql存储时的字符串值
+	*/
+	virtual void getWriteSqlItem(DBInterface* pdbi, MemoryStream* s, mysql::DBContext& context);
+	virtual void getReadSqlItem(mysql::DBContext& context);
+};
 
 }
 

@@ -6,6 +6,7 @@
 #include "common/common.h"
 #include "common/memorystream.h"
 #include "helper/debug_helper.h"
+#include "db_interface/entity_table.h"
 
 namespace KBEngine { 
 namespace mysql {
@@ -57,6 +58,7 @@ public:
 
 	DBContext()
 	{
+		pEntityDBIDVersionData = NULL;
 	}
 
 	~DBContext()
@@ -71,12 +73,32 @@ public:
 	DBID parentTableDBID;
 	DBID dbid;
 	
+	
+
 	DB_RW_CONTEXTS optable;
+	
+	//DB_RW_CONTEXTS deleteOptable;
+
+	std::string version;
+	//std::unordered_map<std::string, KBEShare > deleteOptable;
+
+	
 	
 	bool isEmpty;
 	
-	std::map<DBID, std::vector<DBID> > dbids;
-	std::map<DBID, std::pair< std::vector<std::string>::size_type, std::vector<std::string> > > results;
+	KBEUnordered_map<DBID, std::vector<DBID> > dbids;
+	KBEUnordered_map<DBID, std::pair< std::vector<std::string>::size_type, std::vector<std::string> > > results;
+	//KBEUnordered_map<DBID, std::string> versions;
+
+	ENTITY_DBID_VERSION_DATA* pEntityDBIDVersionData;
+	//std::vector<std::pair<DBID, std::string> >versions;
+	//uint32 versionIndex
+	
+
+	//uint32 digest[5];
+	
+
+	
 
 private:
 

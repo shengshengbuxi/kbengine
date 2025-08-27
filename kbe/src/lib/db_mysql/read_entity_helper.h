@@ -37,10 +37,12 @@ public:
 		// 根据某个dbid获得一张表上的相关数据
 		SqlStatement* pSqlcmd = new SqlStatementQuery(pdbi, context.tableName, 
 			context.dbids[context.dbid], 
-			context.dbid, context.items);
+			context.dbid, context.items, context.version);
 
 		bool ret = pSqlcmd->query();
 		context.dbid = pSqlcmd->dbid();
+		context.version = pSqlcmd->version();
+
 		delete pSqlcmd;
 		
 		if(!ret)
@@ -87,18 +89,30 @@ public:
 				{
 					itemDBIDs.push_back(item_dbid);
 				}
+				
+				sval.clear();
+
+				sval << arow[1];
+				std::string item_version;
+
+				sval >> item_version;
+
+				if (context.pEntityDBIDVersionData != NULL)
+				{
+					context.pEntityDBIDVersionData->versions[item_dbid] = item_version;
+				}
 
 				// 如果这条记录除了dbid以外还存在其他数据，则将数据填充到结果集中
-				if(nfields > 1)
+				if(nfields > 2)
 				{
 					std::vector<std::string>& itemResults = context.results[item_dbid].second;
 					context.results[item_dbid].first = 0;
 
-					KBE_ASSERT(nfields == context.items.size() + 1);
+					KBE_ASSERT(nfields == context.items.size() + 2);
 
-					for (uint32 i = 1; i < nfields; ++i)
+					for (uint32 i = 2; i < nfields; ++i)
 					{
-						KBEShared_ptr<mysql::DBContext::DB_ITEM_DATA> pSotvs = context.items[i - 1];
+						KBEShared_ptr<mysql::DBContext::DB_ITEM_DATA> pSotvs = context.items[i - 2];
 						std::string data;
 						data.assign(arow[i], lengths[i]);
 
@@ -114,6 +128,12 @@ public:
 			mysql_free_result(pResult);
 		}
 		
+		if (context.pEntityDBIDVersionData != NULL)
+		{
+			context.pEntityDBIDVersionData->dbids = context.dbids;
+
+		}
+		
 		std::vector<DBID>& dbids = context.dbids[context.dbid];
 
 		// 如果没有数据则查询完毕了
@@ -124,10 +144,31 @@ public:
 		// 每一个dbid都需要获得子表上的数据
 		// 在这里我们让子表一次查询出所有的dbids数据然后填充到结果集
 
+
 		mysql::DBContext::DB_RW_CONTEXTS::iterator iter1 = context.optable.begin();
 		for(; iter1 != context.optable.end(); ++iter1)
 		{
 			mysql::DBContext& wbox = *iter1->second.get();
+			
+			if (context.pEntityDBIDVersionData != NULL)
+			{
+				ENTITY_DBID_VERSION_DATA* childDBIDsVersionsData = NULL;
+				KBEUnordered_map<std::string, ENTITY_DBID_VERSION_DATA*>::iterator dbidsVersionsTableIt = context.pEntityDBIDVersionData->entityDBIDVersionChildTableDatas.find(wbox.tableName);
+				if (dbidsVersionsTableIt != context.pEntityDBIDVersionData->entityDBIDVersionChildTableDatas.end())
+				{
+					childDBIDsVersionsData = dbidsVersionsTableIt->second;
+				}
+
+				if (childDBIDsVersionsData == NULL)
+				{
+					childDBIDsVersionsData = new ENTITY_DBID_VERSION_DATA();
+					context.pEntityDBIDVersionData->entityDBIDVersionChildTableDatas[wbox.tableName] = childDBIDsVersionsData;
+				}
+
+				wbox.pEntityDBIDVersionData = childDBIDsVersionsData;
+
+			}
+
 			if(!queryChildDB(pdbi, wbox, dbids))
 				return false;
 		}
@@ -144,10 +185,12 @@ public:
 		// 根据某个dbid获得一张表上的相关数据
 		SqlStatement* pSqlcmd = new SqlStatementQuery(pdbi, context.tableName, 
 			parentTableDBIDs, 
-			context.dbid, context.items);
+			context.dbid, context.items, context.version);
 
 		bool ret = pSqlcmd->query();
 		context.dbid = pSqlcmd->dbid();
+		context.version = pSqlcmd->version();
+
 		delete pSqlcmd;
 		
 		if(!ret)
@@ -180,6 +223,17 @@ public:
 				sval.clear();
 				sval << arow[1];
 
+				std::string item_version;
+				sval >> item_version;
+
+				if (context.pEntityDBIDVersionData != NULL)
+				{
+					context.pEntityDBIDVersionData->versions[item_dbid] = item_version;
+				}
+
+				sval.clear();
+				sval << arow[2];
+
 				DBID parentID;
 				sval >> parentID;
 
@@ -206,7 +260,7 @@ public:
 				}
 
 				// 如果这条记录除了dbid以外还存在其他数据，则将数据填充到结果集中
-				const uint32 const_fields = 2; // id, parentID
+				const uint32 const_fields = 3; // id, version, parentID
 				if(nfields > const_fields)
 				{
 					std::vector<std::string>& itemResults = context.results[item_dbid].second;
@@ -232,6 +286,11 @@ public:
 			mysql_free_result(pResult);
 		}
 
+		if (context.pEntityDBIDVersionData != NULL)
+		{
+			context.pEntityDBIDVersionData->dbids = context.dbids;
+		}
+
 		// 如果没有数据则查询完毕了
 		if(t_parentTableDBIDs.size() == 0)
 			return true;
@@ -243,6 +302,25 @@ public:
 		for(; iter1 != context.optable.end(); ++iter1)
 		{
 			mysql::DBContext& wbox = *iter1->second.get();
+
+			if (context.pEntityDBIDVersionData != NULL)
+			{
+				ENTITY_DBID_VERSION_DATA* childDBIDsVersionsData = NULL;
+				KBEUnordered_map<std::string, ENTITY_DBID_VERSION_DATA*>::iterator dbidsVersionsTableIt = context.pEntityDBIDVersionData->entityDBIDVersionChildTableDatas.find(wbox.tableName);
+				if (dbidsVersionsTableIt != context.pEntityDBIDVersionData->entityDBIDVersionChildTableDatas.end())
+				{
+					childDBIDsVersionsData = dbidsVersionsTableIt->second;
+				}
+
+				if (childDBIDsVersionsData == NULL)
+				{
+					childDBIDsVersionsData = new ENTITY_DBID_VERSION_DATA();
+					context.pEntityDBIDVersionData->entityDBIDVersionChildTableDatas[wbox.tableName] = childDBIDsVersionsData;
+				}
+
+				wbox.pEntityDBIDVersionData = childDBIDsVersionsData;
+
+			}
 
 			if(!queryChildDB(pdbi, wbox, t_parentTableDBIDs))
 				return false;

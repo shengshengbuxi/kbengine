@@ -60,47 +60,47 @@ static uint32 watcher_query(std::string cmd)
 	return 0;
 }
 
-static uint32 watcher_select(const std::string&)
+static uint32 watcher_select()
 {
 	return watcher_query("SELECT");
 }
 
-static uint32 watcher_delete(const std::string&)
+static uint32 watcher_delete()
 {
 	return watcher_query("DELETE");
 }
 
-static uint32 watcher_insert(const std::string&)
+static uint32 watcher_insert()
 {
 	return watcher_query("INSERT");
 }
 
-static uint32 watcher_update(const std::string&)
+static uint32 watcher_update()
 {
 	return watcher_query("UPDATE");
 }
 
-static uint32 watcher_create(const std::string&)
+static uint32 watcher_create()
 {
 	return watcher_query("CREATE");
 }
 
-static uint32 watcher_drop(const std::string&)
+static uint32 watcher_drop()
 {
 	return watcher_query("DROP");
 }
 
-static uint32 watcher_show(const std::string&)
+static uint32 watcher_show()
 {
 	return watcher_query("SHOW");
 }
 
-static uint32 watcher_alter(const std::string&)
+static uint32 watcher_alter()
 {
 	return watcher_query("ALTER");
 }
 
-static uint32 watcher_grant(const std::string&)
+static uint32 watcher_grant()
 {
 	return watcher_query("GRANT");
 }
@@ -251,12 +251,20 @@ __RECONNECT:
 
 		// 不需要关闭自动提交，底层会START TRANSACTION之后再COMMIT
 		// mysql_autocommit(mysql(), 0);
+		{
+			char characterset_sql[MAX_BUF];
+			kbe_snprintf(characterset_sql, MAX_BUF, "ALTER DATABASE CHARACTER SET %s COLLATE %s", 
+				characterSet_.c_str(), collation_.c_str());
 
-		char characterset_sql[MAX_BUF];
-		kbe_snprintf(characterset_sql, MAX_BUF, "ALTER DATABASE CHARACTER SET %s COLLATE %s", 
-			characterSet_.c_str(), collation_.c_str());
+			query(&characterset_sql[0], strlen(characterset_sql), false);
+		}
 
-		query(&characterset_sql[0], strlen(characterset_sql), false);
+		{
+			char characterset_sql[MAX_BUF] = "SET SESSION transaction_isolation = 'READ-COMMITTED'";
+
+			query(&characterset_sql[0], strlen(characterset_sql), false);
+		}
+		
 	}
 	catch (std::exception& e)
 	{
@@ -751,14 +759,14 @@ bool DBInterfaceMysql::processException(std::exception & e)
 	}
 	else if (dbe->shouldRetry())
 	{
-		WARNING_MSG(fmt::format("DBInterfaceMysql::processExceptionn(db={}): Retrying {:p}\nException:{}\nnlastquery={}\n",
+		ERROR_MSG(fmt::format("DBInterfaceMysql::processExceptionn(db={}): Retrying {:p}\nException:{}\nnlastquery={}\n",
 			db_name_, (void*)this, dbe->what(), lastquery_));
 
 		retry = true;
 	}
 	else
 	{
-		WARNING_MSG(fmt::format("DBInterfaceMysql::processExceptionn(db={}): "
+		ERROR_MSG(fmt::format("DBInterfaceMysql::processExceptionn(db={}): "
 				"Exception: {}\nlastquery={}\n",
 			db_name_, dbe->what(), lastquery_));
 	}
