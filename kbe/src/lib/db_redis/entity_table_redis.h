@@ -497,7 +497,7 @@ public:
 	*/
 	virtual EntityTableItem* createItem(std::string type, std::string defaultVal);
 
-	DBID writeTable(DBInterface* pdbi, DBID dbid, int8 shouldAutoLoad, MemoryStream* s, ScriptDefModule* pModule);
+	DBID writeTable(DBInterface* pdbi, DBID dbid, int8 shouldAutoLoad, MemoryStream* s, ScriptDefModule* pModule, ENTITY_DBID_VERSION_DATA* pEntityDBIDVersionData=NULL);
 
 	/**
 		´ÓÊý¾Ý¿âÉ¾³ýentity

@@ -324,7 +324,7 @@ void EntityTableRedis::entityShouldAutoLoad(DBInterface* pdbi, DBID dbid, bool s
 }
 
 //-------------------------------------------------------------------------------------
-DBID EntityTableRedis::writeTable(DBInterface* pdbi, DBID dbid, int8 shouldAutoLoad, MemoryStream* s, ScriptDefModule* pModule)
+DBID EntityTableRedis::writeTable(DBInterface* pdbi, DBID dbid, int8 shouldAutoLoad, MemoryStream* s, ScriptDefModule* pModule, ENTITY_DBID_VERSION_DATA* pEntityDBIDVersionData)
 {
 	return 0;
 }
