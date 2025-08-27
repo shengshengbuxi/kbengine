@@ -1,7 +1,7 @@
 LIB =	tmxparser
 
 SRCS =				\
-	base64			\
+	base64/base64			\
 	TmxEllipse		\
 	TmxImage		\
 	TmxImageLayer		\
@@ -14,8 +14,15 @@ SRCS =				\
 	TmxPropertySet		\
 	TmxTile			\
 	TmxTileset		\
-	TmxUtil			
-
+	TmxUtil			\
+	TmxTileOffset		\
+	TmxTileLayer		\
+	TmxTerrainArray		\
+	TmxTerrain		\
+	TmxProperty		\
+	TmxGroupLayer		\
+	TmxColor			\
+	TmxText
 
 ifndef KBE_ROOT
 export KBE_ROOT := $(subst /kbe/src/lib/dependencies/$(LIB),,$(CURDIR))

@@ -25,8 +25,9 @@
 
 */
 
-#include "base64.h"
+#include <base64/base64.h>
 #include <iostream>
+#include <stdlib.h>
 
 static const std::string base64_chars = 
              "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -121,4 +122,3 @@ std::string base64_decode(std::string const& encoded_string) {
 
   return ret;
 }
-

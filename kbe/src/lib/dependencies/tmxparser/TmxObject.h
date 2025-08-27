@@ -25,84 +25,99 @@
 //
 // Author: Tamir Atias
 //-----------------------------------------------------------------------------
-#ifndef __TMX_OBJECT_H__
-#define __TMX_OBJECT_H__
+#pragma once
 
 #include <string>
 
 #include "TmxPropertySet.h"
 
-class TiXmlNode;
+namespace tinyxml2 {
+    class XMLNode;
+}
 
-namespace Tmx 
+namespace Tmx
 {
-	class Ellipse;
-	class Polygon;
-	class Polyline;
+    class Ellipse;
+    class Polygon;
+    class Polyline;
+    class Text;
 
-	//-------------------------------------------------------------------------
-	// Class used for representing a single object from the objectgroup.
-	//-------------------------------------------------------------------------
-	class Object 
-	{
-	public:
-		Object();
-		~Object();
+    //-------------------------------------------------------------------------
+    /// Class used for representing a single object from the objectgroup.
+    //-------------------------------------------------------------------------
+    class Object
+    {
+    public:
+        Object();
+        ~Object();
 
-		// Parse an object node.
-		void Parse(const TiXmlNode *objectNode);
-	
-		// Get the name of the object.
-		const std::string &GetName() const { return name; }
-		
-		// Get the type of the object.
-		const std::string &GetType() const { return type; }
+        /// Parse an object node.
+        void Parse(const tinyxml2::XMLNode *objectNode);
 
-		// Get the left side of the object, in pixels.
-		int GetX() const { return x; }
+        /// Get the name of the object.
+        const std::string &GetName() const { return name; }
 
-		// Get the top side of the object, in pixels.
-		int GetY() const { return y; }
-		
-		// Get the width of the object, in pixels.
-		int GetWidth() const { return width; }
-		
-		// Get the height of the object, in pixels.
-		int GetHeight() const { return height; }
+        /// Get the type of the object.
+        const std::string &GetType() const { return type; }
 
-		// Get the Global ID of the tile associated with this object.
-		int GetGid() const { return gid; }
+        /// Get the left side of the object, in pixels.
+        int GetX() const { return x; }
 
-		// Get the ellipse.
-		const Tmx::Ellipse *GetEllipse() const { return ellipse; }
+        /// Get the top side of the object, in pixels.
+        int GetY() const { return y; }
 
-		// Get the Polygon.
-		const Tmx::Polygon *GetPolygon() const { return polygon; }
+        /// Get the width of the object, in pixels.
+        int GetWidth() const { return width; }
 
-		// Get the Polyline.
-		const Tmx::Polyline *GetPolyline() const { return polyline; }
+        /// Get the height of the object, in pixels.
+        int GetHeight() const { return height; }
 
-		// Get the property set.
-		const Tmx::PropertySet &GetProperties() const { return properties; }
+        /// Get the rotation of the object, in degrees.
+        double GetRot() const { return rotation; }
 
-	private:
-		std::string name;
-		std::string type;
+        /// Get the Global ID of the tile associated with this object.
+        int GetGid() const { return gid; }
 
-		int x;
-		int y;
-		int width;
-		int height;
-		int gid;
+        /// Get the ID of this object.
+        int GetId() const { return id; }
 
-		Tmx::Ellipse *ellipse;
-		Tmx::Polygon *polygon;
-		Tmx::Polyline *polyline;
+        /// Get the visibility of the object.
+        bool IsVisible() const { return visible; }
 
-		Tmx::PropertySet properties;
-	};
-};
+        /// Get the ellipse.
+        const Tmx::Ellipse *GetEllipse() const { return ellipse; }
 
-#endif
+        /// Get the Polygon.
+        const Tmx::Polygon *GetPolygon() const { return polygon; }
 
+        /// Get the Polyline.
+        const Tmx::Polyline *GetPolyline() const { return polyline; }
 
+        /// Get the Text.
+        const Tmx::Text *GetText() const { return text; }
+
+        /// Get the property set.
+        const Tmx::PropertySet &GetProperties() const { return properties; }
+
+    private:
+        std::string name;
+        std::string type;
+
+        int x;
+        int y;
+        int width;
+        int height;
+        int gid;
+        int id;
+
+        double rotation;
+        bool visible;
+
+        Tmx::Ellipse *ellipse;
+        Tmx::Polygon *polygon;
+        Tmx::Polyline *polyline;
+        Tmx::Text *text;
+
+        Tmx::PropertySet properties;
+    };
+}

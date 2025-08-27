@@ -25,22 +25,21 @@
 //
 // Author: Tamir Atias
 //-----------------------------------------------------------------------------
-#ifndef __TMX_UTIL_H__
-#define __TMX_UTIL_H__
+#pragma once
+
 #include <string>
 
 namespace Tmx 
 {
-	class Util 
-	{
-	public:
-		// Decode a base-64 encoded string.
-		static std::string DecodeBase64(const std::string &str);
+    namespace Util
+    {
+        /// Trim both leading and trailing whitespace from a string.
+        std::string &Trim(std::string &str);
 
-		// Decompress a gzip encoded byte array.
-		static char* DecompressGZIP(const char *data, int dataSize, int expectedSize);
-	};
-};
+        /// Decode a base-64 encoded string.
+        std::string DecodeBase64(const std::string &str);
 
-#endif
-
+        /// Decompress a gzip encoded byte array.
+        char* DecompressGZIP(const char *data, int dataSize, int expectedSize);
+    }
+}

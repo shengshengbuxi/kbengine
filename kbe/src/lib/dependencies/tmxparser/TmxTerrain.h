@@ -1,6 +1,4 @@
 //-----------------------------------------------------------------------------
-// TmxPolygon.h
-//
 // Copyright (c) 2010-2014, Tamir Atias
 // All rights reserved.
 //
@@ -22,39 +20,53 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Author: Tamir Atias
 //-----------------------------------------------------------------------------
 #pragma once
 
 #include <vector>
 
-#include "TmxPoint.h"
+#include "TmxPropertySet.h"
 
-namespace tinyxml2 {
+namespace tinyxml2
+{
     class XMLNode;
 }
 
 namespace Tmx
 {
     //-------------------------------------------------------------------------
-    /// Class to store a Polygon of an Object.
+    /// Class to contain information about every terrain in the
+    /// tileset/terraintypes element.
+    /// This class also contains a property set.
     //-------------------------------------------------------------------------
-    class Polygon
+    class Terrain
     {
     public:
-        Polygon();
+        Terrain();
+        ~Terrain();
 
-        /// Parse the polygon node.
-        void Parse(const tinyxml2::XMLNode *polygonNode);
+        /// Parse a terrain type node.
+        void Parse(const tinyxml2::XMLNode *terrainNode);
 
-        /// Get one of the vertices.
-        const Tmx::Point &GetPoint(int index) const { return points[index]; }
+        /// Get the name of the terrain type.
+        const std::string &GetName() const { return name; }
 
-        /// Get the number of vertices.
-        int GetNumPoints() const { return points.size(); }
+        /// Get the local tile-id of the tile that represents the terrain type visually.
+        int GetTileId() const
+        {
+            return tileID;
+        }
+
+        /// Get a set of properties regarding the terrain type.
+        const Tmx::PropertySet &GetProperties() const
+        {
+            return properties;
+        }
 
     private:
-        std::vector< Tmx::Point > points;
+        std::string name;
+        int tileID;
+
+        Tmx::PropertySet properties;
     };
 }

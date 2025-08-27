@@ -25,78 +25,59 @@
 //
 // Author: Tamir Atias
 //-----------------------------------------------------------------------------
-#ifndef __TMX_OBJECTGROUP_H__
-#define __TMX_OBJECTGROUP_H__
+#pragma once
 
 #include <string>
 #include <vector>
 
+#include "TmxLayer.h"
 #include "TmxPropertySet.h"
 
-class TiXmlNode;
+namespace tinyxml2 {
+    class XMLNode;
+}
 
 namespace Tmx 
 {
-	class Object;
-	
-	//-------------------------------------------------------------------------
-	// A class used for holding a list of objects.
-	// This class doesn't have a property set.
-	//-------------------------------------------------------------------------
-	class ObjectGroup 
-	{
-	public:
-		ObjectGroup();
-		~ObjectGroup();
+    class Object;
+    
+    //-------------------------------------------------------------------------
+    /// A class used for holding a list of objects.
+    /// This class has a property set.
+    //-------------------------------------------------------------------------
+    class ObjectGroup : public Tmx::Layer
+    {
+    public:
+        /// Construct a new ObjectGroup
+        ObjectGroup(const Tmx::Map *_map);
 
-		// Parse an objectgroup node.
-		void Parse(const TiXmlNode *objectGroupNode);
+				/// Construct a new ObjectGroup used by a Tile
+				ObjectGroup(const Tmx::Tile *_tile);
+				
+        ~ObjectGroup();
 
-		// Get the name of the object group.
-		const std::string &GetName() const { return name; }
+        /// Parse an objectgroup node.
+        void Parse(const tinyxml2::XMLNode *objectGroupNode);
 
-		// Get the width of the object group, in pixels.
-		// Note: do not rely on this due to temporary bug in tiled.
-		int GetWidth() const { return width; }
+        /// Get a single object.
+        const Tmx::Object *GetObject(int index) const { return objects.at(index); }
 
-		// Get the height of the object group, in pixels.
-		// Note: do not rely on this due to temporary bug in tiled.
-		int GetHeight() const { return height; }
+        /// Get the number of objects in the list.
+        int GetNumObjects() const { return objects.size(); }
 
-		// Get a single object.
-		const Tmx::Object *GetObject(int index) const { return objects.at(index); }
+        /// Get the color used to display the objects in this group.
+        Tmx::Color GetColor() const { return color; }
 
-		// Get the number of objects in the list.
-		int GetNumObjects() const { return objects.size(); }
+        /// Get the whole list of objects.
+        const std::vector< Tmx::Object* > &GetObjects() const { return objects; }
+				
+				/// Get the property set.
+				const Tmx::PropertySet &GetProperties() const { return properties; }
 
-		// Get whether the object layer is visible.
-		int GetVisibility() const { return visible; }
+    private:
+        Tmx::Color color;
 
-		// Get the property set.
-		const Tmx::PropertySet &GetProperties() const { return properties; }
-
-		// Get the whole list of objects.
-		const std::vector< Tmx::Object* > &GetObjects() const { return objects; }
-
-		// Get the zorder of the object group.
-		int GetZOrder() const { return zOrder; }
-		
-		// Set the zorder of the object group.
-		void SetZOrder( int z ) { zOrder = z; }
-
-	private:
-		std::string name;
-		
-		int width;
-		int height;
-		int visible;
-		int zOrder;
-
-		Tmx::PropertySet properties;
-
-		std::vector< Tmx::Object* > objects;
-	};
-};
-
-#endif
-
+        std::vector< Tmx::Object* > objects;
+				Tmx::PropertySet properties;
+    };
+}

@@ -115,7 +115,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>../../tinyxml;../../../../lib;../../../../lib/dependencies;../../../../lib/dependencies/fmt/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../;../../zlib;../../tinyxml2;../../../../lib;../../../../lib/dependencies;../../../../lib/dependencies/fmt/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -156,7 +156,7 @@
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>../../tinyxml;../../../../lib;../../../../lib/dependencies;../../../../lib/dependencies/fmt/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../;../../zlib;../../tinyxml2;../../../../lib;../../../../lib/dependencies;../../../../lib/dependencies/fmt/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -174,7 +174,10 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\base64\base64.cpp" />
+    <ClCompile Include="..\TmxColor.cpp" />
     <ClCompile Include="..\TmxEllipse.cpp" />
+    <ClCompile Include="..\TmxGroupLayer.cpp" />
     <ClCompile Include="..\TmxImage.cpp" />
     <ClCompile Include="..\TmxImageLayer.cpp" />
     <ClCompile Include="..\TmxLayer.cpp" />
@@ -183,14 +186,22 @@
     <ClCompile Include="..\TmxObjectGroup.cpp" />
     <ClCompile Include="..\TmxPolygon.cpp" />
     <ClCompile Include="..\TmxPolyline.cpp" />
+    <ClCompile Include="..\TmxProperty.cpp" />
     <ClCompile Include="..\TmxPropertySet.cpp" />
+    <ClCompile Include="..\TmxTerrain.cpp" />
+    <ClCompile Include="..\TmxTerrainArray.cpp" />
+    <ClCompile Include="..\TmxText.cpp" />
     <ClCompile Include="..\TmxTile.cpp" />
+    <ClCompile Include="..\TmxTileLayer.cpp" />
+    <ClCompile Include="..\TmxTileOffset.cpp" />
     <ClCompile Include="..\TmxTileset.cpp" />
     <ClCompile Include="..\TmxUtil.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Tmx.h" />
+    <ClInclude Include="..\base64\base64.h" />
+    <ClInclude Include="..\TmxColor.h" />
     <ClInclude Include="..\TmxEllipse.h" />
+    <ClInclude Include="..\TmxGroupLayer.h" />
     <ClInclude Include="..\TmxImage.h" />
     <ClInclude Include="..\TmxImageLayer.h" />
     <ClInclude Include="..\TmxLayer.h" />
@@ -201,12 +212,19 @@
     <ClInclude Include="..\TmxPoint.h" />
     <ClInclude Include="..\TmxPolygon.h" />
     <ClInclude Include="..\TmxPolyline.h" />
+    <ClInclude Include="..\TmxProperty.h" />
     <ClInclude Include="..\TmxPropertySet.h" />
+    <ClInclude Include="..\TmxTerrain.h" />
+    <ClInclude Include="..\TmxTerrainArray.h" />
+    <ClInclude Include="..\TmxText.h" />
     <ClInclude Include="..\TmxTile.h" />
+    <ClInclude Include="..\TmxTileLayer.h" />
+    <ClInclude Include="..\TmxTileOffset.h" />
     <ClInclude Include="..\TmxTileset.h" />
     <ClInclude Include="..\TmxUtil.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\Tmx.h" />
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

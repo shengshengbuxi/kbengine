@@ -25,60 +25,71 @@
 //
 // Author: Tamir Atias
 //-----------------------------------------------------------------------------
-#include <tinyxml.h>
+#include <tinyxml2.h>
 
+#include "TmxLayer.h"
 #include "TmxObjectGroup.h"
 #include "TmxObject.h"
 
 namespace Tmx 
 {
-	ObjectGroup::ObjectGroup()
-		: name()
-		, width(0)
-		, height(0)
-		, zOrder(0)
-	{}
+    ObjectGroup::ObjectGroup(const Tmx::Map *_map)
+        : Layer(_map, std::string(), 0, 0, 0, 0, 1.0f, true, TMX_LAYERTYPE_OBJECTGROUP)
+        , color()
+        , objects()
+    {}
 
-	ObjectGroup::~ObjectGroup() 
-	{
-		for(std::size_t i = 0; i < objects.size(); i++)
-		{
-			Object *obj = objects.at(i);
-			delete obj;
-		}
-	}
-
-	void ObjectGroup::Parse(const TiXmlNode *objectGroupNode) 
-	{
-		const TiXmlElement *objectGroupElem = objectGroupNode->ToElement();
-
-		// Read the object group attributes.
-		name = objectGroupElem->Attribute("name");
-		
-		objectGroupElem->Attribute("width", &width);
-		objectGroupElem->Attribute("height", &height);
-		objectGroupElem->Attribute("visible", &visible);
-
-		// Read the properties.
-		const TiXmlNode *propertiesNode = objectGroupNode->FirstChild("properties");
-		if (propertiesNode) 
-		{
-			properties.Parse(propertiesNode);
-		}
-
-		// Iterate through all of the object elements.
-		const TiXmlNode *objectNode = objectGroupNode->FirstChild("object");
-		while (objectNode) 
-		{
-			// Allocate a new object and parse it.
-			Object *object = new Object();
-			object->Parse(objectNode);
+		ObjectGroup::ObjectGroup(const Tmx::Tile *_tile)
+        : Layer(_tile, std::string(), 0, 0, 0, 0, 1.0f, true, TMX_LAYERTYPE_OBJECTGROUP)
+        , color()
+        , objects()
+    {}
 			
-			// Add the object to the list.
-			objects.push_back(object);
+    ObjectGroup::~ObjectGroup() 
+    {
+        for(std::size_t i = 0; i < objects.size(); i++)
+        {
+            Object *obj = objects.at(i);
+            delete obj;
+        }
+    }
 
-			objectNode = objectGroupNode->IterateChildren("object", objectNode);
-		}
-	}
+    void ObjectGroup::Parse(const tinyxml2::XMLNode *objectGroupNode) 
+    {
+        const tinyxml2::XMLElement *objectGroupElem = objectGroupNode->ToElement();
 
-};
+        // Read the object group attributes, set to unknown if not defined in XML
+				objectGroupElem->Attribute("name") != NULL ? name = objectGroupElem->Attribute("name"): name = "unknown";
+
+        if (objectGroupElem->Attribute("color"))
+        {
+            color = Tmx::Color(objectGroupElem->Attribute("color"));
+        }
+        
+        objectGroupElem->QueryFloatAttribute("opacity", &opacity);
+        objectGroupElem->QueryBoolAttribute("visible", &visible);
+
+        // Read the properties.
+        const tinyxml2::XMLNode *propertiesNode = objectGroupNode->FirstChildElement("properties");
+        if (propertiesNode) 
+        {
+            properties.Parse(propertiesNode);
+        }
+
+        // Iterate through all of the object elements.
+        const tinyxml2::XMLNode *objectNode = objectGroupNode->FirstChildElement("object");
+        while (objectNode) 
+        {
+            // Allocate a new object and parse it.
+            Object *object = new Object();
+            object->Parse(objectNode);
+            
+            // Add the object to the list.
+            objects.push_back(object);
+
+            //objectNode = objectGroupNode->IterateChildren("object", objectNode); -- FIXME MAYBE
+            objectNode = objectNode->NextSiblingElement("object");
+        }
+    }
+
+}

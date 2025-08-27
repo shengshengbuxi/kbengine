@@ -26,85 +26,116 @@
 // Author: Tamir Atias
 //-----------------------------------------------------------------------------
 #include <stdlib.h>
+#include <algorithm>
+#include <cctype>
+#include <functional>
 
-#if defined( __WIN32__ ) || defined( WIN32 ) || defined( _WIN32 )
-#define ZLIB_WINAPI
+#ifdef USE_MINIZ
+#define MINIZ_HEADER_FILE_ONLY
+#include "miniz.c"
+#else
+#include <zlib.h>
 #endif
-#include "zlib/zlib.h"
+
+#include <stdio.h>
+
 #include "TmxUtil.h"
-#include "base64.h"
+#include "base64/base64.h"
 
 namespace Tmx {
-	std::string Util::DecodeBase64(const std::string &str) 
-	{
-		return base64_decode(str);
-	}
 
-	char *Util::DecompressGZIP(const char *data, int dataSize, int expectedSize) 
-	{
-		int bufferSize = expectedSize;
-		int ret;
-		z_stream strm;
-		char *out = (char*)malloc(bufferSize);
+    // trim from start
+    static inline std::string &ltrim(std::string &s) {
+        s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+        return s;
+    }
 
-		strm.zalloc = Z_NULL;
-		strm.zfree = Z_NULL;
-		strm.opaque = Z_NULL;
-		strm.next_in = (Bytef*)data;
-		strm.avail_in = dataSize;
-		strm.next_out = (Bytef*)out;
-		strm.avail_out = bufferSize;
+    // trim from end
+    static inline std::string &rtrim(std::string &s) {
+        s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+        return s;
+    }
 
-		ret = inflateInit2(&strm, 15 + 32);
+    // trim from both ends
+    static inline std::string &trim(std::string &s) {
+        return ltrim(rtrim(s));
+    }
 
-		if (ret != Z_OK) 
-		{
-			free(out);
-			return NULL;
-		}
+    std::string &Util::Trim(std::string &str)
+    {
+        return trim( str );
+    }
 
-		do 
-		{
-			ret = inflate(&strm, Z_SYNC_FLUSH);
+    std::string Util::DecodeBase64(const std::string &str) 
+    {
+        return base64_decode(str);
+    }
 
-			switch (ret) 
-			{
-				case Z_NEED_DICT:
-				case Z_STREAM_ERROR:
-					ret = Z_DATA_ERROR;
-				case Z_DATA_ERROR:
-				case Z_MEM_ERROR:
-					inflateEnd(&strm);
-					free(out);
-					return NULL;
-			}
+    char *Util::DecompressGZIP(const char *data, int dataSize, int expectedSize) 
+    {
+        int bufferSize = expectedSize;
+        int ret;
+        z_stream strm;
+        char *out = (char*)malloc(bufferSize);
 
-			if (ret != Z_STREAM_END) 
-			{
-				out = (char *) realloc(out, bufferSize * 2);
+        strm.zalloc = Z_NULL;
+        strm.zfree = Z_NULL;
+        strm.opaque = Z_NULL;
+        strm.next_in = (Bytef*)data;
+        strm.avail_in = dataSize;
+        strm.next_out = (Bytef*)out;
+        strm.avail_out = bufferSize;
 
-				if (!out) 
-				{
-					inflateEnd(&strm);
-					free(out);
-					return NULL;
-				}
+        ret = inflateInit2(&strm, 15 + 32);
 
-				strm.next_out = (Bytef *)(out + bufferSize);
-				strm.avail_out = bufferSize;
-				bufferSize *= 2;
-			}
-		}
-		while (ret != Z_STREAM_END);
+        if (ret != Z_OK) 
+        {
+            free(out);
+            return NULL;
+        }
 
-		if (strm.avail_in != 0) 
-		{
-			free(out);
-			return NULL;
-		}
+        do 
+        {
+            ret = inflate(&strm, Z_SYNC_FLUSH);
 
-		inflateEnd(&strm);
+            switch (ret) 
+            {
+                case Z_NEED_DICT:
+                case Z_STREAM_ERROR:
+                    ret = Z_DATA_ERROR;
+                case Z_DATA_ERROR:
+                case Z_MEM_ERROR:
+                    inflateEnd(&strm);
+                    free(out);
+                    return NULL;
+            }
 
-		return out;
-	}
-};
+            if (ret != Z_STREAM_END) 
+            {
+                out = (char *) realloc(out, bufferSize * 2);
+
+                if (!out) 
+                {
+                    inflateEnd(&strm);
+                    free(out);
+                    return NULL;
+                }
+
+                strm.next_out = (Bytef *)(out + bufferSize);
+                strm.avail_out = bufferSize;
+                bufferSize *= 2;
+            }
+        }
+        while (ret != Z_STREAM_END);
+
+        if (strm.avail_in != 0) 
+        {
+            free(out);
+            return NULL;
+        }
+
+        inflateEnd(&strm);
+
+        return out;
+    }
+}

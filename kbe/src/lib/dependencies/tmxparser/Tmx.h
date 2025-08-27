@@ -25,21 +25,28 @@
 //
 // Author: Tamir Atias
 //-----------------------------------------------------------------------------
-#ifndef __TMX_H__
-#define __TMX_H__
+#pragma once
+
+#define TMX_PARSER_VERSION_MAJOR @VERSION_MAJOR@
+#define TMX_PARSER_VERSION_MINOR @VERSION_MINOR@
+#define TMX_PARSER_VERSION_PATCH @VERSION_PATCH@
 
 #include "TmxMap.h"
 #include "TmxTileset.h"
+#include "TmxTerrainArray.h"
+#include "TmxTerrain.h"
 #include "TmxTile.h"
+#include "TmxTileOffset.h"
 #include "TmxImage.h"
 #include "TmxLayer.h"
+#include "TmxTileLayer.h"
 #include "TmxObject.h"
 #include "TmxObjectGroup.h"
 #include "TmxEllipse.h"
 #include "TmxPolygon.h"
 #include "TmxPolyline.h"
+#include "TmxText.h"
 #include "TmxPropertySet.h"
 #include "TmxUtil.h"
 #include "TmxImageLayer.h"
-
-#endif
+#include "TmxGroupLayer.h"

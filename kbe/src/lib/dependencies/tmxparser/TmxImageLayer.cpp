@@ -1,6 +1,4 @@
 //-----------------------------------------------------------------------------
-// TmxTileset.cpp
-//
 // Copyright (c) 2010-2014, Tamir Atias
 // All rights reserved.
 //
@@ -22,75 +20,60 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Author: Tamir Atias
 //-----------------------------------------------------------------------------
-#include <tinyxml.h>
+#include <tinyxml2.h>
+#include <cstdlib>
+#include <cassert> //RJCB
 
+#include "TmxLayer.h"
 #include "TmxImageLayer.h"
 #include "TmxImage.h"
 
 using std::vector;
 using std::string;
 
-namespace Tmx 
+namespace Tmx
 {
-	ImageLayer::ImageLayer(const Tmx::Map *_map) 
-		: map(_map)
-		, name()
-		, width(0)
-		, height(0)
-		, opacity(0)
-		, visible(0)
-		, zOrder(0)
-		, image(NULL)
-		, properties()
-	{
-	}
+    ImageLayer::ImageLayer(const Tmx::Map *_map)
+        : Layer(_map, std::string(), 0, 0, 0, 0, 1.0f, true, TMX_LAYERTYPE_IMAGE_LAYER)
+        , image(NULL)
+    {
+    }
 
-	ImageLayer::~ImageLayer() 
-	{
-		delete image;
-	}
+    ImageLayer::~ImageLayer()
+    {
+        delete image;
+    }
 
-	void ImageLayer::Parse(const TiXmlNode *imageLayerNode) 
-	{
-		const TiXmlElement *imagenLayerElem = imageLayerNode->ToElement();
+    void ImageLayer::Parse(const tinyxml2::XMLNode *imageLayerNode)
+    {
+        const tinyxml2::XMLElement *imageLayerElem = imageLayerNode->ToElement();
 
-		// Read all the attributes into local variables.
-		name = imagenLayerElem->Attribute("name");
+        // Read all the attributes into local variables.
+        name = imageLayerElem->Attribute("name");
 
-		imagenLayerElem->Attribute("width", &width);
-		imagenLayerElem->Attribute("height", &height);
+        imageLayerElem->QueryIntAttribute("x", &x);
+        imageLayerElem->QueryIntAttribute("y", &y);
 
-		const char *opacityStr = imagenLayerElem->Attribute("opacity");
-		if (opacityStr) 
-		{
-			opacity = (float)atof(opacityStr);
-		}
+        imageLayerElem->QueryFloatAttribute("opacity", &opacity);
+        imageLayerElem->QueryBoolAttribute("visible", &visible);
 
-		const char *visibleStr = imagenLayerElem->Attribute("visible");
-		if (visibleStr) 
-		{
-			visible = atoi(visibleStr) != 0; // to prevent visual c++ from complaining..
-		}
+        // Parse the image if there is one.
+        const tinyxml2::XMLNode *imageNode = imageLayerElem->FirstChildElement("image");
 
-		// Parse the image.
-		const TiXmlNode *imageNode = imagenLayerElem->FirstChild("image");
-		
-		if (imageNode) 
-		{
-			image = new Image();
-			image->Parse(imageNode);
-		}
+        if (imageNode)
+        {
+            image = new Image();
+            image->Parse(imageNode);
+        }
 
-		// Parse the properties if any.
-		const TiXmlNode *propertiesNode = imagenLayerElem->FirstChild("properties");
-		
-		if (propertiesNode) 
-		{
-			properties.Parse(propertiesNode);
-		}
-	}
+        // Parse the properties if any.
+        const tinyxml2::XMLNode *propertiesNode = imageLayerElem->FirstChildElement("properties");
 
-};
+        if (propertiesNode)
+        {
+            properties.Parse(propertiesNode);
+        }
+    }
+
+}

@@ -25,21 +25,16 @@
 //
 // Author: Tamir Atias
 //-----------------------------------------------------------------------------
-#ifndef __TMX_POINT_H__
-#define __TMX_POINT_H__
+#pragma once
 
 namespace Tmx
 {
-	//-------------------------------------------------------------------------
-	// Used to store a vertex of a Polygon/Polyline.
-	//-------------------------------------------------------------------------
-	struct Point
-	{
-		int x;
-		int y;
-	};
+    //-------------------------------------------------------------------------
+    /// Used to store a vertex of a Polygon/Polyline.
+    //-------------------------------------------------------------------------
+    struct Point
+    {
+        float x; ///< X coordinate
+        float y; ///< Y coordinate
+    };
 }
-
-#endif
-
-

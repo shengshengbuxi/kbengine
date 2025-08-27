@@ -25,38 +25,36 @@
 //
 // Author: Tamir Atias
 //-----------------------------------------------------------------------------
-#ifndef __TMX_POLYLINE_H__
-#define __TMX_POLYLINE_H__
+#pragma once
 
 #include <vector>
 
 #include "TmxPoint.h"
 
-class TiXmlNode;
+namespace tinyxml2 {
+    class XMLNode;
+}
 
 namespace Tmx
 {
-	//-------------------------------------------------------------------------
-	// Class to store a Polyline of an Object.
-	//-------------------------------------------------------------------------
-	class Polyline
-	{
-	public:
-		Polyline();
+    //-------------------------------------------------------------------------
+    /// Class to store a Polyline of an Object.
+    //-------------------------------------------------------------------------
+    class Polyline
+    {
+    public:
+        Polyline();
 
-		// Parse the polyline node.
-		void Parse(const TiXmlNode *polylineNode);
+        /// Parse the polyline node.
+        void Parse(const tinyxml2::XMLNode *polylineNode);
 
-		// Get one of the vertices.
-		const Tmx::Point &GetPoint(int index) const { return points[index]; }
+        /// Get one of the vertices.
+        const Tmx::Point &GetPoint(int index) const { return points[index]; }
 
-		// Get the number of vertices.
-		int GetNumPoints() const { return points.size(); }
+        /// Get the number of vertices.
+        int GetNumPoints() const { return points.size(); }
 
-	private:
-		std::vector< Tmx::Point > points;
-	};
-};
-
-#endif
-
+    private:
+        std::vector< Tmx::Point > points;
+    };
+}

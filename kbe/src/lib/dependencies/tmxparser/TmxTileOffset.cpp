@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// TmxPolygon.h
+// TmxTileOffset.cpp
 //
 // Copyright (c) 2010-2014, Tamir Atias
 // All rights reserved.
@@ -25,36 +25,26 @@
 //
 // Author: Tamir Atias
 //-----------------------------------------------------------------------------
-#pragma once
+#include <tinyxml2.h>
 
-#include <vector>
+#include "TmxTileOffset.h"
 
-#include "TmxPoint.h"
+namespace Tmx 
+{   
+    TileOffset::TileOffset() 
+        : x(0)
+        , y(0)
+    {}
 
-namespace tinyxml2 {
-    class XMLNode;
-}
+    TileOffset::~TileOffset() 
+    {}
 
-namespace Tmx
-{
-    //-------------------------------------------------------------------------
-    /// Class to store a Polygon of an Object.
-    //-------------------------------------------------------------------------
-    class Polygon
+    void TileOffset::Parse(const tinyxml2::XMLNode *tileOffsetNode) 
     {
-    public:
-        Polygon();
-
-        /// Parse the polygon node.
-        void Parse(const tinyxml2::XMLNode *polygonNode);
-
-        /// Get one of the vertices.
-        const Tmx::Point &GetPoint(int index) const { return points[index]; }
-
-        /// Get the number of vertices.
-        int GetNumPoints() const { return points.size(); }
-
-    private:
-        std::vector< Tmx::Point > points;
-    };
+        const tinyxml2::XMLElement* tileOffsetElem = tileOffsetNode->ToElement();
+        
+        // Read all the attribute into member variables.
+        tileOffsetElem->QueryIntAttribute("x", &x);
+        tileOffsetElem->QueryIntAttribute("y", &y);
+    }
 }

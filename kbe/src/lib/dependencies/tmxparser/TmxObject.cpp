@@ -25,100 +25,121 @@
 //
 // Author: Tamir Atias
 //-----------------------------------------------------------------------------
-#include <tinyxml.h>
+#include <tinyxml2.h>
 
 #include "TmxObject.h"
 #include "TmxPolygon.h"
 #include "TmxPolyline.h"
 #include "TmxEllipse.h"
+#include "TmxText.h"
 
-namespace Tmx 
+namespace Tmx
 {
-	Object::Object() 
-		: name()
-		, type()
-		, x(0)
-		, y(0)
-		, width(0)
-		, height(0)
-		, gid(0)
-		, ellipse(0)
-		, polygon(0)
-		, polyline(0)
-		, properties() 
-	{}
+    Object::Object()
+        : name()
+        , type()
+        , x(0)
+        , y(0)
+        , width(0)
+        , height(0)
+        , gid(0)
+        , id(0)
+        , rotation(0.0)
+        , visible(true)
+        , ellipse(0)
+        , polygon(0)
+        , polyline(0)
+        , text(0)
+        , properties()
+    {}
 
-	Object::~Object() 
-	{
-		if (ellipse != 0)
-		{
-			delete ellipse;
-			ellipse = 0;
-		}
-		if (polygon != 0)
-		{
-			delete polygon;
-			polygon = 0;
-		}
-		if (polyline != 0)
-		{
-			delete polyline;
-			polyline = 0;
-		}
-	}
+    Object::~Object()
+    {
+        if (ellipse != 0)
+        {
+            delete ellipse;
+            ellipse = 0;
+        }
+        if (polygon != 0)
+        {
+            delete polygon;
+            polygon = 0;
+        }
+        if (polyline != 0)
+        {
+            delete polyline;
+            polyline = 0;
+        }
+        if (text != 0)
+        {
+            delete text;
+            text = 0;
+        }
+    }
 
-	void Object::Parse(const TiXmlNode *objectNode) 
-	{
-		const TiXmlElement *objectElem = objectNode->ToElement();
+    void Object::Parse(const tinyxml2::XMLNode *objectNode)
+    {
+        const tinyxml2::XMLElement *objectElem = objectNode->ToElement();
 
-		// Read the attributes of the object.
-		const char *tempName = objectElem->Attribute("name");
-		const char *tempType = objectElem->Attribute("type");
-		
-		if (tempName) name = tempName;
-		if (tempType) type = tempType;
-		
-		objectElem->Attribute("x", &x);
-		objectElem->Attribute("y", &y);
-		objectElem->Attribute("width", &width);
-		objectElem->Attribute("height", &height);
-		objectElem->Attribute("gid", &gid);
+        // Read the attributes of the object.
+        const char *tempName = objectElem->Attribute("name");
+        const char *tempType = objectElem->Attribute("type");
 
-		// Read the ellipse of the object if there are any.
-		const TiXmlNode *ellipseNode = objectNode->FirstChild("ellipse");
-		if (ellipseNode)
-		{
-			if (ellipse != 0)
-				delete ellipse;
+        if (tempName) name = tempName;
+        if (tempType) type = tempType;
 
-			ellipse = new Ellipse(x,y,width,height);			
-		}
+        id = objectElem->IntAttribute("id");
+        x = objectElem->IntAttribute("x");
+        y = objectElem->IntAttribute("y");
+        width = objectElem->IntAttribute("width");
+        height = objectElem->IntAttribute("height");
+        gid = objectElem->IntAttribute("gid");
+        rotation = objectElem->IntAttribute("rotation");
+        objectElem->QueryBoolAttribute("visible", &visible);
 
-		// Read the Polygon and Polyline of the object if there are any.
-		const TiXmlNode *polygonNode = objectNode->FirstChild("polygon");
-		if (polygonNode)
-		{
-			if (polygon != 0)
-				delete polygon;
+        // Read the ellipse of the object if there are any.
+        const tinyxml2::XMLNode *ellipseNode = objectNode->FirstChildElement("ellipse");
+        if (ellipseNode)
+        {
+            if (ellipse != 0)
+                delete ellipse;
 
-			polygon = new Polygon();
-			polygon->Parse(polygonNode);
-		}
-		const TiXmlNode *polylineNode = objectNode->FirstChild("polyline");
-		if (polylineNode)
-		{
-			if (polyline != 0)
-				delete polyline;
+            ellipse = new Ellipse(x,y,width,height);
+        }
 
-			polyline = new Polyline();
-			polyline->Parse(polylineNode);
-		}
+        // Read the Polygon and Polyline of the object if there are any.
+        const tinyxml2::XMLNode *polygonNode = objectNode->FirstChildElement("polygon");
+        if (polygonNode)
+        {
+            if (polygon != 0)
+                delete polygon;
 
-		// Read the properties of the object.
-		const TiXmlNode *propertiesNode = objectNode->FirstChild("properties");
-		if (propertiesNode) 
-		{
-			properties.Parse(propertiesNode);
-		}
-	}
-};
+            polygon = new Polygon();
+            polygon->Parse(polygonNode);
+        }
+        const tinyxml2::XMLNode *polylineNode = objectNode->FirstChildElement("polyline");
+        if (polylineNode)
+        {
+            if (polyline != 0)
+                delete polyline;
+
+            polyline = new Polyline();
+            polyline->Parse(polylineNode);
+        }
+        const tinyxml2::XMLNode *textNode = objectNode->FirstChildElement("text");
+        if (textNode)
+        {
+            if(text != 0)
+                delete text;
+            text = new Text();
+            text->Parse(textNode);
+        }
+
+        // Read the properties of the object.
+        const tinyxml2::XMLNode *propertiesNode = objectNode->FirstChildElement("properties");
+        if (propertiesNode)
+        {
+            properties.Parse(propertiesNode);
+        }
+    }
+}

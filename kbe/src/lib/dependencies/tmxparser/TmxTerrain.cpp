@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// TmxPolygon.h
+// TmxTerrain.cpp
 //
 // Copyright (c) 2010-2014, Tamir Atias
 // All rights reserved.
@@ -25,36 +25,36 @@
 //
 // Author: Tamir Atias
 //-----------------------------------------------------------------------------
-#pragma once
+#include <tinyxml2.h>
 
-#include <vector>
-
-#include "TmxPoint.h"
-
-namespace tinyxml2 {
-    class XMLNode;
-}
+#include "TmxTerrain.h"
 
 namespace Tmx
 {
-    //-------------------------------------------------------------------------
-    /// Class to store a Polygon of an Object.
-    //-------------------------------------------------------------------------
-    class Polygon
+    Terrain::Terrain() :
+            name(), tileID(), properties()
     {
-    public:
-        Polygon();
+    }
 
-        /// Parse the polygon node.
-        void Parse(const tinyxml2::XMLNode *polygonNode);
+    Terrain::~Terrain()
+    {
+    }
 
-        /// Get one of the vertices.
-        const Tmx::Point &GetPoint(int index) const { return points[index]; }
+    void Terrain::Parse(const tinyxml2::XMLNode *terrainNode)
+    {
+        const tinyxml2::XMLElement *terrainElem = terrainNode->ToElement();
 
-        /// Get the number of vertices.
-        int GetNumPoints() const { return points.size(); }
+        // Parse the attributes.
+        name = std::string(terrainElem->Attribute("name"));
+        tileID = terrainElem->IntAttribute("tile");
 
-    private:
-        std::vector< Tmx::Point > points;
-    };
+        // Parse the properties if any.
+        const tinyxml2::XMLNode *propertiesNode = terrainNode->FirstChildElement(
+                "properties");
+
+        if (propertiesNode)
+        {
+            properties.Parse(propertiesNode);
+        }
+    }
 }

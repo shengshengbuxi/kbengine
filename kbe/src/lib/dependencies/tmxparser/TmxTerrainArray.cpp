@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// TmxPolygon.h
+// TmxTerrainArray.cpp
 //
 // Copyright (c) 2010-2014, Tamir Atias
 // All rights reserved.
@@ -25,36 +25,37 @@
 //
 // Author: Tamir Atias
 //-----------------------------------------------------------------------------
-#pragma once
+#include <tinyxml2.h>
+#include <cstdlib>
 
-#include <vector>
+#include "TmxTerrainArray.h"
+#include "TmxTerrain.h"
 
-#include "TmxPoint.h"
-
-namespace tinyxml2 {
-    class XMLNode;
-}
+using std::string;
+using std::map;
 
 namespace Tmx
 {
-    //-------------------------------------------------------------------------
-    /// Class to store a Polygon of an Object.
-    //-------------------------------------------------------------------------
-    class Polygon
+    TerrainArray::TerrainArray()
+    {}
+
+    TerrainArray::~TerrainArray()
     {
-    public:
-        Polygon();
+    }
 
-        /// Parse the polygon node.
-        void Parse(const tinyxml2::XMLNode *polygonNode);
+    void TerrainArray::Parse(std::vector< Tmx::Terrain* > *terrainTypes, const tinyxml2::XMLNode *terrainArrayNode)
+    {
+        // Iterate through all of the terrain nodes.
+        const tinyxml2::XMLNode *terrainNode = terrainArrayNode->FirstChildElement("terrain");
 
-        /// Get one of the vertices.
-        const Tmx::Point &GetPoint(int index) const { return points[index]; }
+        while (terrainNode)
+        {
+            // Read the attributes of the terrain and add it the terrainTypes vector.
+            Terrain *terrainType = new Terrain();
+            terrainType->Parse(terrainNode);
+            terrainTypes->push_back(terrainType);
 
-        /// Get the number of vertices.
-        int GetNumPoints() const { return points.size(); }
-
-    private:
-        std::vector< Tmx::Point > points;
-    };
+            terrainNode = terrainNode->NextSiblingElement("terrain");
+        }
+    }
 }

@@ -25,55 +25,63 @@
 //
 // Author: Tamir Atias
 //-----------------------------------------------------------------------------
-#ifndef __TMX_PROPERTYSET_H__
-#define __TMX_PROPERTYSET_H__
+#pragma once
 
+#include <unordered_map>
 #include <map>
 #include <string>
 
-class TiXmlNode;
+#include "TmxProperty.h"
 
-namespace Tmx 
+namespace tinyxml2 {
+    class XMLNode;
+}
+
+namespace Tmx
 {
-	//-----------------------------------------------------------------------------
-	// This class contains a map of properties.
-	//-----------------------------------------------------------------------------
-	class PropertySet 
-	{
-	public:
-		PropertySet(const PropertySet& _propertySet);
-		PropertySet();
-		~PropertySet();
+    class Property;
 
-		// Parse a node containing all the property nodes.
-		void Parse(const TiXmlNode *propertiesNode);
-	
-		// Get a numeric property (integer).
-		int GetNumericProperty(const std::string &name) const;
-		// Get a numeric property (float).
-		float GetFloatProperty(const std::string &name) const;
+    //-----------------------------------------------------------------------------
+    /// This class contains a map of properties.
+    //-----------------------------------------------------------------------------
+    class PropertySet
+    {
+    public:
+        PropertySet();
+        ~PropertySet();
 
-		// Get a literal property (string).
-		std::string GetLiteralProperty(const std::string &name) const;
+        /// Parse a node containing all the property nodes.
+        void Parse(const tinyxml2::XMLNode *propertiesNode);
+        /// Get a int property.
+        int GetIntProperty(const std::string &name, int defaultValue = 0) const;
+        /// Get a float property.
+        float GetFloatProperty(const std::string &name, float defaultValue = 0.0f) const;
+        /// Get a string property.
+        std::string GetStringProperty(const std::string &name, std::string defaultValue = "") const;
+        /// Get a bool property.
+        bool GetBoolProperty(const std::string &name, bool defaultValue = false) const;
+        /// Get a color property.
+        Tmx::Color GetColorProperty(const std::string &name, Tmx::Color defaultValue = Tmx::Color()) const;
 
-		// Returns the amount of properties.
-		int GetSize() const { return properties.size(); }
+        /// Returns the amount of properties.
+        int GetSize() const { return properties.size(); }
 
-		bool HasProperty( const std::string& name ) const;
+        /// Checks if a property exists in the set.
+        bool HasProperty( const std::string& name ) const;
 
-		// Returns the STL map of the properties.
-		std::map< std::string, std::string > GetList() const 
-		{ return properties; }
+        /// Returns the unordered map of properties.
+        const std::unordered_map< std::string, Property > &GetPropertyMap() const
+        { return properties; }
 
-		// Returns whether there are no properties.
-		bool Empty() const { return properties.empty(); }
+        /// Returns the STL map of the properties.
+        /// Deprecated, please use GetPropertyMap() instead.
+        std::map< std::string, std::string > GetList() const;
 
-	private:
-		std::map< std::string, std::string > properties;
+        /// Returns whether there are no properties.
+        bool Empty() const { return properties.empty(); }
 
-	};
-};
+    private:
+        std::unordered_map< std::string, Property > properties;
 
-
-#endif
-
+    };
+}

@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// TmxPolygon.h
+// TmxTerrainArray.h
 //
 // Copyright (c) 2010-2014, Tamir Atias
 // All rights reserved.
@@ -27,9 +27,9 @@
 //-----------------------------------------------------------------------------
 #pragma once
 
+#include <map>
+#include <string>
 #include <vector>
-
-#include "TmxPoint.h"
 
 namespace tinyxml2 {
     class XMLNode;
@@ -37,24 +37,20 @@ namespace tinyxml2 {
 
 namespace Tmx
 {
-    //-------------------------------------------------------------------------
-    /// Class to store a Polygon of an Object.
-    //-------------------------------------------------------------------------
-    class Polygon
+    class Terrain;
+
+    //-----------------------------------------------------------------------------
+    /// Class to parse terrain types, which can be referenced from the
+    /// terrain attribute of the tileset/tile element.
+    //-----------------------------------------------------------------------------
+    class TerrainArray
     {
     public:
-        Polygon();
+        TerrainArray();
+        ~TerrainArray();
 
-        /// Parse the polygon node.
-        void Parse(const tinyxml2::XMLNode *polygonNode);
+        /// Parse a node containing all the terrain nodes.
+        void Parse(std::vector< Tmx::Terrain* > *terrainTypes, const tinyxml2::XMLNode *terrainArrayNode);
 
-        /// Get one of the vertices.
-        const Tmx::Point &GetPoint(int index) const { return points[index]; }
-
-        /// Get the number of vertices.
-        int GetNumPoints() const { return points.size(); }
-
-    private:
-        std::vector< Tmx::Point > points;
     };
 }
