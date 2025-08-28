@@ -33,7 +33,7 @@ bool FixedMessages::loadConfig(std::string fileName, bool notFoundError)
 
 	_loaded = true;
 
-	TiXmlNode* node = NULL, *rootNode = NULL;
+	tinyxml2::XMLNode* node = NULL, *rootNode = NULL;
 
 	SmartPointer<XML> xml(new XML(Resmgr::getSingleton().matchRes(fileName).c_str()));
 

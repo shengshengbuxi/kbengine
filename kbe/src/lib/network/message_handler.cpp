@@ -233,7 +233,7 @@ std::string MessageHandlers::getDigestStr()
 		std::map<uint16, std::pair< std::string, std::string> > errsDescrs;
 
 		{
-			TiXmlNode *rootNode = NULL;
+			tinyxml2::XMLNode *rootNode = NULL;
 			SmartPointer<XML> xml(new XML(Resmgr::getSingleton().matchRes("server/server_errors_defaults.xml").c_str()));
 
 			if (!xml->isGood())
@@ -253,8 +253,8 @@ std::string MessageHandlers::getDigestStr()
 
 			XML_FOR_BEGIN(rootNode)
 			{
-				TiXmlNode* node = xml->enterNode(rootNode->FirstChild(), "id");
-				TiXmlNode* node1 = xml->enterNode(rootNode->FirstChild(), "descr");
+				tinyxml2::XMLNode* node = xml->enterNode(rootNode->FirstChild(), "id");
+				tinyxml2::XMLNode* node1 = xml->enterNode(rootNode->FirstChild(), "descr");
 
 				int32 val1 = xml->getValInt(node);
 				md5.append((void*)&val1, sizeof(int32));
@@ -272,7 +272,7 @@ std::string MessageHandlers::getDigestStr()
 		}
 
 		{
-			TiXmlNode *rootNode = NULL;
+			tinyxml2::XMLNode *rootNode = NULL;
 
 			FILE* f = Resmgr::getSingleton().openRes("server/server_errors.xml");
 
@@ -289,8 +289,8 @@ std::string MessageHandlers::getDigestStr()
 					{
 						XML_FOR_BEGIN(rootNode)
 						{
-							TiXmlNode* node = xml->enterNode(rootNode->FirstChild(), "id");
-							TiXmlNode* node1 = xml->enterNode(rootNode->FirstChild(), "descr");
+							tinyxml2::XMLNode* node = xml->enterNode(rootNode->FirstChild(), "id");
+							tinyxml2::XMLNode* node1 = xml->enterNode(rootNode->FirstChild(), "descr");
 
 							int32 val1 = xml->getValInt(node);
 							md5.append((void*)&val1, sizeof(int32));

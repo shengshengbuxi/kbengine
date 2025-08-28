@@ -348,6 +348,13 @@ const char * reasonToString(Reason reason)
 		bool isprint = true;																				\
 		if(pCurrMsgHandler)																					\
 		{																									\
+			DEBUG_MSG(fmt::format("{} {}:msgID:{}, currMsgLength:{}, addr:{}\n",							\
+				((isrecv == true) ? "====>" : "<===="),														\
+				pCurrMsgHandler->name.c_str(),																\
+				pCurrMsgHandler->msgID,																		\
+				(length + headsize),																		\
+				addr));																						\
+																											\
 			std::vector<std::string>::iterator iter = std::find(Network::g_trace_packet_disables.begin(),	\
 														Network::g_trace_packet_disables.end(),				\
 															pCurrMsgHandler->name);							\
@@ -355,15 +362,6 @@ const char * reasonToString(Reason reason)
 			if(iter != Network::g_trace_packet_disables.end())												\
 			{																								\
 				isprint = false;																			\
-			}																								\
-			else																							\
-			{																								\
-				DEBUG_MSG(fmt::format("{} {}:msgID:{}, currMsgLength:{}, addr:{}\n",						\
-						((isrecv == true) ? "====>" : "<===="),												\
-						pCurrMsgHandler->name.c_str(),														\
-						pCurrMsgHandler->msgID,																\
-						(length + headsize),																\
-						addr));																				\
 			}																								\
 		}																									\
 																											\

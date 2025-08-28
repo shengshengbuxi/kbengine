@@ -69,7 +69,7 @@ public:
 	static int getFrame(Packet* pPacket, uint8& msg_opcode, uint8& msg_fin, uint8& msg_masked, uint32& msg_mask, 
 		int32& msg_length_field, uint64& msg_payload_length, FrameType& frameType);
 
-	static bool decodingDatas(Packet* pPacket, uint8 msg_masked, uint32 msg_mask);
+	static bool decodingDatas(Packet* pPacket, uint8 msg_masked, uint32 msg_mask, uint64& fragmentDatasDecodeIndex);
 
 	static std::string getFrameTypeName(FrameType frame_type);
 

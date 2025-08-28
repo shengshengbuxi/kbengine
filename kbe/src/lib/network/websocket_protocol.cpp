@@ -349,14 +349,14 @@ int WebSocketProtocol::getFrame(Packet * pPacket, uint8& msg_opcode, uint8& msg_
 }
 
 //-------------------------------------------------------------------------------------
-bool WebSocketProtocol::decodingDatas(Packet* pPacket, uint8 msg_masked, uint32 msg_mask)
+bool WebSocketProtocol::decodingDatas(Packet* pPacket, uint8 msg_masked, uint32 msg_mask, uint64& fragmentDatasDecodeIndex)
 {
 	// ½âÂëÄÚÈÝ
 	if(msg_masked) 
 	{
 		uint8* c = pPacket->data() + pPacket->rpos();
-		for(int i=0; i<(int)pPacket->length(); i++) {
-			c[i] = c[i] ^ ((uint8*)(&msg_mask))[i % 4];
+		for(int i=0; i<(int)pPacket->length(); i++, fragmentDatasDecodeIndex++) {
+			c[i] = c[i] ^ ((uint8*)(&msg_mask))[fragmentDatasDecodeIndex % 4];
 		}
 	}
 

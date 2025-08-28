@@ -34,6 +34,7 @@ protected:
 
 	int32										pFragmentDatasRemain_;
 	FragmentDataTypes							fragmentDatasFlag_;
+	uint64										fragmentDatasDecodeIndex_;
 
 	uint8										msg_opcode_;
 	uint8										msg_fin_;

@@ -138,6 +138,7 @@ Reason WebSocketPacketFilter::recv(Channel * pChannel, PacketReceiver & receiver
 				{
 					fragmentDatasFlag_ = FRAGMENT_MESSAGE_DATAS;
 					pFragmentDatasRemain_ = (int32)msg_payload_length_;
+					fragmentDatasDecodeIndex_ = 0;
 				}
 			}
 			else
@@ -187,6 +188,7 @@ Reason WebSocketPacketFilter::recv(Channel * pChannel, PacketReceiver & receiver
 						{
 							fragmentDatasFlag_ = FRAGMENT_MESSAGE_DATAS;
 							pFragmentDatasRemain_ = (int32)msg_payload_length_;
+							fragmentDatasDecodeIndex_ = 0;
 						}
 					}
 				}
@@ -290,7 +292,7 @@ Reason WebSocketPacketFilter::recv(Channel * pChannel, PacketReceiver & receiver
 				if (pFragmentDatasRemain_ > 0)
 					continue;
 
-				if (!websocket::WebSocketProtocol::decodingDatas(pTCPPacket_, msg_masked_, msg_mask_))
+				if (!websocket::WebSocketProtocol::decodingDatas(pTCPPacket_, msg_masked_, msg_mask_, fragmentDatasDecodeIndex_))
 				{
 					ERROR_MSG(fmt::format("WebSocketPacketFilter::recv: decoding-frame error! addr={}!\n",
 						pChannel_->c_str()));
@@ -306,7 +308,7 @@ Reason WebSocketPacketFilter::recv(Channel * pChannel, PacketReceiver & receiver
 			}
 			else
 			{
-				if (!websocket::WebSocketProtocol::decodingDatas(pTCPPacket_, msg_masked_, msg_mask_))
+				if (!websocket::WebSocketProtocol::decodingDatas(pTCPPacket_, msg_masked_, msg_mask_, fragmentDatasDecodeIndex_))
 				{
 					ERROR_MSG(fmt::format("WebSocketPacketFilter::recv: decoding-frame error! addr={}!\n",
 						pChannel_->c_str()));
