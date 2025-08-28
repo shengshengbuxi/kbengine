@@ -939,4 +939,88 @@
 		 -->
 		<SOMAXCONN> 511 </SOMAXCONN>
 	</logger>
+
+	
+	<tool>
+		<!-- 脚本入口模块， 相当于main函数 
+			(Entry module, like the main-function)
+		-->
+		<entryScriptFile> kbemain </entryScriptFile>
+
+		<!-- 指定接口地址，可配置网卡名、MAC、IP
+			（Interface address specified, configurable NIC/MAC/IP） 
+		-->
+		<internalInterface>  </internalInterface>
+		
+		<!-- 自动存档的时间周期(秒)
+			（Automatic archiving time period(secs)） 
+		-->
+		<archivePeriod> 300 </archivePeriod> 							<!-- Type: Float -->
+		
+		<!-- 自动备份的时间(秒)
+			（Automatic backup time period(secs)） 
+		-->
+		<backupPeriod> 300 </backupPeriod>								<!-- Type: Float -->
+		
+		<!-- 是否备份未定义的属性
+			（Whether backup undefined property） 
+		-->
+		<backUpUndefinedProperties> 0 </backUpUndefinedProperties>		<!-- Type: Boolean -->
+
+		<!-- 负载平衡滤波器指标值
+			（Load balancing Smoothing Bias value） 
+		-->
+		<loadSmoothingBias> 0.01 </loadSmoothingBias>
+
+
+		<!-- entityID分配器，进入溢出范围则请求获取新的ID资源 
+			(The entityID allocator, enter the overflow area will get the new ID's)
+		-->
+		<ids>
+			<criticallyLowSize> 10000 </criticallyLowSize>				<!-- Type: Integer -->
+		</ids>
+		
+		<!-- 程序的性能分析
+			（Analysis of program performance） 
+		-->
+		<profiles>
+			<!-- 如果设置为true，引擎启动时就会开始记录相关profile信息， 进程退出后将导出一份报告 
+				(if is true, Engine start is completed, start to record profile information, 
+				Process exit will export a report.)
+			-->
+			<cprofile> false </cprofile>
+			<pyprofile> false </pyprofile>
+			<eventprofile> false </eventprofile>
+			<networkprofile> false </networkprofile>
+		</profiles>
+		
+		<!-- listen监听队列最大值
+		    (listen: Maximum listen queue)
+		 -->
+		<SOMAXCONN> 511 </SOMAXCONN>
+		
+		<!-- Telnet服务, 如果端口被占用则向后尝试40001.. 
+			(Telnet service, if the port is occupied backwards to try 40001)
+		-->
+		<telnet_service>
+			<port> 40000 </port>
+			<password> pwd123456 </password>
+			<!-- 命令默认层 
+				(layer of default the command)
+			-->
+			<default_layer> python </default_layer>
+		</telnet_service>
+		
+		<!-- 服务端关闭过程的参数 
+			(Parameter server shutdown process)
+		-->
+		<shutdown>
+			<!-- 每秒销毁base的数量
+				(The destroy of the per-seconds base's)
+			-->
+			<perSecsDestroyEntitySize> 1000 </perSecsDestroyEntitySize>
+		</shutdown>
+		
+	</tool>
+	
 </root>
