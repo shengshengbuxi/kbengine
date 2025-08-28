@@ -52,6 +52,11 @@
 #define DEFINE_IN_INTERFACE
 #include "tools/interfaces/interfaces_interface.h"
 
+#undef DEFINE_IN_INTERFACE
+#include "tools/tool/tool_interface.h"
+#define DEFINE_IN_INTERFACE
+#include "tools/tool/tool_interface.h"
+
 using namespace KBEngine;
 
 int KBENGINE_MAIN(int argc, char* argv[])
