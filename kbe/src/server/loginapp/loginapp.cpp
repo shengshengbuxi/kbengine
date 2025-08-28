@@ -1513,7 +1513,7 @@ void Loginapp::importServerErrorsDescr(Network::Channel* pChannel)
 		std::map<uint16, std::pair< std::string, std::string> > errsDescrs;
 
 		{
-			TiXmlNode *rootNode = NULL;
+			tinyxml2::XMLNode *rootNode = NULL;
 			SmartPointer<XML> xml(new XML(Resmgr::getSingleton().matchRes("server/server_errors_defaults.xml").c_str()));
 
 			if (!xml->isGood())
@@ -1533,15 +1533,15 @@ void Loginapp::importServerErrorsDescr(Network::Channel* pChannel)
 
 			XML_FOR_BEGIN(rootNode)
 			{
-				TiXmlNode* node = xml->enterNode(rootNode->FirstChild(), "id");
-				TiXmlNode* node1 = xml->enterNode(rootNode->FirstChild(), "descr");
+				tinyxml2::XMLNode* node = xml->enterNode(rootNode->FirstChild(), "id");
+				tinyxml2::XMLNode* node1 = xml->enterNode(rootNode->FirstChild(), "descr");
 				errsDescrs[xml->getValInt(node)] = std::make_pair< std::string, std::string>(xml->getKey(rootNode), xml->getVal(node1));
 			}
 			XML_FOR_END(rootNode);
 		}
 
 		{
-			TiXmlNode *rootNode = NULL;
+			tinyxml2::XMLNode *rootNode = NULL;
 
 			FILE* f = Resmgr::getSingleton().openRes("server/server_errors.xml");
 
@@ -1557,8 +1557,8 @@ void Loginapp::importServerErrorsDescr(Network::Channel* pChannel)
 					{
 						XML_FOR_BEGIN(rootNode)
 						{
-							TiXmlNode* node = xml->enterNode(rootNode->FirstChild(), "id");
-							TiXmlNode* node1 = xml->enterNode(rootNode->FirstChild(), "descr");
+							tinyxml2::XMLNode* node = xml->enterNode(rootNode->FirstChild(), "id");
+							tinyxml2::XMLNode* node1 = xml->enterNode(rootNode->FirstChild(), "descr");
 							errsDescrs[xml->getValInt(node)] = std::make_pair< std::string, std::string>(xml->getKey(rootNode), xml->getVal(node1));
 						}
 						XML_FOR_END(rootNode);
