@@ -110,7 +110,7 @@ bool DataType::finalise()
 }
 
 //-------------------------------------------------------------------------------------
-bool DataType::initialize(XML* xml, TiXmlNode* node)
+bool DataType::initialize(XML* xml, tinyxml2::XMLNode* node)
 {
 	return true;
 }
@@ -132,12 +132,19 @@ bool UInt64Type::isSameType(PyObject* pyValue)
 	if(pyValue == NULL)
 	{
 		OUT_TYPE_ERROR("UINT64");
+
+		ERROR_MSG(fmt::format("UInt64Type::isSameType: pyValue is NULL! alias name: {}, id:{}\n",
+			aliasName(), id()));
+
 		return false;
 	}
 
 	if (!PyLong_Check(pyValue))
 	{
 		OUT_TYPE_ERROR("UINT64");
+
+		ERROR_MSG(fmt::format("UInt64Type::isSameType: pyValue not pylong! alias name: {}, id:{}\n",
+			aliasName(), id()));
 		return false;
 	}
 
@@ -157,6 +164,8 @@ bool UInt64Type::isSameType(PyObject* pyValue)
 		if(v < 0)
 		{
 			OUT_TYPE_ERROR("UINT64");
+			ERROR_MSG(fmt::format("UInt64Type::isSameType: pyValue type error! alias name: {}, id:{}\n",
+				aliasName(), id()));
 			return false;
 		}
 		return true;
@@ -164,6 +173,9 @@ bool UInt64Type::isSameType(PyObject* pyValue)
 
 	PyErr_Clear();
 	OUT_TYPE_ERROR("UINT64");
+
+	ERROR_MSG(fmt::format("UInt64Type::isSameType: pyValue type error! alias name: {}, id:{}\n",
+		aliasName(), id()));
 	return false;
 }
 
@@ -262,12 +274,17 @@ bool UInt32Type::isSameType(PyObject* pyValue)
 	if(pyValue == NULL)
 	{
 		OUT_TYPE_ERROR("UINT32");
+		ERROR_MSG(fmt::format("UInt32Type::isSameType: pyValue is NULL! alias name: {}, id:{}\n",
+			aliasName(), id()));
 		return false;
 	}
 
 	if (!PyLong_Check(pyValue))
 	{
 		OUT_TYPE_ERROR("UINT32");
+		ERROR_MSG(fmt::format("UInt32Type::isSameType: pyValue not pylong! alias name: {}, id:{}\n",
+			aliasName(), id())); 
+
 		return false;
 	}
 
@@ -275,6 +292,7 @@ bool UInt32Type::isSameType(PyObject* pyValue)
 	if (!PyErr_Occurred()) 
 		return true;
 	
+	PyErr_PrintEx(0);
 	PyErr_Clear();
 	long v = PyLong_AsLong(pyValue);
 	if (!PyErr_Occurred()) 
@@ -282,13 +300,20 @@ bool UInt32Type::isSameType(PyObject* pyValue)
 		if(v < 0)
 		{
 			OUT_TYPE_ERROR("UINT32");
+			ERROR_MSG(fmt::format("UInt32Type::isSameType: pyValue type error! alias name: {}, id:{}\n",
+				aliasName(), id()));
 			return false;
 		}
 		return true;
 	}
 	
+	PyErr_PrintEx(0);
+
 	PyErr_Clear();
 	OUT_TYPE_ERROR("UINT32");
+
+	ERROR_MSG(fmt::format("UInt32Type::isSameType: pyValue type error! alias name: {}, id:{}\n",
+		aliasName(), id()));
 	return false;
 }
 
@@ -383,12 +408,20 @@ bool Int64Type::isSameType(PyObject* pyValue)
 	if(pyValue == NULL)
 	{
 		OUT_TYPE_ERROR("INT64");
+
+		ERROR_MSG(fmt::format("Int64Type::isSameType: pyValue is NULL! alias name: {}, id:{}\n",
+			aliasName(), id()));
+
 		return false;
 	}
 
 	if (!PyLong_Check(pyValue))
 	{
 		OUT_TYPE_ERROR("INT64");
+
+		ERROR_MSG(fmt::format("Int64Type::isSameType: pyValue not pylong! alias name: {}, id:{}\n",
+			aliasName(), id()));
+
 		return false;
 	}
 
@@ -405,6 +438,8 @@ bool Int64Type::isSameType(PyObject* pyValue)
 
 	PyErr_Clear();
 	OUT_TYPE_ERROR("INT64");
+	ERROR_MSG(fmt::format("Int64Type::isSameType: pyValue type error! alias name: {}, id:{}\n",
+		aliasName(), id()));
 	return false;
 }
 
@@ -499,12 +534,21 @@ bool FloatType::isSameType(PyObject* pyValue)
 	if(pyValue == NULL)
 	{
 		OUT_TYPE_ERROR("FLOAT");
+
+		ERROR_MSG(fmt::format("FloatType::isSameType: pyValue is NULL! alias name: {}, id:{}\n",
+				aliasName(), id()));
+
 		return false;
 	}
 
 	bool ret = PyFloat_Check(pyValue);
 	if(!ret)
+	{
 		OUT_TYPE_ERROR("FLOAT");
+
+		ERROR_MSG(fmt::format("FloatType::isSameType: pyValue not pyfloat! alias name: {}, id:{}\n",
+				aliasName(), id()));
+	}
 	return ret;
 }
 
@@ -589,12 +633,20 @@ bool DoubleType::isSameType(PyObject* pyValue)
 	if(pyValue == NULL)
 	{
 		OUT_TYPE_ERROR("DOUBLE");
+
+		ERROR_MSG(fmt::format("DoubleType::isSameType: pyValue is NULL! alias name: {}, id:{}\n",
+			aliasName(), id()));
 		return false;
 	}
 
 	bool ret = PyFloat_Check(pyValue);
 	if(!ret)
+	{
 		OUT_TYPE_ERROR("DOUBLE");
+
+		ERROR_MSG(fmt::format("DoubleType::isSameType: pyValue not pyfloat! alias name: {}, id:{}\n",
+			aliasName(), id()));    
+	}
 	return ret;
 }
 
@@ -1094,13 +1146,20 @@ bool UnicodeType::isSameType(PyObject* pyValue)
 {
 	if(pyValue == NULL)
 	{
-		OUT_TYPE_ERROR("UNICODE");
+		PyErr_Format(PyExc_TypeError, "UnicodeType(%s)::isSameType: pyValue is NULL.", getName());
+
+		PyErr_PrintEx(0);	
 		return false;
 	}
 
 	bool ret = PyUnicode_Check(pyValue);
-	if(!ret)
-		OUT_TYPE_ERROR("UNICODE");
+	if (!ret)
+	{
+		PyErr_Format(PyExc_TypeError, "UnicodeType(%s)::isSameType: must be set to same type.", getName());
+
+		PyErr_PrintEx(0);	
+	}
+
 
 	return ret;
 }
@@ -1116,7 +1175,7 @@ PyObject* UnicodeType::parseDefaultStr(std::string defaultVal)
 	}
 
 	PyErr_Clear();
-	PyErr_Format(PyExc_TypeError, "UnicodeType::parseDefaultStr: defaultVal(%s) error! val=[%s]", 
+	PyErr_Format(PyExc_TypeError, "UnicodeType(%s)::parseDefaultStr: defaultVal(%s) error! val=[%s]", getName(),
 		pyobj != NULL ? pyobj->ob_type->tp_name : "NULL", defaultVal.c_str());
 
 	PyErr_PrintEx(0);
@@ -1133,7 +1192,10 @@ void UnicodeType::addToStream(MemoryStream* mstream, PyObject* pyValue)
 
 	if (s == NULL)
 	{
-		OUT_TYPE_ERROR("UNICODE");
+		//OUT_TYPE_ERROR("UNICODE");
+		PyErr_Format(PyExc_TypeError, "UnicodeType(%s)::addToStream: s is NULL.", getName());
+
+		PyErr_PrintEx(0);	
 		return;
 	}
 
@@ -1257,12 +1319,18 @@ bool PyDictType::isSameType(PyObject* pyValue)
 	if(pyValue == NULL)
 	{
 		OUT_TYPE_ERROR("PY_DICT");
+
+		ERROR_MSG(fmt::format("PyDictType::isSameType: pyValue is NULL! alias name: {}, id:{}\n",
+						aliasName(), id()));
 		return false;
 	}
 
 	if(!PyDict_Check(pyValue))
 	{
 		OUT_TYPE_ERROR("PY_DICT");
+
+		ERROR_MSG(fmt::format("PyDictType::isSameType: pyValue not dict! alias name: {}, id:{}\n",
+						aliasName(), id()));
 		return false;
 	}
 
@@ -1313,12 +1381,18 @@ bool PyTupleType::isSameType(PyObject* pyValue)
 	if(pyValue == NULL)
 	{
 		OUT_TYPE_ERROR("PY_TUPLE");
+
+		ERROR_MSG(fmt::format("PyTupleType::isSameType: pyValue is NULL! alias name: {}, id:{}\n",
+						aliasName(), id()));
 		return false;
 	}
 
 	if(!PyTuple_Check(pyValue))
 	{
 		OUT_TYPE_ERROR("PY_TUPLE");
+
+		ERROR_MSG(fmt::format("PyTupleType::isSameType: pyValue not tuple! alias name: {}, id:{}\n",
+						aliasName(), id()));
 		return false;
 	}
 
@@ -1369,12 +1443,18 @@ bool PyListType::isSameType(PyObject* pyValue)
 	if(pyValue == NULL)
 	{
 		OUT_TYPE_ERROR("PY_LIST");
+
+		ERROR_MSG(fmt::format("PyListType::isSameType: pyValue is NULL! alias name: {}, id:{}\n",
+					aliasName(), id()));
 		return false;
 	}
 
 	if(!PyList_Check(pyValue))
 	{
 		OUT_TYPE_ERROR("PY_LIST");
+
+		ERROR_MSG(fmt::format("PyListType::isSameType: pyValue not list! alias name: {}, id:{}\n",
+					aliasName(), id()));
 		return false;
 	}
 
@@ -1425,6 +1505,9 @@ bool BlobType::isSameType(PyObject* pyValue)
 	if(pyValue == NULL)
 	{
 		OUT_TYPE_ERROR("BLOB");
+
+		ERROR_MSG(fmt::format("BlobType::isSameType: pyValue not list! alias name: {}, id:{}\n",
+					aliasName(), id()));
 		return false;
 	}
 
@@ -1432,6 +1515,9 @@ bool BlobType::isSameType(PyObject* pyValue)
 		!PyObject_TypeCheck(pyValue, script::PyMemoryStream::getScriptType()))
 	{
 		OUT_TYPE_ERROR("BLOB");
+
+		ERROR_MSG(fmt::format("BlobType::isSameType: pyValue not bytes! alias name: {}, id:{}\n",
+					aliasName(), id()));
 		return false;
 	}
 
@@ -1486,6 +1572,10 @@ bool EntityCallType::isSameType(PyObject* pyValue)
 	if(pyValue == NULL)
 	{
 		OUT_TYPE_ERROR("ENTITYCALL");
+
+		ERROR_MSG(fmt::format("EntityCallType::isSameType: pyValue is NULL! alias name: {}, id:{}\n",
+				aliasName(), id()));
+
 		return false;
 	}
 
@@ -1655,11 +1745,11 @@ PyObject* FixedArrayType::createNewFromObj(PyObject* pyobj)
 }
 
 //-------------------------------------------------------------------------------------
-bool FixedArrayType::initialize(XML* xml, TiXmlNode* node, const std::string& parentName)
+bool FixedArrayType::initialize(XML* xml, tinyxml2::XMLNode* node, const std::string& parentName)
 {
 	dataType_ = NULL;
 
-	TiXmlNode* arrayNode = xml->enterNode(node, "of");
+	tinyxml2::XMLNode* arrayNode = xml->enterNode(node, "of");
 	if (arrayNode == NULL)
 	{
 		ERROR_MSG("FixedArrayType::initialize: not found \"of\".\n");
@@ -1796,12 +1886,19 @@ bool FixedArrayType::isSameType(PyObject* pyValue)
 	if(pyValue == NULL)
 	{
 		OUT_TYPE_ERROR("ARRAY");
+
+		ERROR_MSG(fmt::format("FixedArrayType::isSameType: pyVale is NULL! alias name: {}, id:{}, value alias name:{}, id:{}!\n",
+					aliasName(), id(), dataType_ != NULL ? dataType_->aliasName(): "", dataType_ != NULL ? dataType_->id() : 0));
 		return false;
 	}
 	
 	if(!PySequence_Check(pyValue))
 	{
 		OUT_TYPE_ERROR("ARRAY");
+
+
+		ERROR_MSG(fmt::format("FixedArrayType::isSameType: pyValue not sequence type! alias name: {}, id:{}, value alias name:{}, id:{}!\n",
+					aliasName(), id(), dataType_ != NULL ? dataType_->aliasName(): "", dataType_ != NULL ? dataType_->id() : 0));
 		return false;
 	}
 
@@ -2045,9 +2142,9 @@ PyObject* FixedDictType::createNewFromObj(PyObject* pyobj)
 }
 
 //-------------------------------------------------------------------------------------
-bool FixedDictType::initialize(XML* xml, TiXmlNode* node, std::string& parentName)
+bool FixedDictType::initialize(XML* xml, tinyxml2::XMLNode* node, std::string& parentName)
 {
-	TiXmlNode* propertiesNode = xml->enterNode(node, "Properties");
+	tinyxml2::XMLNode* propertiesNode = xml->enterNode(node, "Properties");
 	if(propertiesNode == NULL)
 	{
 		ERROR_MSG("FixedDictType::initialize: not found \"Properties\".\n");
@@ -2060,9 +2157,9 @@ bool FixedDictType::initialize(XML* xml, TiXmlNode* node, std::string& parentNam
 	{
 		typeName = xml->getKey(propertiesNode);
 
-		TiXmlNode* typeNode = xml->enterNode(propertiesNode->FirstChild(), "Type");
-		TiXmlNode* PersistentNode = xml->enterNode(propertiesNode->FirstChild(), "Persistent");
-		TiXmlNode* DatabaseLengthNode = xml->enterNode(propertiesNode->FirstChild(), "DatabaseLength");
+		tinyxml2::XMLNode* typeNode = xml->enterNode(propertiesNode->FirstChild(), "Type");
+		tinyxml2::XMLNode* PersistentNode = xml->enterNode(propertiesNode->FirstChild(), "Persistent");
+		tinyxml2::XMLNode* DatabaseLengthNode = xml->enterNode(propertiesNode->FirstChild(), "DatabaseLength");
 
 		bool persistent = true;
 		if(PersistentNode)
@@ -2167,13 +2264,13 @@ bool FixedDictType::initialize(XML* xml, TiXmlNode* node, std::string& parentNam
 	}
 	XML_FOR_END(propertiesNode);
 
-	TiXmlNode* implementedByNode = xml->enterNode(node, "implementedBy");
+	tinyxml2::XMLNode* implementedByNode = xml->enterNode(node, "implementedBy");
 	if(implementedByNode)
 	{
 		strType = xml->getValStr(implementedByNode);
 
 		if(g_componentType == CELLAPP_TYPE || g_componentType == BASEAPP_TYPE ||
-				g_componentType == CLIENT_TYPE)
+				g_componentType == CLIENT_TYPE || g_componentType == TOOL_TYPE)
 		{
 			if(strType.size() > 0 && !loadImplModule(strType))
 				return false;
@@ -2204,7 +2301,7 @@ bool FixedDictType::initialize(script::entitydef::DefContext* pDefContext, const
 	if (pDefContext->implementedByModuleName.size() > 0)
 	{
 		if (g_componentType == CELLAPP_TYPE || g_componentType == BASEAPP_TYPE ||
-			g_componentType == CLIENT_TYPE)
+			g_componentType == CLIENT_TYPE || g_componentType == TOOL_TYPE)
 		{
 			PyObject* implementedBy = pDefContext->implementedBy.get();
 			Py_INCREF(implementedBy);
@@ -2501,6 +2598,9 @@ bool FixedDictType::isSameType(PyObject* pyValue)
 	if(pyValue == NULL)
 	{
 		OUT_TYPE_ERROR("DICT");
+
+		ERROR_MSG(fmt::format("FixedDictType::isSameType: pyValue is NULL! alias name: {}, id:{}, module name:{}!\n",
+					aliasName(), id(), moduleName_.c_str()));
 		return false;
 	}
 
@@ -2523,6 +2623,13 @@ bool FixedDictType::isSameType(PyObject* pyValue)
 	if(!PyDict_Check(pyValue))
 	{
 		OUT_TYPE_ERROR("DICT");
+				
+		PyErr_SetString(PyExc_TypeError, this->aliasName());
+		PyErr_PrintEx(0);
+
+		ERROR_MSG(fmt::format("FixedDictType::isSameType: pyValue not dict! alias name: {}, id:{}, module name:{}!\n",
+					aliasName(), id(), moduleName_.c_str()));
+
 		return false;
 	}
 
@@ -2702,10 +2809,29 @@ EntityComponentType::~EntityComponentType()
 //-------------------------------------------------------------------------------------
 bool EntityComponentType::isSameType(PyObject* pyValue)
 {
-	if (pyValue == NULL || !(PyObject_TypeCheck(pyValue, EntityComponent::getScriptType())))
+	if (pyValue == NULL)
 	{
 		OUT_TYPE_ERROR("ENTITY_COMPONENT");
+
+		
+		ERROR_MSG(fmt::format("EntityComponentType::isSameType: pyValue is NULL! alias name: {}, id:{}, module name:{}!\n",
+					aliasName(), id(), pScriptDefModule_ ? pScriptDefModule_->getName() : ""));
 		return false;
+	}
+
+	if (!(PyObject_TypeCheck(pyValue, EntityComponent::getScriptType())))
+	{
+		
+		if (!PyDict_Check(pyValue))
+		{
+			OUT_TYPE_ERROR("ENTITY_COMPONENT");
+
+			
+			ERROR_MSG(fmt::format("EntityComponentType::isSameType: pyValue not dict! alias name: {}, id:{}, module name:{}!\n",
+						aliasName(), id(), pScriptDefModule_ ? pScriptDefModule_->getName() : ""));
+		}
+
+		return isSameDictDataType(pyValue);
 	}
 
 	EntityComponent* pEntityComponent = static_cast<EntityComponent*>(pyValue);
@@ -2728,7 +2854,7 @@ bool EntityComponentType::isSamePersistentType(PyObject* pyValue)
 			OUT_TYPE_ERROR("ENTITY_COMPONENT");
 		}
 
-		return isSameCellDataType(pyValue);
+		return isSameDictDataType(pyValue);
 	}
 
 	EntityComponent* pEntityComponent = static_cast<EntityComponent*>(pyValue);
@@ -2736,7 +2862,7 @@ bool EntityComponentType::isSamePersistentType(PyObject* pyValue)
 }
 
 //-------------------------------------------------------------------------------------
-bool EntityComponentType::isSameCellDataType(PyObject* pyValue)
+bool EntityComponentType::isSameDictDataType(PyObject* pyValue)
 {
 	if (!PyDict_Check(pyValue))
 		return false;
@@ -2748,8 +2874,8 @@ bool EntityComponentType::isSameCellDataType(PyObject* pyValue)
 	{
 		PropertyDescription* propertyDescription = iter->second;
 
-		if (!propertyDescription->hasCell())
-			continue;
+		//if (!propertyDescription->hasCell())
+		//	continue;
 
 		PyObject* pyVal = PyDict_GetItemString(pyValue, propertyDescription->getName());
 		
@@ -2767,13 +2893,14 @@ bool EntityComponentType::isSameCellDataType(PyObject* pyValue)
 		}
 		else
 		{
-			SCRIPT_ERROR_CHECK();
+			PyErr_Clear();
+			//SCRIPT_ERROR_CHECK();
 
-			ERROR_MSG(fmt::format("EntityComponent::isSameCellDataType: not found property({}), use default values! name={}, utype={}, domain={}.\n",
-				propertyDescription->getName(), pScriptDefModule_ ? pScriptDefModule_->getName() : "", pScriptDefModule_ ? pScriptDefModule_->getUType() : 0,
-				COMPONENT_NAME_EX(CELLAPP_TYPE)));
+			//ERROR_MSG(fmt::format("EntityComponent::isSameCellDataType: not found property({}), use default values! name={}, utype={}, domain={}.\n",
+			//	propertyDescription->getName(), pScriptDefModule_ ? pScriptDefModule_->getName() : "", pScriptDefModule_ ? pScriptDefModule_->getUType() : 0,
+			//	COMPONENT_NAME_EX(CELLAPP_TYPE)));
 
-			return false;
+			//return false;
 		}
 	}
 
@@ -2811,8 +2938,9 @@ void EntityComponentType::addPersistentToStream(MemoryStream* mstream, PyObject*
 			PropertyDescription* propertyDescription = iter->second;
 
 			// 如果这里传入的是一个字典，那么肯定是一个celldata字典，因此这里只查找cell属性
-			if (!propertyDescription->hasCell())
-				continue;
+			// TODO mason  如果外部调用这个方法时已经把属性id写入stream里，但是这里却continue了，到dbmgr服 生成写sql时，stream会overflow
+			//if (!propertyDescription->hasCell())
+			//	continue;
 
 			PyObject* pyVal = PyDict_GetItemString(pyValue, propertyDescription->getName());
 
@@ -2822,11 +2950,12 @@ void EntityComponentType::addPersistentToStream(MemoryStream* mstream, PyObject*
 			}
 			else
 			{
-				SCRIPT_ERROR_CHECK();
+				PyErr_Clear();
+				/*SCRIPT_ERROR_CHECK();
 
 				ERROR_MSG(fmt::format("EntityComponent::addPersistentToStream: not found property({}), use default values! name={}, utype={}, domain={}.\n",
 					propertyDescription->getName(), pScriptDefModule_ ? pScriptDefModule_->getName() : "", pScriptDefModule_ ? pScriptDefModule_->getUType() : 0,
-					COMPONENT_NAME_EX(CELLAPP_TYPE)));
+					COMPONENT_NAME_EX(CELLAPP_TYPE)));*/
 
 				propertyDescription->addPersistentToStream(mstream, NULL);
 			}
@@ -3003,6 +3132,19 @@ PyObject* EntityComponentType::createFromStream(MemoryStream* mstream)
 }
 
 //-------------------------------------------------------------------------------------
+PyObject* EntityComponentType::createFromStream(MemoryStream* mstream, PyObject* pyValue)
+{
+	KBE_ASSERT(EntityDef::context().currEntityID > 0);
+
+	if (pyValue == NULL) 
+	{
+		return createFromStream(mstream);
+	} 
+	EntityComponent* pEntityComponent = static_cast<EntityComponent*>(pyValue);
+	return pEntityComponent->createFromStream(mstream);
+}
+
+//-------------------------------------------------------------------------------------
 PyObject* EntityComponentType::createFromPersistentStream(ScriptDefModule* pScriptDefModule, MemoryStream* mstream)
 {
 	KBE_ASSERT(EntityDef::context().currEntityID > 0);
@@ -3015,6 +3157,69 @@ PyObject* EntityComponentType::createFromPersistentStream(ScriptDefModule* pScri
 	EntityComponent* pEntityComponent = static_cast<EntityComponent*>(pyEntityComponent);
 	return pEntityComponent->createFromPersistentStream(pScriptDefModule, mstream);
 }
+
+//-------------------------------------------------------------------------------------
+PyObject* EntityComponentType::createDictDataFromPersistentStream(MemoryStream* mstream)
+{
+	PyObject* dataDict = PyDict_New();
+	
+
+	ScriptDefModule::PROPERTYDESCRIPTION_MAP& propertyDescrs = pScriptDefModule_->getPersistentPropertyDescriptions();
+	ScriptDefModule::PROPERTYDESCRIPTION_MAP::const_iterator iter = propertyDescrs.begin();
+
+	for (; iter != propertyDescrs.end(); ++iter)
+	{
+		PropertyDescription* propertyDescription = iter->second;
+
+		/*if (pScriptDefModule_ && !pScriptDefModule_->hasCell() && !propertyDescription->hasBase())
+		{
+			continue;
+		}*/
+		PyObject* pyobj = NULL;
+		if (mstream)
+			pyobj = propertyDescription->createFromStream(mstream);
+		
+		//if (propertyDescription->hasCell() && !cellDataDict)
+		//{
+		//	cellDataDict = PyDict_New();
+
+		//	PyDict_SetItemString(dataDict, "cellData", cellDataDict);
+		//}
+
+		if (pyobj == NULL)
+		{
+			if (mstream != NULL) 
+			{
+				SCRIPT_ERROR_CHECK();
+			
+				ERROR_MSG(fmt::format("EntityComponentType::createDictDataFromPersistentStream: property({}) error, use default values! name={}, utype={}.\n",
+					propertyDescription->getName(), pScriptDefModule_ ? pScriptDefModule_->getName() : "", pScriptDefModule_ ? pScriptDefModule_->getUType() : 0));
+			}
+
+			pyobj = propertyDescription->newDefaultVal();
+		}
+
+		//if (propertyDescription->hasCell())
+		//{
+			//PyDict_SetItemString(cellDataDict, propertyDescription->getName(), pyobj);
+		//}
+
+		//if (propertyDescription->hasBase())
+		//{
+		PyDict_SetItemString(dataDict,
+			propertyDescription->getName(), pyobj);
+		//}
+
+		Py_DECREF(pyobj);
+	}
+
+	/*
+	if(cellDataDict)
+		Py_DECREF(cellDataDict);*/
+
+	return dataDict;
+}
+
 
 //-------------------------------------------------------------------------------------
 PyObject* EntityComponentType::createCellData()
@@ -3126,5 +3331,88 @@ PyObject* EntityComponentType::createCellDataFromPersistentStream(MemoryStream* 
 	return cellDataDict;
 }
 
+//-------------------------------------------------------------------------------------
+TextType::TextType(DATATYPE_UID did):
+DataType(did)
+{
+}
+
+//-------------------------------------------------------------------------------------
+TextType::~TextType()
+{
+}
+
+//-------------------------------------------------------------------------------------
+bool TextType::isSameType(PyObject* pyValue)
+{
+	if(pyValue == NULL)
+	{
+		OUT_TYPE_ERROR("TEXT");
+		return false;
+	}
+
+	bool ret = PyUnicode_Check(pyValue);
+	if(!ret)
+		OUT_TYPE_ERROR("TEXT");
+
+	return ret;
+}
+
+//-------------------------------------------------------------------------------------
+PyObject* TextType::parseDefaultStr(std::string defaultVal)
+{
+	PyObject* pyobj = PyUnicode_DecodeUTF8(defaultVal.data(), defaultVal.size(), "");
+
+	if(pyobj && !PyErr_Occurred()) 
+	{
+		return pyobj;
+	}
+
+	PyErr_Clear();
+	PyErr_Format(PyExc_TypeError, "TextType::parseDefaultStr: defaultVal(%s) error! val=[%s]", 
+		pyobj != NULL ? pyobj->ob_type->tp_name : "NULL", defaultVal.c_str());
+
+	PyErr_PrintEx(0);
+	S_RELEASE(pyobj);
+
+	return PyUnicode_DecodeUTF8("", 0, "");
+}
+
+//-------------------------------------------------------------------------------------
+void TextType::addToStream(MemoryStream* mstream, PyObject* pyValue)
+{
+	Py_ssize_t size;
+	const char* s = PyUnicode_AsUTF8AndSize(pyValue, &size);
+
+	if (s == NULL)
+	{
+		OUT_TYPE_ERROR("TEXT");
+		return;
+	}
+
+	mstream->appendBlob(s, size);
+}
+
+//-------------------------------------------------------------------------------------
+PyObject* TextType::createFromStream(MemoryStream* mstream)
+{
+	std::string val = "";
+	if(mstream)
+	{
+		mstream->readBlob(val);
+	}
+
+	PyObject* pyobj = PyUnicode_DecodeUTF8(val.data(), val.size(), "");
+
+	if(pyobj && !PyErr_Occurred()) 
+	{
+		return pyobj;
+	}
+
+	S_RELEASE(pyobj);
+	::PyErr_PrintEx(0);
+
+	return NULL;
+}
 //-------------------------------------------------------------------------------------
 }

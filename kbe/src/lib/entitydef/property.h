@@ -279,6 +279,7 @@ public:
 	PyObject* createFromPersistentStream(ScriptDefModule* pScriptModule, MemoryStream* mstream);
 
 	virtual PyObject* createFromStream(MemoryStream* mstream);
+	PyObject* createFromStream(MemoryStream* mstream, PyObject* pyValue);
 
 	/**
 		获取这个属性描述在def文件中被定义的默认值

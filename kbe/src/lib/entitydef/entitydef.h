@@ -70,12 +70,12 @@ public:
 
 	static bool loadAllDefDescriptions(const std::string& moduleName, 
 		XML* defxml, 
-		TiXmlNode* defNode, 
+		tinyxml2::XMLNode* defNode, 
 		ScriptDefModule* pScriptModule);
 
 	static bool loadDefPropertys(const std::string& moduleName, 
 		XML* xml, 
-		TiXmlNode* defPropertyNode, 
+		tinyxml2::XMLNode* defPropertyNode, 
 		ScriptDefModule* pScriptModule);
 
 	static bool calcDefPropertyUType(const std::string& moduleName, 
@@ -83,29 +83,29 @@ public:
 
 	static bool loadDefCellMethods(const std::string& moduleName, 
 		XML* xml, 
-		TiXmlNode* defMethodNode, 
+		tinyxml2::XMLNode* defMethodNode, 
 		ScriptDefModule* pScriptModule);
 
 	static bool loadDefBaseMethods(const std::string& moduleName, 
 		XML* xml, 
-		TiXmlNode* defMethodNode, 
+		tinyxml2::XMLNode* defMethodNode, 
 		ScriptDefModule* pScriptModule);
 
 	static bool loadDefClientMethods(const std::string& moduleName, 
 		XML* xml, 
-		TiXmlNode* defMethodNode, 
+		tinyxml2::XMLNode* defMethodNode, 
 		ScriptDefModule* pScriptModule);
 
 	static bool loadInterfaces(const std::string& defFilePath, 
 		const std::string& moduleName, 
 		XML* defxml, 
-		TiXmlNode* defNode, 
+		tinyxml2::XMLNode* defNode, 
 		ScriptDefModule* pScriptModule, bool ignoreComponents = false);
 
 	static bool loadComponents(const std::string& defFilePath,
 		const std::string& moduleName,
 		XML* defxml,
-		TiXmlNode* defNode,
+		tinyxml2::XMLNode* defNode,
 		ScriptDefModule* pScriptModule);
 
 	static PropertyDescription* addComponentProperty(ENTITY_PROPERTY_UID utype,
@@ -124,25 +124,25 @@ public:
 	static bool loadParentClass(const std::string& defFilePath, 
 		const std::string& moduleName, 
 		XML* defxml, 
-		TiXmlNode* defNode, 
+		tinyxml2::XMLNode* defNode, 
 		ScriptDefModule* pScriptModule);
 
 	static bool loadDefInfo(const std::string& defFilePath, 
 		const std::string& moduleName, 
 		XML* defxml, 
-		TiXmlNode* defNode, 
+		tinyxml2::XMLNode* defNode, 
 		ScriptDefModule* pScriptModule);
 
 	static bool loadDetailLevelInfo(const std::string& defFilePath, 
 		const std::string& moduleName, 
 		XML* defxml, 
-		TiXmlNode* defNode, 
+		tinyxml2::XMLNode* defNode, 
 		ScriptDefModule* pScriptModule);
 
 	static bool loadVolatileInfo(const std::string& defFilePath, 
 		const std::string& moduleName, 
 		XML* defxml, 
-		TiXmlNode* defNode, 
+		tinyxml2::XMLNode* defNode, 
 		ScriptDefModule* pScriptModule);
 
 	static PyObject* loadScriptModule(std::string moduleName);
@@ -240,6 +240,10 @@ public:
 		是否是继承引擎底层允许的基础类的派生类
 	*/
 	static std::string isSubClass(PyObject* pyClass);
+
+	static PyObject* generateMissingScriptModule(std::string moduleName, bool isComponent = false);
+
+	static bool isGenerateMissingScriptModule();
 
 private:
 	static SCRIPT_MODULES __scriptModules;										// 所有的扩展脚本模块都存储在这里

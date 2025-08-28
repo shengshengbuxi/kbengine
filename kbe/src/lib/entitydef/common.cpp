@@ -108,6 +108,11 @@ std::pair<std::wstring, std::wstring> getComponentPythonPaths(COMPONENT_TYPE com
 		pyPaths += user_scripts_path + L"server_common;";
 		pyPaths += user_scripts_path + L"db;";
 		break;
+	case TOOL_TYPE:
+		pyPaths += user_scripts_path + L"server_common;";
+		pyPaths += user_scripts_path + L"tool;";
+		pyPaths += user_scripts_path + L"tool/interfaces;";
+		pyPaths += user_scripts_path + L"tool/components;";
 	default:
 		pyPaths += user_scripts_path + L"client;";
 		pyPaths += user_scripts_path + L"client/interfaces;";

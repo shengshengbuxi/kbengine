@@ -541,7 +541,7 @@ void EntityComponent::onEntityDestroy(PyObject* pEntity, ScriptDefModule* pEntit
 	ScriptDefModule::COMPONENTDESCRIPTION_MAP::iterator comps_iter = componentDescrs.begin();
 	for (; comps_iter != componentDescrs.end(); ++comps_iter)
 	{
-		if (g_componentType == BASEAPP_TYPE)
+		if (g_componentType == BASEAPP_TYPE || g_componentType == TOOL_TYPE)
 		{
 			if (!comps_iter->second->hasBase())
 				continue;
@@ -581,7 +581,7 @@ void EntityComponent::onEntityDestroy(PyObject* pEntity, ScriptDefModule* pEntit
 		ScriptDefModule::COMPONENTDESCRIPTION_MAP::iterator comps_iter = componentDescrs.begin();
 		for (; comps_iter != componentDescrs.end(); ++comps_iter)
 		{
-			if (g_componentType == BASEAPP_TYPE)
+			if (g_componentType == BASEAPP_TYPE || g_componentType == TOOL_TYPE)
 			{
 				if (!comps_iter->second->hasBase())
 					continue;
@@ -676,7 +676,7 @@ const ScriptDefModule::PROPERTYDESCRIPTION_MAP* EntityComponent::pChildPropertyD
 {
 	const ScriptDefModule::PROPERTYDESCRIPTION_MAP* pPropertyDescrs = NULL;
 
-	if (componentType_ == BASEAPP_TYPE)
+	if (componentType_ == BASEAPP_TYPE || componentType_ == TOOL_TYPE)
 	{
 		// 当addClientDataToStream时会设置EntityDef::currComponentType() == CLIENT_TYPE
 		if (EntityDef::context().currComponentType == CLIENT_TYPE)
@@ -745,10 +745,10 @@ bool EntityComponent::isSamePersistentType(PyObject* pyValue)
 
 	if (pEntity)
 	{
-		KBE_ASSERT(g_componentType == BASEAPP_TYPE || g_componentType == CELLAPP_TYPE);
-		KBE_ASSERT(componentType_ == BASEAPP_TYPE || componentType_ == CELLAPP_TYPE);
+		KBE_ASSERT(g_componentType == BASEAPP_TYPE || g_componentType == CELLAPP_TYPE || g_componentType == TOOL_TYPE);
+		KBE_ASSERT(componentType_ == BASEAPP_TYPE || componentType_ == CELLAPP_TYPE || componentType_ == TOOL_TYPE);
 
-		if (g_componentType == BASEAPP_TYPE)
+		if (g_componentType == BASEAPP_TYPE || g_componentType == TOOL_TYPE)
 		{
 			if (pPropertyDescription_->hasCell())
 			{
@@ -770,7 +770,7 @@ bool EntityComponent::isSamePersistentType(PyObject* pyValue)
 				}
 			}
 
-			if (componentType_ == BASEAPP_TYPE)
+			if (componentType_ == BASEAPP_TYPE || componentType_ == TOOL_TYPE)
 			{
 				baseComponentPart = this;
 				Py_INCREF(baseComponentPart);
@@ -848,7 +848,7 @@ bool EntityComponent::isSamePersistentType(PyObject* pyValue)
 //-------------------------------------------------------------------------------------
 PyObject* EntityComponent::createFromPersistentStream(ScriptDefModule* pScriptModule, MemoryStream* mstream)
 {
-	KBE_ASSERT(g_componentType == BASEAPP_TYPE);
+	KBE_ASSERT(g_componentType == BASEAPP_TYPE || g_componentType == TOOL_TYPE);
 
 	// 设置为-1， 避免onScriptSetAttribute中尝试广播属性
 	ENTITY_ID oid = ownerID_;
@@ -868,7 +868,7 @@ PyObject* EntityComponent::createFromPersistentStream(ScriptDefModule* pScriptMo
 			continue;
 		}
 
-		PyObject* pyobj = propertyDescription->createFromStream(mstream);
+		PyObject* pyobj = propertyDescription->createFromPersistentStream(mstream);
 		
 		if (propertyDescription->hasCell() && !cellDataDict)
 		{
@@ -922,10 +922,10 @@ void EntityComponent::addPersistentToStream(MemoryStream* mstream, PyObject* pyV
 
 	if (pEntity)
 	{
-		KBE_ASSERT(g_componentType == BASEAPP_TYPE || g_componentType == CELLAPP_TYPE);
-		KBE_ASSERT(componentType_ == BASEAPP_TYPE || componentType_ == CELLAPP_TYPE);
+		KBE_ASSERT(g_componentType == BASEAPP_TYPE || g_componentType == CELLAPP_TYPE || g_componentType == TOOL_TYPE);
+		KBE_ASSERT(componentType_ == BASEAPP_TYPE || componentType_ == CELLAPP_TYPE || componentType_ == TOOL_TYPE);
 
-		if (g_componentType == BASEAPP_TYPE)
+		if (g_componentType == BASEAPP_TYPE || g_componentType == TOOL_TYPE)
 		{
 			if (pPropertyDescription_->hasCell())
 			{
@@ -947,7 +947,7 @@ void EntityComponent::addPersistentToStream(MemoryStream* mstream, PyObject* pyV
 				}
 			}
 
-			if (componentType_ == BASEAPP_TYPE)
+			if (componentType_ == BASEAPP_TYPE || componentType_ == TOOL_TYPE)
 			{
 				baseComponentPart = this;
 				Py_INCREF(baseComponentPart);
@@ -1288,7 +1288,7 @@ PropertyDescription* EntityComponent::getProperty(ENTITY_PROPERTY_UID child_uid)
 		}
 		else
 		{
-			if (componentType_ == BASEAPP_TYPE)
+			if (componentType_ == BASEAPP_TYPE || componentType_ == TOOL_TYPE)
 			{
 				// 当addClientDataToStream时会设置EntityDef::currComponentType() == CLIENT_TYPE
 				if (EntityDef::context().currComponentType == CLIENT_TYPE)
@@ -1421,6 +1421,8 @@ void EntityComponent::updateFromDict(PyObject* pOwner, PyObject* pyDict)
 				PyObject_SetAttrString(static_cast<PyObject*>(this),
 					propertyDescription->getName(), value);
 			}
+
+			continue;
 		}
 
 		if (pyCellData)
@@ -1455,14 +1457,14 @@ void EntityComponent::convertDictDataToEntityComponent(ENTITY_ID entityID, PyObj
 	ScriptDefModule::COMPONENTDESCRIPTION_MAP::iterator comps_iter = componentDescrs.begin();
 	for (; comps_iter != componentDescrs.end(); ++comps_iter)
 	{
-		if (!comps_iter->second->getScriptType())
+		if (!comps_iter->second->getScriptType() || !comps_iter->second->hasCell())
 			continue;
 
 		PyObject* pyObj = PyDict_GetItemString(cellData, comps_iter->first.c_str());
 		if (!pyObj || !PyDict_Check(pyObj))
 		{
 			// 由于存在一种情况， 组件def中没有内容， 但有cell脚本，此时baseapp上无法判断他是否有cell属性，所以写celldata时没有数据写入
-			if (g_componentType == BASEAPP_TYPE)
+			if (g_componentType == BASEAPP_TYPE || g_componentType == TOOL_TYPE)
 			{
 				SCRIPT_ERROR_CHECK();
 				continue;
@@ -1509,7 +1511,7 @@ std::vector<EntityComponent*> EntityComponent::getComponents(const std::string& 
 		if (name != comps_iter->second->getName())
 			continue;
 
-		if (g_componentType == BASEAPP_TYPE)
+		if (g_componentType == BASEAPP_TYPE || g_componentType == TOOL_TYPE)
 		{
 			if (!comps_iter->second->hasBase())
 				continue;
@@ -1718,6 +1720,32 @@ PyObject* EntityComponent::pyClientEntity(ENTITY_ID entityID)
 	}
 
 	PyObject* pyResult = PyObject_CallMethod(this, const_cast<char*>("clientEntity"),
+		const_cast<char*>("i"), entityID);
+
+	if (pyResult != NULL)
+	{
+		PyObject* pObj =  PyObject_GetAttrString(pyResult, pPropertyDescription_->getName());
+		Py_DECREF(pyResult);
+		return pObj;
+	}
+
+	return NULL;
+}
+
+//-------------------------------------------------------------------------------------
+PyObject* EntityComponent::pyClientIn(ENTITY_ID entityID)
+{
+	PyObject* pEntity = owner();
+
+	if (!pEntity)
+	{
+		PyErr_Format(PyExc_AssertionError, "%s: %d is destroyed!\n",
+			scriptName(), ownerID_);
+		PyErr_PrintEx(0);
+		return 0;
+	}
+
+	PyObject* pyResult = PyObject_CallMethod(pEntity, const_cast<char*>("clientIn"),
 		const_cast<char*>("i"), entityID);
 
 	if (pyResult != NULL)

@@ -78,6 +78,8 @@ bool DataTypes::initialize(std::string file)
 	addDataType("VECTOR3",		new Vector3Type);
 	addDataType("VECTOR4",		new Vector4Type);
 
+	addDataType("TEXT",         new TextType);
+
 	_g_baseTypeEndIndex = dataTypesOrders_.size();
 	return loadTypes(file);
 }
@@ -107,7 +109,7 @@ bool DataTypes::loadTypes(SmartPointer<XML>& xml)
 	if (xml == NULL || !xml->isGood())
 		return false;
 
-	TiXmlNode* node = xml->getRootNode();
+	tinyxml2::XMLNode* node = xml->getRootNode();
 
 	if(node == NULL)
 	{
@@ -119,7 +121,7 @@ bool DataTypes::loadTypes(SmartPointer<XML>& xml)
 	{
 		std::string type = "";
 		std::string aliasName = xml->getKey(node);
-		TiXmlNode* childNode = node->FirstChild();
+		tinyxml2::XMLNode* childNode = node->FirstChild();
 
 		if (!DataTypes::validTypeName(aliasName))
 		{
@@ -198,7 +200,7 @@ bool DataTypes::addDataType(std::string name, DataType* dataType)
 	DATATYPE_MAP::iterator iter = dataTypesLowerName_.find(lowername);
 	if (iter != dataTypesLowerName_.end())
 	{ 
-		ERROR_MSG(fmt::format("DataTypes::addDataType(name): name {} exist.\n", name.c_str()));
+		WARNING_MSG(fmt::format("DataTypes::addDataType(name): name {} exist.\n", name.c_str()));
 		return false;
 	}
 

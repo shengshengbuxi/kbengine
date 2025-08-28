@@ -68,7 +68,7 @@ public:
 		return pyobj;
 	}
 		
-	virtual bool initialize(XML* xml, TiXmlNode* node);
+	virtual bool initialize(XML* xml, tinyxml2::XMLNode* node);
 
 	virtual PyObject* parseDefaultStr(std::string defaultVal) = 0;
 
@@ -654,7 +654,7 @@ public:
 
 	PyObject* parseDefaultStr(std::string defaultVal);
 
-	bool initialize(XML* xml, TiXmlNode* node, const std::string& parentName);
+	bool initialize(XML* xml, tinyxml2::XMLNode* node, const std::string& parentName);
 	bool initialize(script::entitydef::DefContext* pDefContext, const std::string& parentName);
 
 	const char* getName(void) const{ return "ARRAY";}
@@ -712,7 +712,7 @@ public:
 
 	PyObject* parseDefaultStr(std::string defaultVal);
 
-	bool initialize(XML* xml, TiXmlNode* node, std::string& parentName);
+	bool initialize(XML* xml, tinyxml2::XMLNode* node, std::string& parentName);
 	bool initialize(script::entitydef::DefContext* pDefContext, const std::string& parentName);
 
 	/**	
@@ -778,7 +778,7 @@ public:
 
 	bool isSameType(PyObject* pyValue);
 	bool isSamePersistentType(PyObject* pyValue);
-	bool isSameCellDataType(PyObject* pyValue);
+	bool isSameDictDataType(PyObject* pyValue);
 
 	void addToStream(MemoryStream* mstream, PyObject* pyValue);
 	void addPersistentToStream(MemoryStream* mstream, PyObject* pyValue);
@@ -788,7 +788,9 @@ public:
 		ENTITY_ID ownerID, PropertyDescription* parentPropertyDescription, COMPONENT_TYPE sendtoComponentType, bool checkValue);
 
 	PyObject* createFromStream(MemoryStream* mstream);
+	PyObject* createFromStream(MemoryStream* mstream, PyObject* pyValue);
 	PyObject* createFromPersistentStream(ScriptDefModule* pScriptDefModule, MemoryStream* mstream);
+	PyObject* createDictDataFromPersistentStream(MemoryStream* mstream);
 
 	PyObject* createCellData();
 	PyObject* createCellDataFromPersistentStream(MemoryStream* mstream);
@@ -926,6 +928,27 @@ PyObject* IntType<SPECIFY_TYPE>::createFromStream(MemoryStream* mstream)
 
 	return pyval;
 }
+
+class TextType : public DataType
+{
+protected:
+public:	
+	TextType(DATATYPE_UID did = 0);
+	virtual ~TextType();	
+
+	bool isSameType(PyObject* pyValue);
+
+	void addToStream(MemoryStream* mstream, PyObject* pyValue);
+
+	PyObject* createFromStream(MemoryStream* mstream);
+
+	PyObject* parseDefaultStr(std::string defaultVal);
+
+	const char* getName(void) const{ return "TEXT";}
+
+	virtual DATATYPE type() const{ return DATA_TYPE_TEXT; }
+};
+
 
 }
 

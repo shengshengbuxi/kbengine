@@ -46,7 +46,7 @@ namespace KBEngine {
 		ScriptDefModule::COMPONENTDESCRIPTION_MAP::iterator comps_iter = componentDescrs.begin();				\
 		for (; comps_iter != componentDescrs.end(); ++comps_iter)												\
 		{																										\
-			if(g_componentType == BASEAPP_TYPE)																	\
+			if(g_componentType == BASEAPP_TYPE || g_componentType == TOOL_TYPE)								\
 			{																									\
 				if (!comps_iter->second->hasBase())																\
 					continue;																					\
@@ -243,6 +243,8 @@ public:
 		调用客户端实体的方法
 	*/
 	DECLARE_PY_MOTHOD_ARG1(pyClientEntity, ENTITY_ID);
+
+	DECLARE_PY_MOTHOD_ARG1(pyClientIn, ENTITY_ID);
 
 protected:
 	void addToServerStream(MemoryStream* mstream, PyObject* pyValue);

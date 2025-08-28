@@ -353,7 +353,7 @@ void ScriptDefModule::autoMatchCompOwn()
 			return;
 
 		// 获得entities.xml根节点, 如果没有定义一个entity那么直接返回true
-		TiXmlNode* node = xml->getRootNode();
+		tinyxml2::XMLNode* node = xml->getRootNode();
 		if (node == NULL)
 			return;
 
@@ -572,6 +572,7 @@ bool ScriptDefModule::addPropertyDescription(const char* attrName,
 			setCell(true);
 			break;
 	case BASEAPP_TYPE:
+	case TOOL_TYPE:
 			f_propertyDescription = findBasePropertyDescription(attrName);
 			propertyDescr = &getBasePropertyDescriptions();
 			propertyDescr_uidmap = &getBasePropertyDescriptions_uidmap();
@@ -730,6 +731,7 @@ PropertyDescription* ScriptDefModule::findPropertyDescription(const char* attrNa
 			return findCellPropertyDescription(attrName);
 			break;
 	case BASEAPP_TYPE:
+	case TOOL_TYPE:
 			return findBasePropertyDescription(attrName);
 			break;
 	default:
@@ -1027,6 +1029,7 @@ ScriptDefModule::PROPERTYDESCRIPTION_MAP& ScriptDefModule::getPropertyDescrs()
 			lpPropertyDescrs = &getCellPropertyDescriptions();
 			break;
 		case BASEAPP_TYPE:
+		case TOOL_TYPE:
 			lpPropertyDescrs = &getBasePropertyDescriptions();
 			break;	
 		default:

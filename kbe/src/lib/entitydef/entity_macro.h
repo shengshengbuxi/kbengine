@@ -558,6 +558,7 @@ public:																										\
 			if (iter->second->getDataType()->type() == DATA_TYPE_ENTITY_COMPONENT)							\
 			{																								\
 				pyobj = ((EntityComponentType*)iter->second->getDataType())->createCellDataFromStream(mstream);\
+				PyDict_SetItemString(cellData, ((EntityComponentType*)iter->second->getDataType())->pScriptDefModule()->getName(), pyobj);\
 			}																								\
 			else																							\
 			{																								\
@@ -836,7 +837,7 @@ public:																										\
 		CLASS* pobj = static_cast<CLASS*>(self);															\
 																											\
 		if((g_componentType == CELLAPP_TYPE && currargsSize > 2) ||											\
-			(g_componentType == BASEAPP_TYPE && currargsSize > 3))											\
+			((g_componentType == BASEAPP_TYPE || g_componentType == TOOL_TYPE) && currargsSize > 3))											\
 		{																									\
 			PyErr_Format(PyExc_AssertionError,																\
 							"%s::writeToDB: args max require %d args, gived %d!\n",							\
@@ -861,14 +862,14 @@ public:																										\
 				PyErr_PrintEx(0);																			\
 			}																								\
 		}																									\
-		else if(g_componentType == BASEAPP_TYPE)															\
+		else if(g_componentType == BASEAPP_TYPE || g_componentType == TOOL_TYPE)															\
 		{																									\
 			extra = -1;	/* shouldAutoLoad -1默认不改变设置 */												\
 		}																									\
 																											\
 		if(currargsSize == 1)																				\
 		{																									\
-			if(g_componentType == BASEAPP_TYPE)																\
+			if(g_componentType == BASEAPP_TYPE || g_componentType == TOOL_TYPE)																\
 			{																								\
 				if(!PyArg_ParseTuple(args, "O", &pycallback))												\
 				{																							\
@@ -905,7 +906,7 @@ public:																										\
 		}																									\
 		else if(currargsSize == 2)																			\
 		{																									\
-			if(g_componentType == BASEAPP_TYPE)																\
+			if(g_componentType == BASEAPP_TYPE || g_componentType == TOOL_TYPE)																\
 			{																								\
 				if(!PyArg_ParseTuple(args, "O|i", &pycallback, &extra))										\
 				{																							\
@@ -957,7 +958,7 @@ public:																										\
 		}																									\
 		else if(currargsSize == 3)																			\
 		{																									\
-			if(g_componentType == BASEAPP_TYPE)																\
+			if(g_componentType == BASEAPP_TYPE || g_componentType == TOOL_TYPE)																\
 			{																								\
 				PyObject* pystr_extra = NULL;																\
 				if(!PyArg_ParseTuple(args, "O|i|O", &pycallback, &extra, &pystr_extra))						\
@@ -1083,7 +1084,7 @@ public:																										\
 	{																										\
 		ENTITY_DESTROYED_CHECK(return, "fireEvent", this);													\
 																											\
-		std::vector<PyObjectPtr>& evnVecs = events_[evnName];												\
+		std::vector<PyObjectPtr> evnVecs = events_[evnName];												\
 		std::vector<PyObjectPtr>::iterator iter = evnVecs.begin();											\
 		for(; iter != evnVecs.end(); ++iter)																\
 		{																									\
@@ -1364,13 +1365,12 @@ public:																										\
 				componentName = const_cast<char*>(PyUnicode_AsUTF8AndSize(pyName, NULL));					\
 			}																								\
 																											\
-			if (!componentName)																				\
+			if(!componentName)																				\
 			{																								\
 				PyErr_Format(PyExc_AssertionError, "%s::getComponent:: componentName error!", pobj->scriptName());\
 				PyErr_PrintEx(0);																			\
 				Py_RETURN_NONE;																				\
 			}																								\
-																											\
 																											\
 			return pobj->pyGetComponent(componentName, (pyobj == Py_True));									\
 		}																									\
@@ -1419,6 +1419,7 @@ public:																										\
 		return pobj->pyGetComponents();																		\
 	}																										\
 																											\
+
 
 #define ENTITY_CPP_IMPL(APP, CLASS)																			\
 	class EntityScriptTimerHandler : public TimerHandler													\
@@ -1585,7 +1586,7 @@ public:																										\
 		PyObject* pyDir = NULL;																				\
 																											\
 																											\
-		if(g_componentType == BASEAPP_TYPE)																	\
+		if(g_componentType == BASEAPP_TYPE || g_componentType == TOOL_TYPE)																	\
 		{																									\
 			PyObject* cellDataDict = PyObject_GetAttrString(this, "cellData");								\
 			if(cellDataDict == NULL)																		\
@@ -1626,7 +1627,7 @@ public:																										\
 			ADD_POS_DIR_TO_STREAM(s, pos, dir)																\
 		}																									\
 																											\
-		if(g_componentType != BASEAPP_TYPE)																	\
+		if(g_componentType != BASEAPP_TYPE && g_componentType != TOOL_TYPE)																	\
 		{																									\
 			Py_XDECREF(pyPos);																				\
 			Py_XDECREF(pyDir);																				\

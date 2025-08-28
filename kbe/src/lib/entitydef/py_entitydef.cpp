@@ -375,7 +375,7 @@ bool DefContext::addChildContext(DefContext& defContext)
 	}
 	else if (defContext.type == DefContext::DC_TYPE_METHOD)
 	{
-		if(defContext.componentType == BASEAPP_TYPE)
+		if(defContext.componentType == BASEAPP_TYPE || defContext.componentType == TOOL_TYPE)
 			pContexts = &base_methods;
 		else
 			pContexts = &cell_methods;
@@ -528,7 +528,7 @@ static bool registerDefContext(DefContext& defContext)
 		// 检查作用域是否属于该进程
 		bool flagsGood = true;
 
-		if (defContext.componentType == BASEAPP_TYPE)
+		if (defContext.componentType == BASEAPP_TYPE || defContext.componentType == TOOL_TYPE)
 			flagsGood = (stringToEntityDataFlags(defContext.propertyFlags) & ENTITY_BASE_DATA_FLAGS) != 0;
 		else if (defContext.componentType == CELLAPP_TYPE)
 			flagsGood = (stringToEntityDataFlags(defContext.propertyFlags) & ENTITY_CELL_DATA_FLAGS) != 0;
@@ -1482,7 +1482,7 @@ static PyObject* __py_def_parse(PyObject *self, PyObject* args)
 			}
 			else
 			{
-				if (defContext.returnType != "UNICODE" && defContext.returnType != "STRING")
+				if (defContext.returnType != "UNICODE" && defContext.returnType != "STRING" && defContext.returnType != "TEXT")
 				{
 					PyObject* mdict = PyModule_GetDict(module); // Borrowed reference.
 					PyObject* result = PyRun_String(const_cast<char*>(defContext.propertyDefaultVal.c_str()),
@@ -1859,6 +1859,11 @@ static bool loadAllScriptForComponentType(COMPONENT_TYPE loadComponentType)
 		ENGINE_COMPONENT_INFO& info = g_kbeSrvConfig.getCellApp();
 		entryScriptFileName = info.entryScriptFile;
 	}
+	else if (loadComponentType == TOOL_TYPE) 
+	{		
+		ENGINE_COMPONENT_INFO& info = g_kbeSrvConfig.getTool();
+		entryScriptFileName = info.entryScriptFile;
+	}
 	else
 	{
 		KBE_ASSERT(false);
@@ -2115,6 +2120,7 @@ static bool loadAllScripts()
 	std::vector< COMPONENT_TYPE > loadOtherComponentTypes;
 	loadOtherComponentTypes.push_back(BASEAPP_TYPE);
 	loadOtherComponentTypes.push_back(CELLAPP_TYPE);
+	loadOtherComponentTypes.push_back(TOOL_TYPE);
 
 	for (std::vector< COMPONENT_TYPE >::iterator iter = loadOtherComponentTypes.begin(); iter != loadOtherComponentTypes.end(); ++iter)
 	{
@@ -2674,7 +2680,7 @@ static bool registerDefComponents(ScriptDefModule* pScriptModule, DefContext& de
 		autosetHasClient(*pDefPropTypeContext);
 
 		// 除了这几个进程以外，其他进程不需要访问脚本
-		if (g_componentType == BASEAPP_TYPE || g_componentType == CELLAPP_TYPE || g_componentType == BOTS_TYPE || g_componentType == CLIENT_TYPE)
+		if (g_componentType == BASEAPP_TYPE || g_componentType == CELLAPP_TYPE || g_componentType == BOTS_TYPE || g_componentType == CLIENT_TYPE || g_componentType == TOOL_TYPE)
 		{
 			// 如果是bots类型，需要将脚本类设置为程序环境的类
 			// 注意：如果是CLIENT_TYPE使用def文件模式或者将定义放在一个common的py中，因为该模式相关定义都在服务器代码上，而客户端环境没有服务器代码
@@ -2807,7 +2813,7 @@ static bool registerEntityDef(ScriptDefModule* pScriptModule, DefContext& defCon
 	}
 
 	// 除了这几个进程以外，其他进程不需要访问脚本
-	if (g_componentType == BASEAPP_TYPE || g_componentType == CELLAPP_TYPE || g_componentType == BOTS_TYPE || g_componentType == CLIENT_TYPE)
+	if (g_componentType == BASEAPP_TYPE || g_componentType == CELLAPP_TYPE || g_componentType == BOTS_TYPE || g_componentType == CLIENT_TYPE || g_componentType == TOOL_TYPE)
 	{
 		if (defContext.pyObjectSourceFileComponentType == g_componentType)
 		{

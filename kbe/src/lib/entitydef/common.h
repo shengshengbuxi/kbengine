@@ -102,6 +102,7 @@ typedef uint8  ENTITY_COMPONENT_ALIASID;
 #define DATA_TYPE_PYTUPLE				13
 #define DATA_TYPE_PYLIST				14
 #define DATA_TYPE_ENTITY_COMPONENT		15
+#define DATA_TYPE_TEXT					16
 
 // 对entity的一些系统级别的可变属性进行编号以便网络传输时进行辨别
 enum ENTITY_BASE_PROPERTY_UTYPE

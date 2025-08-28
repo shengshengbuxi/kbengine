@@ -44,8 +44,16 @@ public:
 				if(i++ >= 256)
 					break;
 
-				ERROR_MSG(fmt::format("\t--> leaked: {}({}).\n", 
-					iter->second->ob_type->tp_name, iter->first));
+				try
+				{
+					ERROR_MSG(fmt::format("\t--> leaked: {}({}).\n", 
+						iter->second->ob_type->tp_name, iter->first));
+				}
+				catch (...)
+				{
+					ERROR_MSG(fmt::format("\t--> leaked: ({}).\n", iter->first));				
+				}
+
 			}
 		}
 

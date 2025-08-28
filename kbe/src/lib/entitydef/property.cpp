@@ -531,6 +531,19 @@ PyObject* EntityComponentDescription::createFromStream(MemoryStream* mstream)
 }
 
 //-------------------------------------------------------------------------------------
+PyObject* EntityComponentDescription::createFromStream(MemoryStream* mstream, PyObject* pyValue)
+{
+	
+	if (pyValue == NULL) 
+	{
+		return createFromStream(mstream);
+	}
+
+	return static_cast<EntityComponentType*>(dataType_)->createFromStream(mstream, pyValue);
+
+}
+
+//-------------------------------------------------------------------------------------
 PyObject* EntityComponentDescription::parseDefaultStr(const std::string& defaultStr)
 {
 	EntityComponent* pEntityComponent = static_cast<EntityComponent*>(PropertyDescription::parseDefaultStr(defaultStr));
