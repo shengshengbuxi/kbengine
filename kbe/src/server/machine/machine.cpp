@@ -21,6 +21,8 @@
 #include "../tools/logger/logger_interface.h"
 #include "../../server/tools/interfaces/interfaces_interface.h"
 #include "../../server/tools/bots/bots_interface.h"
+#include "../tools/tool/tool_interface.h"
+
 #include "common/md5.h"
 
 namespace KBEngine{
@@ -1460,12 +1462,16 @@ uint16 Machine::startLinuxProcess(int32 uid, COMPONENT_TYPE componentType, uint6
 
 	if ((childpid = fork()) == 0)
 	{
-		if (setuid(uid) == -1)
+		passwd* pw = getpwuid(uid);
+		if (pw != NULL)
 		{
-			ERROR_MSG(fmt::format("Machine::startLinuxProcess: Failed to setuid to {}, aborting exec for '{}'\n", 
-				uid,  COMPONENT_NAME_EX(componentType)));
+			if (setuid(uid) == -1)
+			{
+				ERROR_MSG(fmt::format("Machine::startLinuxProcess: Failed to setuid to {}, aborting exec for '{}'\n", 
+					uid,  COMPONENT_NAME_EX(componentType)));
 
-			exit(1);
+				exit(1);
+			}
 		}
 
 		if (KBE_ROOT == "")
@@ -1494,14 +1500,16 @@ uint16 Machine::startLinuxProcess(int32 uid, COMPONENT_TYPE componentType, uint6
 		// 改变当前目录，以让出问题的时候core能在此处生成
 		//chdir(bin_path.c_str());
 
-		const char *argv[6];
+		const char *argv[7];
 		const char **pArgv = argv;
 		std::string scid = fmt::format("--cid={}", cid);
 		std::string sgus = fmt::format("--gus={}", gus);
+		std::string suid = fmt::format("--uid={}", uid);
 		
 		*pArgv++ = cmdLine.c_str();
 		*pArgv++ = scid.c_str();
 		*pArgv++ = sgus.c_str();
+		*pArgv++ = suid.c_str();
 		*pArgv = NULL;
 
 		// 关闭父类的socket
@@ -1509,7 +1517,7 @@ uint16 Machine::startLinuxProcess(int32 uid, COMPONENT_TYPE componentType, uint6
 		epBroadcast_.close();
 		epLocal_.close();
 
-		INFO_MSG(fmt::format("Machine::startLinuxProcess: UID {} execing '{}', cid = {}, gus = {}\n", uid, cmdLine, cid, gus));
+		INFO_MSG(fmt::format("Machine::startLinuxProcess: UID {} execing '{}', cid = {}, gus = {}, uid = {}\n", uid, cmdLine, cid, gus, uid));
 
 		DebugHelper::getSingleton().closeLogger();
 		int result = execv(cmdLine.c_str(), (char * const *)argv);
@@ -1546,6 +1554,7 @@ DWORD Machine::startWindowsProcess(int32 uid, COMPONENT_TYPE componentType, uint
 	// 増加参数
 	str += fmt::format(" --cid={}", cid);
 	str += fmt::format(" --gus={}", gus);
+	str += fmt::format(" --uid={}", uid);
 
 	wchar_t* szCmdline = KBEngine::strutil::char2wchar(str.c_str());
 
