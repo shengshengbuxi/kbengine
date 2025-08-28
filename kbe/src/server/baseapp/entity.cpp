@@ -278,8 +278,10 @@ void Entity::createCellData(void)
 			
 			if (dataType->type() != DATA_TYPE_ENTITY_COMPONENT)
 				pyObj = propertyDescription->newDefaultVal();
-			else
+			else {
 				pyObj = ((EntityComponentType*)dataType)->createCellData();
+				PyDict_SetItemString(cellDataDict_, ((EntityComponentType*)dataType)->pScriptDefModule()->getName(), pyObj);
+			}
 
 			PyDict_SetItemString(cellDataDict_, propertyDescription->getName(), pyObj);
 			Py_DECREF(pyObj);
@@ -394,21 +396,48 @@ void Entity::addCellDataToStream(COMPONENT_TYPE sendTo, uint32 flags, MemoryStre
 	}
 }
 
+
+
 //-------------------------------------------------------------------------------------
-void Entity::addPersistentsDataToStream(uint32 flags, MemoryStream* s)
+void Entity::addPersistentsDataToStreamEx(ScriptDefModule* pScriptModule, PyObject* pydict, PyObject* cellDataDict, uint32 flags, MemoryStream* s, Entity* entity)
 {
+	
 	std::vector<ENTITY_PROPERTY_UID> log;
 
-	// 再将base中存储属性取出
-	PyObject* pydict = PyObject_GetAttrString(this, "__dict__");
-
 	// 先将celldata中的存储属性取出
-	ScriptDefModule::PROPERTYDESCRIPTION_MAP& propertyDescrs = pScriptModule_->getPersistentPropertyDescriptions();
+	ScriptDefModule::PROPERTYDESCRIPTION_MAP& propertyDescrs = pScriptModule->getPersistentPropertyDescriptions();
 	ScriptDefModule::PROPERTYDESCRIPTION_MAP::const_iterator iter = propertyDescrs.begin();
 
-	if(pScriptModule_->hasCell())
+	
+	if(pScriptModule->hasCell())
 	{
-		addPositionAndDirectionToStream(*s);
+		if (entity) 
+			entity->addPositionAndDirectionToStream(*s);
+		else
+		{
+			ENTITY_PROPERTY_UID posuid = ENTITY_BASE_PROPERTY_UTYPE_POSITION_XYZ;								
+			ENTITY_PROPERTY_UID diruid = ENTITY_BASE_PROPERTY_UTYPE_DIRECTION_ROLL_PITCH_YAW;					
+																											
+			Network::FixedMessages::MSGInfo* msgInfo =															
+						Network::FixedMessages::getSingleton().isFixed("Property::position");					
+																											
+			if(msgInfo != NULL)																					
+			{																									
+				posuid = msgInfo->msgid;																		
+				msgInfo = NULL;																					
+			}																									
+																											
+			msgInfo = Network::FixedMessages::getSingleton().isFixed("Property::direction");					
+			if(msgInfo != NULL)																					
+			{																									
+				diruid = msgInfo->msgid;																		
+				msgInfo = NULL;																					
+			}																									
+						
+			float v = 0;
+			(*s) << (ENTITY_PROPERTY_UID)0 << posuid << v << v << v;
+			(*s) << (ENTITY_PROPERTY_UID)0 << diruid << v << v << v;
+		}
 	}
 
 	for(; iter != propertyDescrs.end(); ++iter)
@@ -428,20 +457,27 @@ void Entity::addPersistentsDataToStream(uint32 flags, MemoryStream* s)
 			PyObject *key = PyUnicode_FromString(attrname);
 
 			if(!isComponent /* 如果是组件类型，应该先从实体自身找到这个组件属性 */
-				&& cellDataDict_ != NULL && PyDict_Contains(cellDataDict_, key) > 0)
+				&& cellDataDict != NULL && (propertyDescription->hasCell() && PyDict_Contains(cellDataDict, key) > 0))
 			{
-				PyObject* pyVal = PyDict_GetItemString(cellDataDict_, attrname);
+				PyObject* pyVal = PyDict_GetItemString(cellDataDict, attrname);
 				if(!propertyDescription->isSamePersistentType(pyVal))
 				{
 					CRITICAL_MSG(fmt::format("{}::addPersistentsDataToStream: {} persistent({}) type(curr_py: {} != {}) error.\n",
-						this->scriptName(), this->id(), attrname, (pyVal ? pyVal->ob_type->tp_name : "unknown"), propertyDescription->getDataType()->getName()));
+						pScriptModule->getName(), entity==NULL ? 0 : entity->id(), attrname, (pyVal ? pyVal->ob_type->tp_name : "unknown"), propertyDescription->getDataType()->getName()));
 				}
 				else
 				{
 					(*s) << (ENTITY_PROPERTY_UID)0 << propertyDescription->getUType();
 					log.push_back(propertyDescription->getUType());
 					propertyDescription->addPersistentToStream(s, pyVal);
-					DEBUG_PERSISTENT_PROPERTY("addCellPersistentsDataToStream", attrname);
+					//DEBUG_PERSISTENT_PROPERTY("addCellPersistentsDataToStream", attrname);
+					if(g_debugEntity)																					
+					{																									
+						DEBUG_MSG(fmt::format("{}(refc={}, id={})::debug_op_Persistent:op={}, {}.\n",					
+															pScriptModule->getName(),												
+															entity==NULL ? 0 : entity->ob_refcnt, entity==NULL ? 0: entity->id(),		
+																		"addCellPersistentsDataToStream", attrname));
+					}	
 				}
 			}
 			else if(PyDict_Contains(pydict, key) > 0)
@@ -450,22 +486,31 @@ void Entity::addPersistentsDataToStream(uint32 flags, MemoryStream* s)
 				if(!propertyDescription->isSamePersistentType(pyVal))
 				{
 					CRITICAL_MSG(fmt::format("{}::addPersistentsDataToStream: {} persistent({}) type(curr_py: {} != {}) error.\n",
-						this->scriptName(), this->id(), attrname, (pyVal ? pyVal->ob_type->tp_name : "unknown"), propertyDescription->getDataType()->getName()));
+						pScriptModule->getName(), entity==NULL ? 0 : entity->id(), attrname, (pyVal ? pyVal->ob_type->tp_name : "unknown"), propertyDescription->getDataType()->getName()));
 				}
 				else
 				{
 	    			(*s) << (ENTITY_PROPERTY_UID)0 << propertyDescription->getUType();
 					log.push_back(propertyDescription->getUType());
 	    			propertyDescription->addPersistentToStream(s, pyVal);
-					DEBUG_PERSISTENT_PROPERTY("addBasePersistentsDataToStream", attrname);
+					//DEBUG_PERSISTENT_PROPERTY("addBasePersistentsDataToStream", attrname);
+					if(g_debugEntity)																					
+					{																									
+						DEBUG_MSG(fmt::format("{}(refc={}, id={})::debug_op_Persistent:op={}, {}.\n",					
+															pScriptModule->getName(),												
+															entity==NULL ? 0 : entity->ob_refcnt, entity==NULL ? 0: entity->id(),		
+																		"addBasePersistentsDataToStream", attrname));
+					}	
 				}
 			}
 			else
 			{
 				if (!isComponent)
 				{
-					WARNING_MSG(fmt::format("{}::addPersistentsDataToStream: {} not found Persistent({}), use default values!\n",
-						this->scriptName(), this->id(), attrname));
+					if (entity) 
+						WARNING_MSG(fmt::format("{}::addPersistentsDataToStream: {} not found Persistent({}), use default values!\n",
+							pScriptModule->getName(), entity==NULL ? 0 : entity->id(), attrname));
+					
 
 					(*s) << (ENTITY_PROPERTY_UID)0 << propertyDescription->getUType();
 					log.push_back(propertyDescription->getUType());
@@ -474,25 +519,32 @@ void Entity::addPersistentsDataToStream(uint32 flags, MemoryStream* s)
 				else
 				{
 					// 一些实体没有cell部分， 因此cell属性忽略
-					if (cellDataDict_)
+					if (cellDataDict)
 					{
 						// 一些组件可能没有cell属性
 						EntityComponentType* pEntityComponentType = (EntityComponentType*)propertyDescription->getDataType();
 						if (pEntityComponentType->pScriptDefModule()->getCellPropertyDescriptions().size() == 0)
 							continue;
 
-						PyObject* pyVal = PyDict_GetItemString(cellDataDict_, attrname);
+						PyObject* pyVal = PyDict_GetItemString(cellDataDict, attrname);
 						if (!propertyDescription->isSamePersistentType(pyVal))
 						{
 							CRITICAL_MSG(fmt::format("{}::addPersistentsDataToStream: {} persistent({}) type(curr_py: {} != {}) error.\n",
-								this->scriptName(), this->id(), attrname, (pyVal ? pyVal->ob_type->tp_name : "unknown"), propertyDescription->getDataType()->getName()));
+								pScriptModule->getName(), entity==NULL ? 0 : entity->id(), attrname, (pyVal ? pyVal->ob_type->tp_name : "unknown"), propertyDescription->getDataType()->getName()));
 						}
 						else
 						{
 							(*s) << (ENTITY_PROPERTY_UID)0 << propertyDescription->getUType();
 							log.push_back(propertyDescription->getUType());
 							propertyDescription->addPersistentToStream(s, pyVal);
-							DEBUG_PERSISTENT_PROPERTY("addCellPersistentsDataToStream", attrname);
+							//DEBUG_PERSISTENT_PROPERTY("addCellPersistentsDataToStream", attrname);
+							if(g_debugEntity)
+							{																									
+								DEBUG_MSG(fmt::format("{}(refc={}, id={})::debug_op_Persistent:op={}, {}.\n",					
+																	pScriptModule->getName(),												
+																	entity==NULL ? 0 : entity->ob_refcnt, entity==NULL ? 0: entity->id(),		
+																				"addCellPersistentsDataToStream", attrname));
+							}	
 						}
 					}
 				}
@@ -506,6 +558,129 @@ void Entity::addPersistentsDataToStream(uint32 flags, MemoryStream* s)
 
 	Py_XDECREF(pydict);
 	SCRIPT_ERROR_CHECK();
+}
+//-------------------------------------------------------------------------------------
+//void Entity::addPersistentsDataToStream(uint32 flags, MemoryStream* s)
+//{
+//	std::vector<ENTITY_PROPERTY_UID> log;
+//
+//	// 再将base中存储属性取出
+//	PyObject* pydict = PyObject_GetAttrString(this, "__dict__");
+//
+//	// 先将celldata中的存储属性取出
+//	ScriptDefModule::PROPERTYDESCRIPTION_MAP& propertyDescrs = pScriptModule_->getPersistentPropertyDescriptions();
+//	ScriptDefModule::PROPERTYDESCRIPTION_MAP::const_iterator iter = propertyDescrs.begin();
+//
+//	if(pScriptModule_->hasCell())
+//	{
+//		addPositionAndDirectionToStream(*s);
+//	}
+//
+//	for(; iter != propertyDescrs.end(); ++iter)
+//	{
+//		PropertyDescription* propertyDescription = iter->second;
+//		std::vector<ENTITY_PROPERTY_UID>::const_iterator finditer = 
+//			std::find(log.begin(), log.end(), propertyDescription->getUType());
+//
+//		if(finditer != log.end())
+//			continue;
+//
+//		const char* attrname = propertyDescription->getName();
+//		if(propertyDescription->isPersistent() && (flags & propertyDescription->getFlags()) > 0)
+//		{
+//			bool isComponent = propertyDescription->getDataType()->type() == DATA_TYPE_ENTITY_COMPONENT;
+//
+//			PyObject *key = PyUnicode_FromString(attrname);
+//
+//			if(!isComponent /* 如果是组件类型，应该先从实体自身找到这个组件属性 */
+//				&& cellDataDict_ != NULL && (propertyDescription->hasCell() && PyDict_Contains(cellDataDict_, key) > 0))
+//			{
+//				PyObject* pyVal = PyDict_GetItemString(cellDataDict_, attrname);
+//				if(!propertyDescription->isSamePersistentType(pyVal))
+//				{
+//					CRITICAL_MSG(fmt::format("{}::addPersistentsDataToStream: {} persistent({}) type(curr_py: {} != {}) error.\n",
+//						this->scriptName(), this->id(), attrname, (pyVal ? pyVal->ob_type->tp_name : "unknown"), propertyDescription->getDataType()->getName()));
+//				}
+//				else
+//				{
+//					(*s) << (ENTITY_PROPERTY_UID)0 << propertyDescription->getUType();
+//					log.push_back(propertyDescription->getUType());
+//					propertyDescription->addPersistentToStream(s, pyVal);
+//					DEBUG_PERSISTENT_PROPERTY("addCellPersistentsDataToStream", attrname);
+//				}
+//			}
+//			else if(PyDict_Contains(pydict, key) > 0)
+//			{
+//				PyObject* pyVal = PyDict_GetItem(pydict, key);
+//				if(!propertyDescription->isSamePersistentType(pyVal))
+//				{
+//					CRITICAL_MSG(fmt::format("{}::addPersistentsDataToStream: {} persistent({}) type(curr_py: {} != {}) error.\n",
+//						this->scriptName(), this->id(), attrname, (pyVal ? pyVal->ob_type->tp_name : "unknown"), propertyDescription->getDataType()->getName()));
+//				}
+//				else
+//				{
+//	    			(*s) << (ENTITY_PROPERTY_UID)0 << propertyDescription->getUType();
+//					log.push_back(propertyDescription->getUType());
+//	    			propertyDescription->addPersistentToStream(s, pyVal);
+//					DEBUG_PERSISTENT_PROPERTY("addBasePersistentsDataToStream", attrname);
+//				}
+//			}
+//			else
+//			{
+//				if (!isComponent)
+//				{
+//					WARNING_MSG(fmt::format("{}::addPersistentsDataToStream: {} not found Persistent({}), use default values!\n",
+//						this->scriptName(), this->id(), attrname));
+//
+//					(*s) << (ENTITY_PROPERTY_UID)0 << propertyDescription->getUType();
+//					log.push_back(propertyDescription->getUType());
+//					propertyDescription->addPersistentToStream(s, NULL);
+//				}
+//				else
+//				{
+//					// 一些实体没有cell部分， 因此cell属性忽略
+//					if (cellDataDict_)
+//					{
+//						// 一些组件可能没有cell属性
+//						EntityComponentType* pEntityComponentType = (EntityComponentType*)propertyDescription->getDataType();
+//						if (pEntityComponentType->pScriptDefModule()->getCellPropertyDescriptions().size() == 0)
+//							continue;
+//
+//						PyObject* pyVal = PyDict_GetItemString(cellDataDict_, attrname);
+//						if (!propertyDescription->isSamePersistentType(pyVal))
+//						{
+//							CRITICAL_MSG(fmt::format("{}::addPersistentsDataToStream: {} persistent({}) type(curr_py: {} != {}) error.\n",
+//								this->scriptName(), this->id(), attrname, (pyVal ? pyVal->ob_type->tp_name : "unknown"), propertyDescription->getDataType()->getName()));
+//						}
+//						else
+//						{
+//							(*s) << (ENTITY_PROPERTY_UID)0 << propertyDescription->getUType();
+//							log.push_back(propertyDescription->getUType());
+//							propertyDescription->addPersistentToStream(s, pyVal);
+//							DEBUG_PERSISTENT_PROPERTY("addCellPersistentsDataToStream", attrname);
+//						}
+//					}
+//				}
+//			}
+//
+//			Py_DECREF(key);
+//		}
+//
+//		SCRIPT_ERROR_CHECK();
+//	}
+//
+//	Py_XDECREF(pydict);
+//	SCRIPT_ERROR_CHECK();
+//}
+
+void Entity::addPersistentsDataToStream(uint32 flags, MemoryStream* s)
+{
+	
+	// 再将base中存储属性取出
+	PyObject* pydict = PyObject_GetAttrString(this, "__dict__");
+
+
+	Entity::addPersistentsDataToStreamEx(pScriptModule_, pydict, cellDataDict_, flags, s, this);
 }
 
 //-------------------------------------------------------------------------------------
@@ -1062,15 +1237,21 @@ void Entity::onLoseCell(Network::Channel* pChannel, MemoryStream& s)
 	isGetingCellData_ = false;
 	createdSpace_ = false;
 	
+	Py_INCREF(this);
+
 	CALL_COMPONENTS_AND_ENTITY_METHOD(this, SCRIPT_OBJECT_CALL_ARGS0(pyTempObj, const_cast<char*>("onLoseCell"), GETERR));
 
 	if (!isDestroyed() && hasFlags(ENTITY_FLAGS_DESTROY_AFTER_GETCELL))
 	{
+		Py_DECREF(this);
+
 		WARNING_MSG(fmt::format("{}::onLoseCell(): Automatically destroy! id={}.\n",
 			this->scriptName(), this->id()));
 
 		destroy();
 	}
+	else
+		Py_DECREF(this);
 }
 
 //-------------------------------------------------------------------------------------
@@ -1185,8 +1366,8 @@ void Entity::writeToDB(void* data, void* extra1, void* extra2)
 		//if(pyCallback != NULL)
 		//	Py_DECREF(pyCallback);
 
-		WARNING_MSG(fmt::format("{}::writeToDB(): is archiveing! entityid={}, dbid={}.\n", 
-			this->scriptName(), this->id(), this->dbid()));
+		//WARNING_MSG(fmt::format("{}::writeToDB(): is archiveing! entityid={}, dbid={}.\n", 
+		//	this->scriptName(), this->id(), this->dbid()));
 
 		return;
 	}
@@ -1358,6 +1539,7 @@ void Entity::onCellWriteToDBCompleted(CALLBACK_ID callbackID, int8 shouldAutoLoa
 	(*pBundle).newMessage(DbmgrInterface::writeEntity);
 
 	(*pBundle) << g_componentID;
+	(*pBundle) << g_componentType;
 	(*pBundle) << this->id();
 	(*pBundle) << this->dbid();
 	(*pBundle) << this->dbInterfaceIndex();

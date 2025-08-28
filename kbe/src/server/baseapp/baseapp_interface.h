@@ -301,6 +301,16 @@ NETWORK_INTERFACE_DECLARE_BEGIN(BaseappInterface)
 	// 请求强制杀死当前app
 	BASEAPP_MESSAGE_DECLARE_STREAM(reqKillServer,									NETWORK_VARIABLE_MESSAGE)
 
+	
+	// createEntityAnywhereFromDBID的回调
+	BASEAPP_MESSAGE_DECLARE_STREAM(onCreateNewEntityAnywhereByDB,	NETWORK_FIXED_MESSAGE)
+
+	BASEAPP_MESSAGE_DECLARE_STREAM(onCreateNewEntityAnywhereByDBCallback,	NETWORK_FIXED_MESSAGE)
+		
+		// 写entity到db回调。
+	BASEAPP_MESSAGE_DECLARE_STREAM(onWriteNewEntityToDBCallback,						NETWORK_FIXED_MESSAGE)
+								
+
 	//--------------------------------------------Entity----------------------------------------------------------
 	// 远程呼叫entity方法
 	ENTITY_MESSAGE_EXPOSED(onRemoteMethodCall)
@@ -331,6 +341,8 @@ NETWORK_INTERFACE_DECLARE_BEGIN(BaseappInterface)
 	ENTITY_MESSAGE_DECLARE_ARGS2(onMigrationCellappEnd,								NETWORK_FIXED_MESSAGE,
 								COMPONENT_ID,										sourceCellAppID,
 								COMPONENT_ID,										targetCellAppID)
+
+
 
 	//--------------------------------------------Proxy---------------------------------------------------------
 	/**

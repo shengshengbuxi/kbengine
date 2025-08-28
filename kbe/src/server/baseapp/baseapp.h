@@ -125,6 +125,7 @@ public:
 	/** 
 		创建一个entity 
 	*/
+	static PyObject* __py_createEntityLocally(PyObject* self, PyObject* args);
 	static PyObject* __py_createEntity(PyObject* self, PyObject* args);
 	static PyObject* __py_createEntityAnywhere(PyObject* self, PyObject* args);
 	static PyObject* __py_createEntityRemotely(PyObject* self, PyObject* args);
@@ -371,7 +372,7 @@ public:
 	*/
 	void onWriteToDBCallback(Network::Channel* pChannel, ENTITY_ID eid, DBID entityDBID, 
 		uint16 dbInterfaceIndex, CALLBACK_ID callbackID, bool success);
-
+	
 	/**
 		增加proxices计数
 	*/
@@ -515,7 +516,24 @@ public:
 	void flags(uint32 v) { flags_ = v; }
 	static PyObject* __py_setFlags(PyObject* self, PyObject* args);
 	static PyObject* __py_getFlags(PyObject* self, PyObject* args);
+
+	static PyObject* __py_createNewEntityByDB(PyObject* self, PyObject* args, PyObject* kwargs);
+
+	void createNewEntityByDB(const char* entityType, PyObject* params, PyObject* pyCallback, int8 shouldAutoLoad, std::string& dbInterfaceName, bool writeConcern);
+
+	static PyObject* __py_createNewEntityAnywhereByDB(PyObject* self, PyObject* args, PyObject* kwargs);
 	
+	void createNewEntityAnywhereByDB(const char* entityType, PyObject* params, PyObject* pyCallback, int8 shouldAutoLoad, uint16 dbInterfaceIndex, bool writeConcern);
+	
+	void onCreateNewEntityAnywhereByDB(Network::Channel* pChannel, KBEngine::MemoryStream& stream);
+
+	void onCreateNewEntityAnywhereByDBCallback(Network::Channel* pChannel, KBEngine::MemoryStream& stream);
+
+	void onWriteNewEntityToDBCallback(Network::Channel* pChannel, KBEngine::MemoryStream& s);
+	
+	void _onCreateNewEntityAnywhereByDBCallback(Network::Channel* pChannel, CALLBACK_ID callbackID, const char* entityType, ENTITY_ID eid, DBID entityDBID, COMPONENT_ID componentID);
+	
+
 protected:
 	TimerHandle												loopCheckTimerHandle_;
 

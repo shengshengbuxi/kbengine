@@ -98,6 +98,7 @@ public:
 
 	void destroyCellData(void);
 
+	static void addPersistentsDataToStreamEx(ScriptDefModule* pScriptModule, PyObject* pydict, PyObject* cellDataDict, uint32 flags, MemoryStream* s, Entity* entity=NULL);
 	void addPersistentsDataToStream(uint32 flags, MemoryStream* s);
 
 	PyObject* createCellDataDict(uint32 flags);

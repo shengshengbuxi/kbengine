@@ -129,7 +129,7 @@ bool EntityAutoLoader::process()
 			if (!g_kbeSrvConfig.isPureDBInterfaceName(g_kbeSrvConfig.dbInterfaceIndex2dbInterfaceName(dbInterfaceIndex)))
 			{
 				(*pBundle).newMessage(DbmgrInterface::entityAutoLoad);
-				(*pBundle) << dbInterfaceIndex << g_componentID << (*(*entityTypes_.begin()).begin()) << start_ << end_;
+				(*pBundle) << dbInterfaceIndex << g_componentID << g_componentType << (*(*entityTypes_.begin()).begin()) << start_ << end_;
 				pChannel->send(pBundle);
 				querying_ = true;
 			}
