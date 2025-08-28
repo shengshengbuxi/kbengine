@@ -17,7 +17,8 @@ LOGGER_TYPE				= 10
 BOTS_TYPE				= 11
 WATCHER_TYPE			= 12
 INTERFACES_TYPE			= 13
-COMPONENT_END_TYPE		= 14
+TOOL_TYPE			= 14
+COMPONENT_END_TYPE		= 15
 
 VALID_COMPONENT_TYPE_FOR_RUN = [
 	DBMGR_TYPE, 
@@ -29,6 +30,7 @@ VALID_COMPONENT_TYPE_FOR_RUN = [
 	LOGGER_TYPE, 
 	BOTS_TYPE, 
 	INTERFACES_TYPE, 
+	TOOL_TYPE,
 ]
 
 # ComponentName to type
@@ -47,6 +49,7 @@ COMPONENT_NAME2TYPE = {
 	"bots" 			: BOTS_TYPE,
 	"watcher" 		: WATCHER_TYPE,
 	"interfaces" 	: INTERFACES_TYPE,
+	"tool" 	: TOOL_TYPE,
 }
 
 # Component name
@@ -65,6 +68,7 @@ COMPONENT_NAME = (
 	"bots",
 	"watcher",
 	"interfaces",
+	"tool"
 )
 
 if sys.hexversion >= 0x02060000:

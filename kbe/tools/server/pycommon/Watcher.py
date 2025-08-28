@@ -38,6 +38,8 @@ CMD_ID_queryWatcher = {
 	Define.DBMGR_TYPE      : 41006,
 	Define.INTERFACES_TYPE : 41007,
 	Define.LOGGER_TYPE     : 41008,
+	Define.TOOL_TYPE     : 41009,
+	
 }
 
 class Watcher(ServerApp.ServerApp):
