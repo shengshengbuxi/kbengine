@@ -36,7 +36,7 @@ all install clean full:
 	cd dependencies/curl && $(MAKE) $@
 	cd dependencies/hiredis && $(MAKE) $@
 	cd dependencies/g3dlite && $(MAKE) $@
-	cd dependencies/tinyxml && $(MAKE) $@
+	cd dependencies/tinyxml2 && $(MAKE) $@
 	cd dependencies/sigar/linux && $(MAKE) $@
 	cd dependencies/tmxparser && $(MAKE) $@
 	cd dependencies/jwsmtp/jwsmtp/jwsmtp && $(MAKE) $@
