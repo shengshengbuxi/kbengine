@@ -10,6 +10,7 @@
 #include "common/memorystream.h"
 #include "thread/threadtask.h"
 #include "helper/debug_helper.h"
+#include "db_interface/entity_table.h"
 
 namespace KBEngine { 
 
@@ -125,6 +126,10 @@ protected:
 	DBID_TASKS_MAP dbid_tasks_;
 	ENTITYID_TASKS_MAP entityid_tasks_;
 
+	KBEUnordered_map<DBID, ENTITY_DBID_VERSION_DATA*> entityDBIDVersion_datas_;
+	//std::map<DBID, mysql::DBContext::ENTITY_DBID_VERSION_DATA*> entityDBIDsVersions_;
+
+	
 	KBEngine::thread::ThreadMutex mutex_;
 
 	std::string dbInterfaceName_;

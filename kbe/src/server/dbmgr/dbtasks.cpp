@@ -21,6 +21,7 @@
 #include "cellappmgr/cellappmgr_interface.h"
 #include "loginapp/loginapp_interface.h"
 #include "tools/interfaces/interfaces_interface.h"
+#include "tools/tool/tool_interface.h"
 
 #if KBE_PLATFORM == PLATFORM_WIN32
 #ifdef _DEBUG
@@ -195,6 +196,8 @@ thread::TPTask::TPTaskState DBTaskExecuteRawDatabaseCommandByEntity::presentMain
 			(*pBundle).newMessage(CellappInterface::onExecuteRawDatabaseCommandCB);
 		else if (componentType_ == INTERFACES_TYPE)
 			(*pBundle).newMessage(InterfacesInterface::onExecuteRawDatabaseCommandCB);
+		else if (componentType_ == TOOL_TYPE)
+			(*pBundle).newMessage(ToolInterface::onExecuteRawDatabaseCommandCB);
 		else
 		{
 			KBE_ASSERT(false && "no support!\n");
@@ -259,6 +262,8 @@ thread::TPTask::TPTaskState DBTaskExecuteRawDatabaseCommand::presentMainThread()
 			(*pBundle).newMessage(CellappInterface::onExecuteRawDatabaseCommandCB);
 		else if (componentType_ == INTERFACES_TYPE)
 			(*pBundle).newMessage(InterfacesInterface::onExecuteRawDatabaseCommandCB);
+		else if (componentType_ == TOOL_TYPE)
+			(*pBundle).newMessage(ToolInterface::onExecuteRawDatabaseCommandCB);
 		else
 		{
 			KBE_ASSERT(false && "no support!\n");
@@ -306,10 +311,11 @@ thread::TPTask::TPTaskState DBTaskExecuteRawDatabaseCommand::presentMainThread()
 
 //-------------------------------------------------------------------------------------
 DBTaskWriteEntity::DBTaskWriteEntity(const Network::Address& addr, 
-									 COMPONENT_ID componentID, ENTITY_ID eid, 
+									 COMPONENT_ID componentID, COMPONENT_TYPE componentType, ENTITY_ID eid, 
 									 DBID entityDBID, MemoryStream& datas):
 EntityDBTask(addr, datas, eid, entityDBID),
 componentID_(componentID),
+componentType_(componentType),
 eid_(eid),
 entityDBID_(entityDBID),
 sid_(0),
@@ -327,6 +333,8 @@ DBTaskWriteEntity::~DBTaskWriteEntity()
 //-------------------------------------------------------------------------------------
 bool DBTaskWriteEntity::db_thread_process()
 {
+	// 可能会因为sql间隙锁死锁异常，当前任务进行重新执行，直接操作pDatas_会触发异常崩溃，当下没有做处理，可以考虑执行 pDatas_->length == 0, pDatas_->rpos(0)
+	
 	(*pDatas_) >> sid_ >> callbackID_ >> shouldAutoLoad_;
 
 	ScriptDefModule* pModule = EntityDef::findScriptModule(sid_);
@@ -351,7 +359,7 @@ bool DBTaskWriteEntity::db_thread_process()
 
 	EntityTables& entityTables = EntityTables::findByInterfaceName(pdbi_->name());
 
-	entityDBID_ = entityTables.writeEntity(pdbi_, entityDBID_, shouldAutoLoad_, pDatas_, pModule);
+	entityDBID_ = entityTables.writeEntity(pdbi_, entityDBID_, shouldAutoLoad_, pDatas_, pModule, pEntityDBIDVersionData());
 	success_ = entityDBID_ > 0;
 
 	if(writeEntityLog && success_)
@@ -383,13 +391,104 @@ thread::TPTask::TPTaskState DBTaskWriteEntity::presentMainThread()
 	// 返回写entity的结果， 成功或者失败
 
 	Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
-	(*pBundle).newMessage(BaseappInterface::onWriteToDBCallback);
-	BaseappInterface::onWriteToDBCallbackArgs5::staticAddToBundle((*pBundle), 
+	if (componentType_ == BASEAPP_TYPE)	
+	{
+		(*pBundle).newMessage(BaseappInterface::onWriteToDBCallback);
+		BaseappInterface::onWriteToDBCallbackArgs5::staticAddToBundle((*pBundle), 
 		eid_, entityDBID_, pdbi_->dbIndex(), callbackID_, success_);
 
+	}
+	else if (componentType_ == TOOL_TYPE)
+	{	
+		(*pBundle).newMessage(ToolInterface::onWriteToDBCallback);
+		ToolInterface::onWriteToDBCallbackArgs5::staticAddToBundle((*pBundle), 
+		eid_, entityDBID_, pdbi_->dbIndex(), callbackID_, success_);
+	}
+	
+	
 	if(!this->send(pBundle))
 	{
 		ERROR_MSG(fmt::format("DBTaskWriteEntity::presentMainThread: channel({0}) not found.\n", addr_.c_str()));
+		Network::Bundle::reclaimPoolObject(pBundle);
+	}
+	
+	return EntityDBTask::presentMainThread();
+}
+
+//-------------------------------------------------------------------------------------
+DBTaskWriteNewEntity::DBTaskWriteNewEntity(const Network::Address& addr, 
+									 COMPONENT_ID componentID, COMPONENT_TYPE componentType, 
+									 ENTITY_ID eid, DBID entityDBID, bool writeConcern, COMPONENT_ID sourceComponentID, MemoryStream& datas):
+DBTaskWriteEntity(addr, componentID, componentType, eid, entityDBID, datas),
+writeConcern_(writeConcern),
+sourceComponentID_(sourceComponentID)
+//,
+//s_(NULL)
+{
+	//s_ = MemoryStream::createPoolObject(OBJECTPOOL_POINT);
+	//s_->append(datas);
+
+}
+
+//-------------------------------------------------------------------------------------
+DBTaskWriteNewEntity::~DBTaskWriteNewEntity()
+{
+	//MemoryStream::reclaimPoolObject(s_);
+}
+
+//-------------------------------------------------------------------------------------
+bool DBTaskWriteNewEntity::db_thread_process()
+{
+	/*(*s_).read_skip<ENTITY_SCRIPT_UID>();
+	(*s_).read_skip<CALLBACK_ID>();
+	(*s_).read_skip<int8>();
+
+	if (entityDBID_ == 0)
+	{
+		(*s_).read_skip<uint32>();
+		(*s_).read_skip<uint16>();
+	}*/
+
+	pDatas_->readBlob(strInitData_);
+
+	bool res = DBTaskWriteEntity::db_thread_process();
+
+	return res;
+}
+
+//-------------------------------------------------------------------------------------
+thread::TPTask::TPTaskState DBTaskWriteNewEntity::presentMainThread()
+{
+	ScriptDefModule* pModule = EntityDef::findScriptModule(sid_);
+	DEBUG_MSG(fmt::format("Dbmgr::writeEntity: {0}({1}).\n", pModule->getName(), entityDBID_));
+
+	// 返回写entity的结果， 成功或者失败
+
+	Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
+	if (componentType_ == BASEAPP_TYPE)	
+	{
+		(*pBundle).newMessage(BaseappInterface::onWriteNewEntityToDBCallback);
+		//BaseappInterface::onWriteNewEntityToDBCallbackArgs8::staticAddToBundle((*pBundle), 
+
+		(*pBundle) << eid_ << entityDBID_ << pdbi_->dbIndex() << success_ << writeConcern_ << sourceComponentID_ << sid_ << callbackID_;
+
+		(*pBundle) << (uint32)strInitData_.length();
+
+		if (strInitData_.length() > 0) 
+		{
+			(*pBundle).append(strInitData_.data(), strInitData_.length());
+		}
+	}
+	else
+	{	
+		/*(*pBundle).newMessage(ToolInterface::onWriteToDBCallback);
+		ToolInterface::onWriteToDBCallbackArgs5::staticAddToBundle((*pBundle), 
+		eid_, entityDBID_, pdbi_->dbIndex(), callbackID_, success_);*/
+	}
+	
+	if(!this->send(pBundle))
+	{
+		ERROR_MSG(fmt::format("DBTaskWriteNewEntity::presentMainThread: channel({0}) not found.\n", addr_.c_str()));
 		Network::Bundle::reclaimPoolObject(pBundle);
 	}
 	
@@ -509,10 +608,11 @@ thread::TPTask::TPTaskState DBTaskDeleteEntityByDBID::presentMainThread()
 }
 
 //-------------------------------------------------------------------------------------
-DBTaskEntityAutoLoad::DBTaskEntityAutoLoad(const Network::Address& addr, COMPONENT_ID componentID, 
+DBTaskEntityAutoLoad::DBTaskEntityAutoLoad(const Network::Address& addr, COMPONENT_ID componentID,	COMPONENT_TYPE componentType,
 		ENTITY_SCRIPT_UID entityType, ENTITY_ID start, ENTITY_ID end):
 DBTask(addr),
 componentID_(componentID),
+componentType_(componentType),
 entityType_(entityType),
 start_(start),
 end_(end),
@@ -546,7 +646,15 @@ thread::TPTask::TPTaskState DBTaskEntityAutoLoad::presentMainThread()
 	}
 
 	Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
-	(*pBundle).newMessage(BaseappInterface::onEntityAutoLoadCBFromDBMgr);
+	if (componentType_ == BASEAPP_TYPE)
+	{
+		(*pBundle).newMessage(BaseappInterface::onEntityAutoLoadCBFromDBMgr);
+	}
+	else if (componentType_ == TOOL_TYPE)
+	{
+		(*pBundle).newMessage(ToolInterface::onEntityAutoLoadCBFromDBMgr);
+	}
+	
 
 	(*pBundle) << pdbi_->dbIndex() << size << entityType_;
 
@@ -566,23 +674,29 @@ thread::TPTask::TPTaskState DBTaskEntityAutoLoad::presentMainThread()
 }
 
 //-------------------------------------------------------------------------------------
-DBTaskLookUpEntityByDBID::DBTaskLookUpEntityByDBID(const Network::Address& addr, COMPONENT_ID componentID, 
-		DBID entityDBID, CALLBACK_ID callbackID, ENTITY_SCRIPT_UID sid):
+DBTaskLookUpEntityByDBID::DBTaskLookUpEntityByDBID(const Network::Address& addr, COMPONENT_ID componentID, COMPONENT_TYPE componentType, 
+		DBID entityDBID, CALLBACK_ID callbackID, ENTITY_SCRIPT_UID sid, bool getRawData):
 DBTask(addr),
 componentID_(componentID),
+componentType_(componentType),
 callbackID_(callbackID),
 entityDBID_(entityDBID),
 sid_(sid),
 success_(false),
 entityID_(0),
 entityInAppID_(0),
-serverGroupID_(0)
+serverGroupID_(0),
+getRawData_(getRawData),
+s_(NULL)
 {
+	s_ = MemoryStream::createPoolObject(OBJECTPOOL_POINT);
+
 }
 
 //-------------------------------------------------------------------------------------
 DBTaskLookUpEntityByDBID::~DBTaskLookUpEntityByDBID()
 {
+	MemoryStream::reclaimPoolObject(s_);
 }
 
 //-------------------------------------------------------------------------------------
@@ -614,11 +728,12 @@ bool DBTaskLookUpEntityByDBID::db_thread_process()
 		entityInAppID_ = entitylog.componentID;
 		entityID_ = entitylog.entityID;
 		KBE_ASSERT(entityID_ > 0 && entityInAppID_ > 0);
-		return false;
+		//return false;
 	}
 
-	MemoryStream s;
-	success_ = entityTables.queryEntity(pdbi_, entityDBID_, &s, pModule);
+	if (getRawData_)
+		success_ = entityTables.queryEntity(pdbi_, entityDBID_, s_, pModule);
+
 	return false;
 }
 
@@ -637,9 +752,18 @@ thread::TPTask::TPTaskState DBTaskLookUpEntityByDBID::presentMainThread()
 	}
 	
 	Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
-	(*pBundle).newMessage(BaseappInterface::lookUpEntityByDBIDCB);
 
-	(*pBundle) << success_ << entityID_ << entityInAppID_ << callbackID_ << sid_ << entityDBID_;
+	if (componentType_ == BASEAPP_TYPE)
+		pBundle->newMessage(BaseappInterface::lookUpEntityByDBIDCB);
+	else if (componentType_ == TOOL_TYPE)
+		pBundle->newMessage(ToolInterface::lookUpEntityByDBIDCB);
+
+	(*pBundle) << success_ << entityID_ << entityInAppID_ << callbackID_ << sid_ << entityDBID_ << getRawData_;
+	 
+	if (getRawData_ && success_) 
+	{
+		pBundle->append(s_);
+	}
 
 	if(!this->send(pBundle))
 	{
@@ -729,8 +853,11 @@ bool DBTaskCreateAccount::writeAccount(DBInterface* pdbi, const std::string& acc
 	{
 		// 防止多线程问题， 这里做一个拷贝。
 		MemoryStream copyAccountDefMemoryStream(pTable->accountDefMemoryStream());
+		uint64 accountDBID = 0;
+		if (pdbi->getAutoIncrementInit() == NULL || strlen(pdbi->getAutoIncrementInit()) == 0) 
+			accountDBID = genUUID64();
 
-		entityDBID = EntityTables::findByInterfaceName(pdbi->name()).writeEntity(pdbi, 0, -1,
+		entityDBID = EntityTables::findByInterfaceName(pdbi->name()).writeEntity(pdbi, accountDBID, -1,
 				&copyAccountDefMemoryStream, pModule);
 
 		if (entityDBID <= 0)
@@ -1365,7 +1492,7 @@ bool DBTaskQueryAccount::db_thread_process()
 	}
 
 	ScriptDefModule* pModule = EntityDef::findScriptModule(DBUtil::accountScriptName());
-	success_ = entityTables.queryEntity(pdbi_, info.dbid, s_, pModule);
+	success_ = entityTables.queryEntity(pdbi_, info.dbid, s_, pModule, pEntityDBIDVersionData());
 
 	if(!success_ && pdbi_->getlasterror() > 0)
 	{
@@ -1760,7 +1887,7 @@ bool DBTaskQueryEntity::db_thread_process()
 {
 	EntityTables& entityTables = EntityTables::findByInterfaceName(pdbi_->name());
 	ScriptDefModule* pModule = EntityDef::findScriptModule(entityType_.c_str());
-	success_ = entityTables.queryEntity(pdbi_, dbid_, s_, pModule);
+	success_ = entityTables.queryEntity(pdbi_, dbid_, s_, pModule, pEntityDBIDVersionData());
 
 	if(success_)
 	{
@@ -1840,8 +1967,16 @@ thread::TPTask::TPTaskState DBTaskQueryEntity::presentMainThread()
 	
 	Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
 
-	if(queryMode_ == 0)
-		pBundle->newMessage(BaseappInterface::onCreateEntityFromDBIDCallback);
+	
+	
+	if(queryMode_ == 0) 
+	{
+		Components::ComponentInfos* componentInfo = Components::getSingleton().findComponent(componentID_);
+		if (componentInfo->componentType == BASEAPP_TYPE)
+			pBundle->newMessage(BaseappInterface::onCreateEntityFromDBIDCallback);
+		else if (componentInfo->componentType == TOOL_TYPE)
+			pBundle->newMessage(ToolInterface::onCreateEntityFromDBIDCallback);
+	}
 	else if(queryMode_ == 1)
 		pBundle->newMessage(BaseappInterface::onCreateEntityAnywhereFromDBIDCallback);
 	else if (queryMode_ == 2)

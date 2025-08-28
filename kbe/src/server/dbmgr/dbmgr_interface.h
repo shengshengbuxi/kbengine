@@ -107,6 +107,9 @@ NETWORK_INTERFACE_DECLARE_BEGIN(DbmgrInterface)
 	// Ä³¸öentity´æµµ
 	DBMGR_MESSAGE_DECLARE_STREAM(writeEntity,						NETWORK_VARIABLE_MESSAGE)
 
+	// Ä³¸öÐÂµÄentity´æµµ
+	DBMGR_MESSAGE_DECLARE_STREAM(writeNewEntity,					NETWORK_VARIABLE_MESSAGE)
+
 	// É¾³ýÄ³¸öentityµÄ´æµµ
 	DBMGR_MESSAGE_DECLARE_STREAM(removeEntity,						NETWORK_VARIABLE_MESSAGE)
 

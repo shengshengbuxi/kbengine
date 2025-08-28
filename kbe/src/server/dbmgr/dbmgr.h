@@ -144,6 +144,7 @@ public:
 		某个entity存档
 	*/
 	void writeEntity(Network::Channel* pChannel, KBEngine::MemoryStream& s);
+	void writeNewEntity(Network::Channel* pChannel, KBEngine::MemoryStream& s);
 
 	/** 网络接口
 		删除某个entity的存档数据

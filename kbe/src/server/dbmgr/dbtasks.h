@@ -12,6 +12,7 @@
 #include "network/address.h"
 #include "db_interface/db_tasks.h"
 #include "server/server_errors.h"
+#include "db_interface/entity_table.h"
 
 namespace KBEngine{ 
 
@@ -65,7 +66,8 @@ public:
 	DBTask(addr, datas),
 	_entityID(entityID),
 	_entityDBID(entityDBID),
-	_pBuffered_DBTasks(NULL)
+	_pBuffered_DBTasks(NULL),
+	_pEntityDBIDVersionData(NULL)
 	{
 	}
 	
@@ -73,7 +75,8 @@ public:
 	DBTask(addr),
 	_entityID(entityID),
 	_entityDBID(entityDBID),
-	_pBuffered_DBTasks(NULL)
+	_pBuffered_DBTasks(NULL),
+	_pEntityDBIDVersionData(NULL)
 	{
 	}
 	
@@ -83,6 +86,9 @@ public:
 	DBID EntityDBTask_entityDBID() const { return _entityDBID; }
 	
 	void pBuffered_DBTasks(Buffered_DBTasks* v){ _pBuffered_DBTasks = v; }
+	void pEntityDBIDVersionData(ENTITY_DBID_VERSION_DATA* v) { _pEntityDBIDVersionData = v; }
+	ENTITY_DBID_VERSION_DATA* pEntityDBIDVersionData() { return _pEntityDBIDVersionData; }
+
 	virtual thread::TPTask::TPTaskState presentMainThread();
 
 	DBTask* tryGetNextTask();
@@ -91,10 +97,15 @@ public:
 		return "EntityDBTask";
 	}
 
+
+
 private:
 	ENTITY_ID _entityID;
 	DBID _entityDBID;
+
 	Buffered_DBTasks* _pBuffered_DBTasks;
+	ENTITY_DBID_VERSION_DATA* _pEntityDBIDVersionData;
+
 };
 
 /**
@@ -146,13 +157,14 @@ protected:
 	MemoryStream* pExecret_;
 };
 
+
 /**
 	向数据库写entity， 备份entity时也是这个机制
 */
 class DBTaskWriteEntity : public EntityDBTask
 {
 public:
-	DBTaskWriteEntity(const Network::Address& addr, COMPONENT_ID componentID, 
+	DBTaskWriteEntity(const Network::Address& addr, COMPONENT_ID componentID, COMPONENT_TYPE componentType,
 		ENTITY_ID eid, DBID entityDBID, MemoryStream& datas);
 
 	virtual ~DBTaskWriteEntity();
@@ -165,12 +177,45 @@ public:
 
 protected:
 	COMPONENT_ID componentID_;
+	COMPONENT_TYPE componentType_;
 	ENTITY_ID eid_;
 	DBID entityDBID_;
 	ENTITY_SCRIPT_UID sid_;
 	CALLBACK_ID callbackID_;
 	int8 shouldAutoLoad_;
 	bool success_;
+};
+
+/**
+	向数据库写entity， 备份entity时也是这个机制
+*/
+class DBTaskWriteNewEntity : public DBTaskWriteEntity
+{
+public:
+	DBTaskWriteNewEntity(const Network::Address& addr, COMPONENT_ID componentID, COMPONENT_TYPE componentType,
+		ENTITY_ID eid, DBID entityDBID, bool writeConcern, COMPONENT_ID sourceComponentID, MemoryStream& datas);
+
+	virtual ~DBTaskWriteNewEntity();
+	virtual bool db_thread_process();
+	virtual thread::TPTask::TPTaskState presentMainThread();
+
+	virtual std::string name() const {
+		return "DBTaskWriteNewEntity";
+	}
+
+protected:
+//	COMPONENT_ID componentID_;
+//	COMPONENT_TYPE componentType_;
+//	ENTITY_ID eid_;
+//	DBID entityDBID_;
+//	ENTITY_SCRIPT_UID sid_;
+//	CALLBACK_ID callbackID_;
+//	int8 shouldAutoLoad_;
+//	bool success_;
+	bool writeConcern_;
+	COMPONENT_ID sourceComponentID_;
+	std::string strInitData_;
+	MemoryStream* s_;
 };
 
 /**
@@ -230,7 +275,7 @@ protected:
 class DBTaskEntityAutoLoad : public DBTask
 {
 public:
-	DBTaskEntityAutoLoad(const Network::Address& addr, COMPONENT_ID componentID, 
+	DBTaskEntityAutoLoad(const Network::Address& addr, COMPONENT_ID componentID, COMPONENT_TYPE componentType,
 		ENTITY_SCRIPT_UID entityType, ENTITY_ID start, ENTITY_ID end);
 
 	virtual ~DBTaskEntityAutoLoad();
@@ -243,6 +288,8 @@ public:
 
 protected:
 	COMPONENT_ID componentID_;
+	COMPONENT_TYPE componentType_;
+
 	ENTITY_SCRIPT_UID entityType_;
 	ENTITY_ID start_;
 	ENTITY_ID end_;
@@ -255,8 +302,8 @@ protected:
 class DBTaskLookUpEntityByDBID : public DBTask
 {
 public:
-	DBTaskLookUpEntityByDBID(const Network::Address& addr, COMPONENT_ID componentID, 
-		DBID entityDBID, CALLBACK_ID callbackID, ENTITY_SCRIPT_UID sid);
+	DBTaskLookUpEntityByDBID(const Network::Address& addr, COMPONENT_ID componentID, COMPONENT_TYPE componentType,
+		DBID entityDBID, CALLBACK_ID callbackID, ENTITY_SCRIPT_UID sid, bool rawData);
 
 	virtual ~DBTaskLookUpEntityByDBID();
 	virtual bool db_thread_process();
@@ -268,6 +315,7 @@ public:
 
 protected:
 	COMPONENT_ID componentID_;
+	COMPONENT_TYPE componentType_;
 	CALLBACK_ID callbackID_;
 	DBID entityDBID_;
 	ENTITY_SCRIPT_UID sid_;
@@ -275,6 +323,8 @@ protected:
 	ENTITY_ID entityID_;
 	COMPONENT_ID entityInAppID_;
 	COMPONENT_ID serverGroupID_;
+	bool getRawData_;
+	MemoryStream* s_;
 };
 
 /**

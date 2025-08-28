@@ -26,6 +26,8 @@
 #include "baseappmgr/baseappmgr_interface.h"
 #include "cellappmgr/cellappmgr_interface.h"
 #include "loginapp/loginapp_interface.h"
+#include "tools/tool/tool_interface.h"
+
 
 namespace KBEngine{
 
@@ -97,22 +99,6 @@ ShutdownHandler::CAN_SHUTDOWN_STATE Dbmgr::canShutdown()
 		}
 	}
 
-	KBEUnordered_map<std::string, Buffered_DBTasks>::iterator bditer = bufferedDBTasksMaps_.begin();
-	for (; bditer != bufferedDBTasksMaps_.end(); ++bditer)
-	{
-		if (bditer->second.size() > 0)
-		{
-			thread::ThreadPool* pThreadPool = DBUtil::pThreadPool(bditer->first);
-			KBE_ASSERT(pThreadPool);
-
-			INFO_MSG(fmt::format("Dbmgr::canShutdown(): Wait for the task to complete, dbInterface={}, tasks{}=[{}], threads={}/{}, threadpoolDestroyed={}!\n",
-				bditer->first, bditer->second.size(), bditer->second.getTasksinfos(), (pThreadPool->currentThreadCount() - pThreadPool->currentFreeThreadCount()),
-				pThreadPool->currentThreadCount(), pThreadPool->isDestroyed()));
-
-			return ShutdownHandler::CAN_SHUTDOWN_STATE_FALSE;
-		}
-	}
-
 	Components::COMPONENTS& cellapp_components = Components::getSingleton().getComponents(CELLAPP_TYPE);
 	if (cellapp_components.size() > 0)
 	{
@@ -141,6 +127,27 @@ ShutdownHandler::CAN_SHUTDOWN_STATE Dbmgr::canShutdown()
 			s));
 
 		return ShutdownHandler::CAN_SHUTDOWN_STATE_FALSE;
+	}
+
+	KBEUnordered_map<std::string, Buffered_DBTasks>::iterator bditer = bufferedDBTasksMaps_.begin();
+	for (; bditer != bufferedDBTasksMaps_.end(); ++bditer)
+	{
+		
+		thread::ThreadPool* pThreadPool = DBUtil::pThreadPool(bditer->first);
+		KBE_ASSERT(pThreadPool);
+
+		if (bditer->second.size() > 0 || pThreadPool->currentFreeThreadCount() != pThreadPool->currentThreadCount())
+		{
+			//thread::ThreadPool* pThreadPool = DBUtil::pThreadPool(bditer->first);
+			
+
+			INFO_MSG(fmt::format("Dbmgr::canShutdown(): Wait for the task to complete, dbInterface={}, tasks{}=[{}], threads={}/{}, threadpoolDestroyed={}!\n",
+				bditer->first, bditer->second.size(), bditer->second.getTasksinfos(), (pThreadPool->currentThreadCount() - pThreadPool->currentFreeThreadCount()),
+				pThreadPool->currentThreadCount(), pThreadPool->isDestroyed()));
+
+			return ShutdownHandler::CAN_SHUTDOWN_STATE_FALSE;
+		}
+		
 	}
 
 	return ShutdownHandler::CAN_SHUTDOWN_STATE_TRUE;
@@ -392,12 +399,21 @@ bool Dbmgr::initInterfacesHandler()
 			((InterfacesHandler_Interfaces*)pInterfacesHandler)->setAddr(addr);
 
 			if (!pInterfacesHandler->initialize())
-				return false;
+			{
+				//return false;
+				delete pInterfacesHandler;
+				continue;
+			}
 
 			pInterfacesHandlers_.push_back(pInterfacesHandler);
 		}
+
+		if (pInterfacesHandlers_.size() == 0) 
+			ERROR_MSG(fmt::format("DBMgr::initInterfacesHandler(): interfaces not a single one! Check kbengine[_defs].xml->interfaces->host and interfaces.*.log\n"));
+
 	}
 
+	
 	return pInterfacesHandlers_.size() > 0;
 }
 
@@ -548,7 +564,8 @@ void Dbmgr::onRegisterNewApp(Network::Channel* pChannel, int32 uid, std::string&
 	// 例如：初始会分配entityID段以及这个app启动的顺序信息（是否第一个baseapp启动）
 	if(tcomponentType == BASEAPP_TYPE || 
 		tcomponentType == CELLAPP_TYPE || 
-		tcomponentType == LOGINAPP_TYPE)
+		tcomponentType == LOGINAPP_TYPE 
+		)
 	{
 		switch(tcomponentType)
 		{
@@ -565,9 +582,10 @@ void Dbmgr::onRegisterNewApp(Network::Channel* pChannel, int32 uid, std::string&
 			}
 			break;
 		case LOGINAPP_TYPE:
-			if(grouporderID <= 0)
-				startGroupOrder = Components::getSingleton().getLoginappGroupOrderLog()[getUserUID()];
-
+			{
+				if(grouporderID <= 0)
+					startGroupOrder = Components::getSingleton().getLoginappGroupOrderLog()[getUserUID()];
+			}
 			break;
 		default:
 			break;
@@ -578,7 +596,7 @@ void Dbmgr::onRegisterNewApp(Network::Channel* pChannel, int32 uid, std::string&
 
 	// 如果是baseapp或者cellapp则将自己注册到所有其他baseapp和cellapp
 	if(tcomponentType == BASEAPP_TYPE || 
-		tcomponentType == CELLAPP_TYPE)
+		tcomponentType == CELLAPP_TYPE || tcomponentType == TOOL_TYPE)
 	{
 		KBEngine::COMPONENT_TYPE broadcastCpTypes[2] = {BASEAPP_TYPE, CELLAPP_TYPE};
 		for(int idx = 0; idx < 2; ++idx)
@@ -599,7 +617,13 @@ void Dbmgr::onRegisterNewApp(Network::Channel* pChannel, int32 uid, std::string&
 						uid, username, componentType, componentID, startGlobalOrder, startGroupOrder,
 							intaddr, intport, extaddr, extport, g_kbeSrvConfig.getConfig().externalAddress);
 				}
-				else
+				else if (tcomponentType == TOOL_TYPE) 
+				{
+					ToolInterface::onGetEntityAppFromDbmgrArgs11::staticAddToBundle((*pBundle), 
+						uid, username, componentType, componentID, startGlobalOrder, startGroupOrder,
+							intaddr, intport, extaddr, extport, g_kbeSrvConfig.getConfig().externalAddress);
+				}
+				else 
 				{
 					CellappInterface::onGetEntityAppFromDbmgrArgs11::staticAddToBundle((*pBundle), 
 						uid, username, componentType, componentID, startGlobalOrder, startGroupOrder,
@@ -1048,8 +1072,9 @@ void Dbmgr::writeEntity(Network::Channel* pChannel,
 	DBID entityDBID;
 	COMPONENT_ID componentID;
 	uint16 dbInterfaceIndex;
+	COMPONENT_TYPE componentType;
 
-	s >> componentID >> eid >> entityDBID >> dbInterfaceIndex;
+	s >> componentID >> componentType >> eid >> entityDBID >> dbInterfaceIndex;
 
 	Buffered_DBTasks* pBuffered_DBTasks = findBufferedDBTask(g_kbeSrvConfig.dbInterfaceIndex2dbInterfaceName(dbInterfaceIndex));
 	if (!pBuffered_DBTasks)
@@ -1059,7 +1084,37 @@ void Dbmgr::writeEntity(Network::Channel* pChannel,
 		return;
 	}
 
-	pBuffered_DBTasks->addTask(new DBTaskWriteEntity(pChannel->addr(), componentID, eid, entityDBID, s));
+	pBuffered_DBTasks->addTask(new DBTaskWriteEntity(pChannel->addr(), componentID, componentType, eid, entityDBID, s));
+	s.done();
+
+	++numWrittenEntity_;
+}
+
+
+//-------------------------------------------------------------------------------------
+void Dbmgr::writeNewEntity(Network::Channel* pChannel, 
+						KBEngine::MemoryStream& s)
+{
+	ENTITY_ID eid;
+	DBID entityDBID;
+	COMPONENT_ID componentID;
+	uint16 dbInterfaceIndex;
+	COMPONENT_TYPE componentType;
+	bool writeConcern;
+	COMPONENT_ID sourceComponentID;
+
+
+	s >> componentID >> componentType >> eid >> entityDBID >> dbInterfaceIndex >> writeConcern >> sourceComponentID;
+
+	Buffered_DBTasks* pBuffered_DBTasks = findBufferedDBTask(g_kbeSrvConfig.dbInterfaceIndex2dbInterfaceName(dbInterfaceIndex));
+	if (!pBuffered_DBTasks)
+	{
+		ERROR_MSG(fmt::format("Dbmgr::writeEntity: not found dbInterfaceIndex({})!\n", dbInterfaceIndex));
+		s.done();
+		return;
+	}
+
+	pBuffered_DBTasks->addTask(new DBTaskWriteNewEntity(pChannel->addr(), componentID, componentType, eid, entityDBID, writeConcern, sourceComponentID, s));
 	s.done();
 
 	++numWrittenEntity_;
@@ -1096,15 +1151,16 @@ void Dbmgr::removeEntity(Network::Channel* pChannel, KBEngine::MemoryStream& s)
 void Dbmgr::entityAutoLoad(Network::Channel* pChannel, KBEngine::MemoryStream& s)
 {
 	COMPONENT_ID componentID;
+	COMPONENT_TYPE componentType;
 	ENTITY_SCRIPT_UID entityType;
 	ENTITY_ID start;
 	ENTITY_ID end;
 	uint16 dbInterfaceIndex = 0;
 
-	s >> dbInterfaceIndex >> componentID >> entityType >> start >> end;
+	s >> dbInterfaceIndex >> componentID >> componentType >> entityType >> start >> end;
 
 	DBUtil::pThreadPool(g_kbeSrvConfig.dbInterfaceIndex2dbInterfaceName(dbInterfaceIndex))->
-		addTask(new DBTaskEntityAutoLoad(pChannel->addr(), componentID, entityType, start, end));
+		addTask(new DBTaskEntityAutoLoad(pChannel->addr(), componentID, componentType, entityType, start, end));
 }
 
 //-------------------------------------------------------------------------------------
@@ -1127,16 +1183,18 @@ void Dbmgr::deleteEntityByDBID(Network::Channel* pChannel, KBEngine::MemoryStrea
 void Dbmgr::lookUpEntityByDBID(Network::Channel* pChannel, KBEngine::MemoryStream& s)
 {
 	COMPONENT_ID componentID;
+	COMPONENT_TYPE componentType;
 	ENTITY_SCRIPT_UID sid;
 	CALLBACK_ID callbackID = 0;
 	DBID entityDBID;
 	uint16 dbInterfaceIndex = 0;
+	bool getRawData = false;
 
-	s >> dbInterfaceIndex >> componentID >> entityDBID >> callbackID >> sid;
+	s >> dbInterfaceIndex >> componentID >> componentType >> entityDBID >> callbackID >> sid >> getRawData;
 	KBE_ASSERT(entityDBID > 0);
 
 	DBUtil::pThreadPool(g_kbeSrvConfig.dbInterfaceIndex2dbInterfaceName(dbInterfaceIndex))->
-		addTask(new DBTaskLookUpEntityByDBID(pChannel->addr(), componentID, entityDBID, callbackID, sid));
+		addTask(new DBTaskLookUpEntityByDBID(pChannel->addr(), componentID, componentType, entityDBID, callbackID, sid, getRawData));
 }
 
 //-------------------------------------------------------------------------------------
@@ -1276,6 +1334,19 @@ void Dbmgr::onChannelDeregister(Network::Channel * pChannel)
 			{
 				loseBaseappts_[cinfo->cid] = timestamp() + uint64(60 * stampsPerSecond());
 				WARNING_MSG(fmt::format("Dbmgr::onChannelDeregister(): If the process cannot be resumed, the entitylog(baseapp={}) will be cleaned up after 60 seconds!\n", cinfo->cid));
+			}
+			else if (cinfo->componentType == TOOL_TYPE)
+			{
+				ENGINE_COMPONENT_INFO& dbcfg = g_kbeSrvConfig.getDBMgr();
+				std::vector<DBInterfaceInfo>::iterator dbinfo_iter = dbcfg.dbInterfaceInfos.begin();
+				for (; dbinfo_iter != dbcfg.dbInterfaceInfos.end(); ++dbinfo_iter)
+				{
+					std::string dbInterfaceName = dbinfo_iter->name;
+
+					DBUtil::pThreadPool(dbInterfaceName)->
+						addTask(new DBTaskEraseBaseappEntityLog(cinfo->cid));
+				}
+			
 			}
 		}
 	}

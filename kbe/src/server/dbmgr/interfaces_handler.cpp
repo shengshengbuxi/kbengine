@@ -365,6 +365,9 @@ bool InterfacesHandler_Interfaces::loginAccount(Network::Channel* pChannel, std:
 
 	if (!pInterfacesChannel || pInterfacesChannel->isDestroyed())
 	{
+		WARNING_MSG(fmt::format("InterfacesHandler_Interfaces::loginAccount(): Can't find interfaces server({}), will reconnect soon! Check kbengine[_defs].xml->interfaces->host and interfaces.*.log\n", 
+				addr_.c_str()));
+
 		if (!this->reconnect())
 		{
 			return false;
@@ -505,7 +508,7 @@ bool InterfacesHandler_Interfaces::reconnect()
 
 		if(!connected)
 		{
-			ERROR_MSG(fmt::format("InterfacesHandler_Interfaces::reconnect(): couldn't connect to(interfaces server): {}! Check kbengine[_defs].xml->interfaces->host and interfaces.*.log\n", 
+			WARNING_MSG(fmt::format("InterfacesHandler_Interfaces::reconnect(): couldn't connect to(interfaces server): {}! Check kbengine[_defs].xml->interfaces->host and interfaces.*.log\n", 
 				pInterfacesChannel->pEndPoint()->addr().c_str()));
 
 			pInterfacesChannel->destroy();

@@ -70,6 +70,21 @@ void Buffered_DBTasks::addTask(EntityDBTask* pTask)
 	}
 	else
 	{
+		ENTITY_DBID_VERSION_DATA* pEntityDBIDVersionData = NULL;
+
+		KBEUnordered_map<DBID, ENTITY_DBID_VERSION_DATA*>::iterator it = entityDBIDVersion_datas_.find(pTask->EntityDBTask_entityDBID());
+
+		if (it != entityDBIDVersion_datas_.end()) 
+			pEntityDBIDVersionData = it->second;
+		
+		if (NULL == pEntityDBIDVersionData)
+		{
+			pEntityDBIDVersionData = new ENTITY_DBID_VERSION_DATA();
+			entityDBIDVersion_datas_[pTask->EntityDBTask_entityDBID()] = pEntityDBIDVersionData;
+		}
+
+		pTask->pEntityDBIDVersionData(pEntityDBIDVersionData);
+
 		if(hasTask_(pTask->EntityDBTask_entityDBID()))
 		{
 			dbid_tasks_.insert(std::make_pair(pTask->EntityDBTask_entityDBID(), pTask));

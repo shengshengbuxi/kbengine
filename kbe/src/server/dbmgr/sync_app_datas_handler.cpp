@@ -15,6 +15,7 @@
 #include "baseappmgr/baseappmgr_interface.h"
 #include "cellappmgr/cellappmgr_interface.h"
 #include "loginapp/loginapp_interface.h"
+#include "../tools/tool/tool_interface.h"
 
 namespace KBEngine{	
 
@@ -78,7 +79,8 @@ bool SyncAppDatasHandler::process()
 		COMPONENT_TYPE tcomponentType = cinfos->componentType;
 		if(tcomponentType == BASEAPP_TYPE || 
 			tcomponentType == CELLAPP_TYPE ||
-			tcomponentType == LOGINAPP_TYPE)
+			tcomponentType == LOGINAPP_TYPE || 
+			tcomponentType == TOOL_TYPE)
 		{
 			hasApp = true;
 			break;
@@ -111,7 +113,8 @@ bool SyncAppDatasHandler::process()
 
 		if(tcomponentType == BASEAPP_TYPE || 
 			tcomponentType == CELLAPP_TYPE || 
-			tcomponentType == LOGINAPP_TYPE)
+			tcomponentType == LOGINAPP_TYPE ||
+			tcomponentType == TOOL_TYPE)
 		{
 			Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
 			
@@ -146,6 +149,17 @@ bool SyncAppDatasHandler::process()
 						digest);
 
 				break;
+			case TOOL_TYPE:
+				{
+					std::pair<ENTITY_ID, ENTITY_ID> idRange = Dbmgr::getSingleton().idServer().allocRange();
+					(*pBundle).newMessage(ToolInterface::onDbmgrInitCompleted);
+
+					ToolInterface::onDbmgrInitCompletedArgs6::staticAddToBundle((*pBundle), g_kbetime, idRange.first, 
+							idRange.second, cInitInfo.startGlobalOrder, cInitInfo.startGroupOrder, 
+							digest);
+				}
+				break;
+			
 			default:
 				break;
 			}
