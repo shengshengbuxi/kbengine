@@ -113,7 +113,7 @@ KBE_INCLUDES += -I $(KBE_ROOT)/kbe/src/lib
 KBE_INCLUDES += -I $(KBE_ROOT)/kbe/src/server
 KBE_INCLUDES += -I $(KBE_ROOT)/kbe/src/lib/dependencies
 KBE_INCLUDES += -I $(KBE_ROOT)/kbe/src/lib/dependencies/zlib
-KBE_INCLUDES += -I $(KBE_ROOT)/kbe/src/lib/dependencies/tinyxml
+KBE_INCLUDES += -I $(KBE_ROOT)/kbe/src/lib/dependencies/tinyxml2
 KBE_INCLUDES += -I $(KBE_ROOT)/kbe/src/lib/dependencies/fmt/include
 KBE_INCLUDES += -I $(KBE_ROOT)/kbe/src/lib/dependencies/curl/include
 
@@ -234,7 +234,7 @@ LDLIBS += -ljemalloc -lrt -ldl
 CPPFLAGS += -DUSE_JEMALLOC
 #endif
 
-LDLIBS += -ltinyxml
+LDLIBS += -ltinyxml2
 LDLIBS += -lm
 LDLIBS += -lfmt
 LDLIBS += -lz
@@ -280,6 +280,8 @@ CXXFLAGS += -Wall -Wno-deprecated
 CXXFLAGS += -Wno-uninitialized -Wno-char-subscripts
 CXXFLAGS += -fno-strict-aliasing -Wno-non-virtual-dtor
 CXXFLAGS += -Wno-invalid-offsetof
+CXXFLAGS += -Wno-format-truncation
+CXXFLAGS += -Wno-comment
 CXXFLAGS += -Werror
 CXXFLAGS += -std=c++11
 
