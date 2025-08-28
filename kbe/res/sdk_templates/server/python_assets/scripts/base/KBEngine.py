@@ -1,6 +1,6 @@
 class EntityComponent:
 	def __init__(self):
-		pass		
+		pass
 
 	@property
 	def owner(self):
