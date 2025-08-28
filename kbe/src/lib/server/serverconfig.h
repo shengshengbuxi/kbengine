@@ -254,6 +254,7 @@ public:
 	INLINE ENGINE_COMPONENT_INFO& getBots(void);
 	INLINE ENGINE_COMPONENT_INFO& getLogger(void);
 	INLINE ENGINE_COMPONENT_INFO& getInterfaces(void);
+	INLINE ENGINE_COMPONENT_INFO& getTool(void);
 
 	INLINE ENGINE_COMPONENT_INFO& getComponent(COMPONENT_TYPE componentType);
  	
@@ -301,6 +302,8 @@ private:
 	ENGINE_COMPONENT_INFO _botsInfo;
 	ENGINE_COMPONENT_INFO _loggerInfo;
 	ENGINE_COMPONENT_INFO _interfacesInfo;
+	ENGINE_COMPONENT_INFO _toolInfo;
+
 
 public:
 	int16 gameUpdateHertz_;

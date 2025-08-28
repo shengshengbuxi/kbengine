@@ -221,6 +221,7 @@ private:
 	COMPONENTS								_interfaceses;
 	COMPONENTS								_bots;
 	COMPONENTS								_consoles;
+	COMPONENTS								_tool;
 
 	Network::NetworkInterface*				_pNetworkInterface;
 	

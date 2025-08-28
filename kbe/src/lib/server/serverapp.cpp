@@ -23,6 +23,7 @@
 #include "../../server/loginapp/loginapp_interface.h"
 #include "../../server/tools/logger/logger_interface.h"
 #include "../../server/tools/interfaces/interfaces_interface.h"
+#include "../../server/tools/tool/tool_interface.h"
 
 namespace KBEngine{
 COMPONENT_TYPE g_componentType = UNKNOWN_COMPONENT_TYPE;
@@ -326,7 +327,8 @@ void ServerApp::onRemoveComponent(const Components::ComponentInfos* pInfos)
 			g_componentType != LOGGER_TYPE && 
 			g_componentType != INTERFACES_TYPE &&
 			g_componentType != BOTS_TYPE &&
-			g_componentType != WATCHER_TYPE)
+			g_componentType != WATCHER_TYPE &&
+			g_componentType != TOOL_TYPE)
 			this->shutDown(0.f);
 	}
 	else if (pInfos->componentType == CELLAPPMGR_TYPE)

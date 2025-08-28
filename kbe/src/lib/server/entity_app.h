@@ -491,20 +491,31 @@ bool EntityApp<E>::installPyModules()
 	}
 	
 	
-	onInstallPyModules();
 
+	onInstallPyModules();
+	
+	std::string componentName = "";
 	// 安装入口模块
 	std::string entryScriptFileName = "";
 	if (componentType() == BASEAPP_TYPE)
 	{
 		ENGINE_COMPONENT_INFO& info = g_kbeSrvConfig.getBaseApp();
 		entryScriptFileName = info.entryScriptFile;
+		componentName = "/base";
 	}
 	else if (componentType() == CELLAPP_TYPE)
 	{
 		ENGINE_COMPONENT_INFO& info = g_kbeSrvConfig.getCellApp();
 		entryScriptFileName = info.entryScriptFile;
+		componentName = "/cell";
 	}
+	else if (componentType() == TOOL_TYPE) 
+	{
+		ENGINE_COMPONENT_INFO& info = g_kbeSrvConfig.getTool();
+		entryScriptFileName = info.entryScriptFile;
+		componentName = "/tool";
+	}
+
 
 	if (entryScriptFileName.size() > 0)
 	{
@@ -514,7 +525,7 @@ bool EntityApp<E>::installPyModules()
 		if (PyErr_Occurred())
 		{
 			INFO_MSG(fmt::format("EntityApp::installPyModules: importing scripts/{}{}.py...\n",
-				(componentType() == BASEAPP_TYPE ? "base/" : "cell/"),
+				componentName.c_str(),
 				entryScriptFileName));
 
 			PyErr_PrintEx(0);
@@ -527,7 +538,6 @@ bool EntityApp<E>::installPyModules()
 			return false;
 		}
 	}
-
 	return true;
 }
 

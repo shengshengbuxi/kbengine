@@ -51,7 +51,7 @@ ServerConfig::~ServerConfig()
 //-------------------------------------------------------------------------------------
 bool ServerConfig::loadConfig(std::string fileName)
 {
-	TiXmlNode* node = NULL, *rootNode = NULL;
+	tinyxml2::XMLNode* node = NULL, *rootNode = NULL;
 	SmartPointer<XML> xml(new XML(Resmgr::getSingleton().matchRes(fileName).c_str()));
 
 	if(!xml->isGood())
@@ -83,7 +83,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 	rootNode = xml->getRootNode("trace_packet");
 	if(rootNode != NULL)
 	{
-		TiXmlNode* childnode = xml->enterNode(rootNode, "debug_type");
+		tinyxml2::XMLNode* childnode = xml->enterNode(rootNode, "debug_type");
 		if(childnode)
 			Network::g_trace_packet = xml->getValInt(childnode);
 
@@ -125,7 +125,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 	rootNode = xml->getRootNode("publish");
 	if(rootNode != NULL)
 	{
-		TiXmlNode* childnode = xml->enterNode(rootNode, "state");
+		tinyxml2::XMLNode* childnode = xml->enterNode(rootNode, "state");
 		if(childnode)
 		{
 			g_appPublish = xml->getValInt(childnode);
@@ -161,7 +161,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 	rootNode = xml->getRootNode("thread_pool");
 	if(rootNode != NULL)
 	{
-		TiXmlNode* childnode = xml->enterNode(rootNode, "timeout");
+		tinyxml2::XMLNode* childnode = xml->enterNode(rootNode, "timeout");
 		if(childnode)
 		{
 			thread_timeout_ = float(KBE_MAX(1.0, xml->getValFloat(childnode)));
@@ -189,10 +189,10 @@ bool ServerConfig::loadConfig(std::string fileName)
 	rootNode = xml->getRootNode("channelCommon");
 	if(rootNode != NULL)
 	{
-		TiXmlNode* childnode = xml->enterNode(rootNode, "timeout");
+		tinyxml2::XMLNode* childnode = xml->enterNode(rootNode, "timeout");
 		if(childnode)
 		{
-			TiXmlNode* childnode1 = xml->enterNode(childnode, "internal");
+			tinyxml2::XMLNode* childnode1 = xml->enterNode(childnode, "internal");
 			if(childnode1)
 			{
 				channelCommon_.channelInternalTimeout = KBE_MAX(0.f, float(xml->getValFloat(childnode1)));
@@ -210,10 +210,10 @@ bool ServerConfig::loadConfig(std::string fileName)
 		childnode = xml->enterNode(rootNode, "resend");
 		if(childnode)
 		{
-			TiXmlNode* childnode1 = xml->enterNode(childnode, "internal");
+			tinyxml2::XMLNode* childnode1 = xml->enterNode(childnode, "internal");
 			if(childnode1)
 			{
-				TiXmlNode* childnode2 = xml->enterNode(childnode1, "interval");
+				tinyxml2::XMLNode* childnode2 = xml->enterNode(childnode1, "interval");
 				if(childnode2)
 				{
 					Network::g_intReSendInterval = uint32(xml->getValInt(childnode2));
@@ -229,7 +229,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 			childnode1 = xml->enterNode(childnode, "external");
 			if(childnode)
 			{
-				TiXmlNode* childnode2 = xml->enterNode(childnode1, "interval");
+				tinyxml2::XMLNode* childnode2 = xml->enterNode(childnode1, "interval");
 				if(childnode2)
 				{
 					Network::g_extReSendInterval = uint32(xml->getValInt(childnode2));
@@ -246,7 +246,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		childnode = xml->enterNode(rootNode, "readBufferSize");
 		if(childnode)
 		{
-			TiXmlNode* childnode1 = xml->enterNode(childnode, "internal");
+			tinyxml2::XMLNode* childnode1 = xml->enterNode(childnode, "internal");
 			if(childnode1)
 				channelCommon_.intReadBufferSize = KBE_MAX(0, xml->getValInt(childnode1));
 
@@ -258,7 +258,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		childnode = xml->enterNode(rootNode, "writeBufferSize");
 		if(childnode)
 		{
-			TiXmlNode* childnode1 = xml->enterNode(childnode, "internal");
+			tinyxml2::XMLNode* childnode1 = xml->enterNode(childnode, "internal");
 			if(childnode1)
 				channelCommon_.intWriteBufferSize = KBE_MAX(0, xml->getValInt(childnode1));
 
@@ -270,13 +270,13 @@ bool ServerConfig::loadConfig(std::string fileName)
 		childnode = xml->enterNode(rootNode, "windowOverflow");
 		if(childnode)
 		{
-			TiXmlNode* sendNode = xml->enterNode(childnode, "send");
+			tinyxml2::XMLNode* sendNode = xml->enterNode(childnode, "send");
 			if(sendNode)
 			{
-				TiXmlNode* childnode1 = xml->enterNode(sendNode, "messages");
+				tinyxml2::XMLNode* childnode1 = xml->enterNode(sendNode, "messages");
 				if(childnode1)
 				{
-					TiXmlNode* childnode2 = xml->enterNode(childnode1, "internal");
+					tinyxml2::XMLNode* childnode2 = xml->enterNode(childnode1, "internal");
 					if(childnode2)
 						Network::g_intSendWindowMessagesOverflow = KBE_MAX(0, xml->getValInt(childnode2));
 
@@ -292,7 +292,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 				childnode1 = xml->enterNode(sendNode, "bytes");
 				if(childnode1)
 				{
-					TiXmlNode* childnode2 = xml->enterNode(childnode1, "internal");
+					tinyxml2::XMLNode* childnode2 = xml->enterNode(childnode1, "internal");
 					if(childnode2)
 						Network::g_intSendWindowBytesOverflow = KBE_MAX(0, xml->getValInt(childnode2));
 				
@@ -304,7 +304,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 				childnode1 = xml->enterNode(sendNode, "tickSentBytes");
 				if (childnode1)
 				{
-					TiXmlNode* childnode2 = xml->enterNode(childnode1, "internal");
+					tinyxml2::XMLNode* childnode2 = xml->enterNode(childnode1, "internal");
 					if (childnode2)
 						Network::g_intSentWindowBytesOverflow = KBE_MAX(0, xml->getValInt(childnode2));
 
@@ -314,13 +314,13 @@ bool ServerConfig::loadConfig(std::string fileName)
 				}
 			}
 
-			TiXmlNode* recvNode = xml->enterNode(childnode, "receive");
+			tinyxml2::XMLNode* recvNode = xml->enterNode(childnode, "receive");
 			if(recvNode)
 			{
-				TiXmlNode* childnode1 = xml->enterNode(recvNode, "messages");
+				tinyxml2::XMLNode* childnode1 = xml->enterNode(recvNode, "messages");
 				if(childnode1)
 				{
-					TiXmlNode* childnode2 = xml->enterNode(childnode1, "internal");
+					tinyxml2::XMLNode* childnode2 = xml->enterNode(childnode1, "internal");
 					if(childnode2)
 						Network::g_intReceiveWindowMessagesOverflow = KBE_MAX(0, xml->getValInt(childnode2));
 
@@ -336,7 +336,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 				childnode1 = xml->enterNode(recvNode, "bytes");
 				if(childnode1)
 				{
-					TiXmlNode* childnode2 = xml->enterNode(childnode1, "internal");
+					tinyxml2::XMLNode* childnode2 = xml->enterNode(childnode1, "internal");
 					if(childnode2)
 						Network::g_intReceiveWindowBytesOverflow = KBE_MAX(0, xml->getValInt(childnode2));
 				
@@ -365,13 +365,13 @@ bool ServerConfig::loadConfig(std::string fileName)
 			Network::g_sslPrivateKey = xml->getValStr(childnode);
 		}
 
-		TiXmlNode* rudpChildnode = xml->enterNode(rootNode, "reliableUDP");
+		tinyxml2::XMLNode* rudpChildnode = xml->enterNode(rootNode, "reliableUDP");
 		if(rudpChildnode)
 		{
 			childnode = xml->enterNode(rudpChildnode, "readPacketsQueueSize");
 			if (childnode)
 			{
-				TiXmlNode* childnode1 = xml->enterNode(childnode, "internal");
+				tinyxml2::XMLNode* childnode1 = xml->enterNode(childnode, "internal");
 				if (childnode1)
 					Network::g_rudp_intReadPacketsQueueSize = KBE_MAX(0, xml->getValInt(childnode1));
 
@@ -383,7 +383,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 			childnode = xml->enterNode(rudpChildnode, "writePacketsQueueSize");
 			if (childnode)
 			{
-				TiXmlNode* childnode1 = xml->enterNode(childnode, "internal");
+				tinyxml2::XMLNode* childnode1 = xml->enterNode(childnode, "internal");
 				if (childnode1)
 					Network::g_rudp_intWritePacketsQueueSize = KBE_MAX(0, xml->getValInt(childnode1));
 
@@ -443,7 +443,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 	rootNode = xml->getRootNode("interfaces");
 	if(rootNode != NULL)
 	{
-		TiXmlNode* childnode = xml->enterNode(rootNode, "entryScriptFile");	
+		tinyxml2::XMLNode* childnode = xml->enterNode(rootNode, "entryScriptFile");	
 		if(childnode != NULL)
 			strncpy((char*)&_interfacesInfo.entryScriptFile, xml->getValStr(childnode).c_str(), MAX_NAME - 1);
 
@@ -484,7 +484,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "telnet_service");
 		if (node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "port");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "port");
 			if (childnode)
 			{
 				_interfacesInfo.telnet_port = xml->getValInt(childnode);
@@ -515,7 +515,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		if(node != NULL)
 			strncpy((char*)&_cellAppInfo.entryScriptFile, xml->getValStr(node).c_str(), MAX_NAME - 1);
 		
-		TiXmlNode* viewNode = xml->enterNode(rootNode, "defaultViewRadius");
+		tinyxml2::XMLNode* viewNode = xml->enterNode(rootNode, "defaultViewRadius");
 		if(viewNode != NULL)
 		{
 			node = NULL;
@@ -531,7 +531,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "ids");
 		if(node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "criticallyLowSize");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "criticallyLowSize");
 			if(childnode)
 			{
 				_cellAppInfo.ids_criticallyLowSize = xml->getValInt(childnode);
@@ -543,7 +543,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "profiles");
 		if(node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "cprofile");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "cprofile");
 			if(childnode)
 			{
 				_cellAppInfo.profiles.open_cprofile = (xml->getValStr(childnode) == "true");
@@ -605,7 +605,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "coordinate_system");
 		if(node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "enable");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "enable");
 			if(childnode)
 			{
 				_cellAppInfo.use_coordinate_system = (xml->getValStr(childnode) == "true");
@@ -626,7 +626,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 			childnode = xml->enterNode(node, "entity_posdir_updates");
 			if (childnode)
 			{
-				TiXmlNode* node = xml->enterNode(childnode, "type");
+				tinyxml2::XMLNode* node = xml->enterNode(childnode, "type");
 				if (node)
 					_cellAppInfo.entity_posdir_updates_type = xml->getValInt(node);
 
@@ -639,7 +639,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "telnet_service");
 		if(node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "port");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "port");
 			if(childnode)
 			{
 				_cellAppInfo.telnet_port = xml->getValInt(childnode);
@@ -661,7 +661,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "shutdown");
 		if(node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "perSecsDestroyEntitySize");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "perSecsDestroyEntitySize");
 			if(childnode)
 			{
 				_cellAppInfo.perSecsDestroyEntitySize = uint32(xml->getValInt(childnode));
@@ -671,7 +671,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "witness");
 		if(node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "timeout");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "timeout");
 			if(childnode)
 			{
 				_cellAppInfo.witness_timeout = uint16(xml->getValInt(childnode));
@@ -743,7 +743,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "ids");
 		if(node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "criticallyLowSize");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "criticallyLowSize");
 			if(childnode)
 			{
 				_baseAppInfo.ids_criticallyLowSize = xml->getValInt(childnode);
@@ -755,7 +755,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "downloadStreaming");
 		if(node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "bitsPerSecondTotal");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "bitsPerSecondTotal");
 			if(childnode)
 				_baseAppInfo.downloadBitsPerSecondTotal = xml->getValInt(childnode);
 
@@ -767,7 +767,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "profiles");
 		if(node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "cprofile");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "cprofile");
 			if(childnode)
 			{
 				_baseAppInfo.profiles.open_cprofile = (xml->getValStr(childnode) == "true");
@@ -808,7 +808,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "telnet_service");
 		if(node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "port");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "port");
 			if(childnode)
 			{
 				_baseAppInfo.telnet_port = xml->getValInt(childnode);
@@ -830,7 +830,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "shutdown");
 		if(node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "perSecsDestroyEntitySize");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "perSecsDestroyEntitySize");
 			if(childnode)
 			{
 				_baseAppInfo.perSecsDestroyEntitySize = uint32(xml->getValInt(childnode));
@@ -840,7 +840,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "respool");
 		if(node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "buffer_size");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "buffer_size");
 			if(childnode)
 				_baseAppInfo.respool_buffersize = xml->getValInt(childnode);
 
@@ -867,7 +867,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "telnet_service");
 		if (node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "port");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "port");
 			if (childnode)
 			{
 				_dbmgrInfo.telnet_port = xml->getValInt(childnode);
@@ -889,7 +889,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "ids");
 		if (node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "increasing_range");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "increasing_range");
 			if (childnode)
 			{
 				_dbmgrInfo.ids_increasing_range = xml->getValInt(childnode);
@@ -899,11 +899,11 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "InterfacesServiceAddr");
 		if (node != NULL)
 		{
-			TiXmlNode* loopNode = node;
+			tinyxml2::XMLNode* loopNode = node;
 
 			do
 			{
-				if (TiXmlNode::TINYXML_COMMENT == loopNode->Type())
+				if (NULL != loopNode->ToComment())
 					continue;
 
 				std::string name = loopNode->Value();
@@ -913,8 +913,8 @@ bool ServerConfig::loadConfig(std::string fileName)
 				{
 					if (loopNode->FirstChild() != NULL)
 					{
-						TiXmlNode* host_node = xml->enterNode(loopNode->FirstChild(), "host");
-						TiXmlNode* port_node = xml->enterNode(loopNode->FirstChild(), "port");
+						tinyxml2::XMLNode* host_node = xml->enterNode(loopNode->FirstChild(), "host");
+						tinyxml2::XMLNode* port_node = xml->enterNode(loopNode->FirstChild(), "port");
 						if (host_node && port_node)
 						{
 							std::string ip = xml->getValStr(host_node);
@@ -930,7 +930,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 				}
 			} while ((loopNode = loopNode->NextSibling()));
 
-			TiXmlNode* childnode = xml->enterNode(node, "addDefaultAddress");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "addDefaultAddress");
 			if (childnode)
 			{
 				g_dbmgr_addDefaultAddress = xml->getValStr(childnode) == "true";
@@ -951,14 +951,14 @@ bool ServerConfig::loadConfig(std::string fileName)
 		if(node != NULL)
 			strncpy((char*)&_dbmgrInfo.internalInterface, xml->getValStr(node).c_str(), MAX_NAME - 1);
 
-		TiXmlNode* databaseInterfacesNode = xml->enterNode(rootNode, "databaseInterfaces");	
+		tinyxml2::XMLNode* databaseInterfacesNode = xml->enterNode(rootNode, "databaseInterfaces");	
 		if(databaseInterfacesNode != NULL)
 		{
 			if (databaseInterfacesNode->FirstChild() != NULL)
 			{
 				do
 				{
-					if (TiXmlNode::TINYXML_COMMENT == databaseInterfacesNode->Type())
+					if (NULL != databaseInterfacesNode->ToComment())
 						continue;
 					
 					std::vector<std::string> missingFields;
@@ -973,7 +973,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 					
 					strncpy((char*)&pDBInfo->name, name.c_str(), MAX_NAME - 1);
 
-					TiXmlNode* interfaceNode = databaseInterfacesNode->FirstChild();
+					tinyxml2::XMLNode* interfaceNode = databaseInterfacesNode->FirstChild();
 					
 					node = xml->enterNode(interfaceNode, "pure");
 					if (node)
@@ -1011,7 +1011,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 					node = xml->enterNode(interfaceNode, "auth");
 					if(node != NULL)
 					{
-						TiXmlNode* childnode = xml->enterNode(node, "password");
+						tinyxml2::XMLNode* childnode = xml->enterNode(node, "password");
 						if(childnode)
 						{
 							strncpy((char*)&pDBInfo->db_password, xml->getValStr(childnode).c_str(), MAX_BUF * 10 - 1);
@@ -1061,7 +1061,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 					node = xml->enterNode(interfaceNode, "unicodeString");
 					if(node != NULL)
 					{
-						TiXmlNode* childnode = xml->enterNode(node, "characterSet");
+						tinyxml2::XMLNode* childnode = xml->enterNode(node, "characterSet");
 						if(childnode)
 						{
 							pDBInfo->db_unicodeString_characterSet = xml->getValStr(childnode);
@@ -1151,7 +1151,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "account_system");
 		if(node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "accountDefaultFlags");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "accountDefaultFlags");
 			if(childnode)
 			{
 				_dbmgrInfo.accountDefaultFlags = xml->getValInt(childnode);
@@ -1172,7 +1172,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 			childnode = xml->enterNode(node, "account_registration");	
 			if(childnode != NULL)
 			{
-				TiXmlNode* childchildnode = xml->enterNode(childnode, "enable");
+				tinyxml2::XMLNode* childchildnode = xml->enterNode(childnode, "enable");
 				if(childchildnode)
 				{
 					_dbmgrInfo.account_registration_enable = (xml->getValStr(childchildnode) == "true");
@@ -1187,7 +1187,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 			childnode = xml->enterNode(node, "account_resetPassword");
 			if (childnode != NULL)
 			{
-				TiXmlNode* childchildnode = xml->enterNode(childnode, "enable");
+				tinyxml2::XMLNode* childchildnode = xml->enterNode(childnode, "enable");
 				if (childchildnode)
 				{
 					_dbmgrInfo.account_reset_password_enable = (xml->getValStr(childchildnode) == "true");
@@ -1206,7 +1206,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "telnet_service");
 		if (node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "port");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "port");
 			if (childnode)
 			{
 				_loginAppInfo.telnet_port = xml->getValInt(childnode);
@@ -1360,7 +1360,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		{
 			do
 			{
-				if (TiXmlNode::TINYXML_COMMENT == node->Type())
+				if (NULL != node->ToComment())
 					continue;
 
 				if(node->FirstChild() != NULL)
@@ -1414,7 +1414,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "defaultAddBots");
 		if(node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "totalCount");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "totalCount");
 			if(childnode)
 			{
 				_botsInfo.defaultAddBots_totalCount = xml->getValInt(childnode);
@@ -1436,7 +1436,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "account_infos");
 		if(node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "account_name_prefix");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "account_name_prefix");
 			if(childnode)
 			{
 				_botsInfo.bots_account_name_prefix = xml->getValStr(childnode);
@@ -1468,7 +1468,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "telnet_service");
 		if(node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "port");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "port");
 			if(childnode)
 			{
 				_botsInfo.telnet_port = xml->getValInt(childnode);
@@ -1517,7 +1517,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		node = xml->enterNode(rootNode, "telnet_service");
 		if (node != NULL)
 		{
-			TiXmlNode* childnode = xml->enterNode(node, "port");
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "port");
 			if (childnode)
 			{
 				_loggerInfo.telnet_port = xml->getValInt(childnode);
@@ -1537,6 +1537,132 @@ bool ServerConfig::loadConfig(std::string fileName)
 		}
 	}
 
+	
+	rootNode = xml->getRootNode("tool");
+	if(rootNode != NULL)
+	{
+		node = xml->enterNode(rootNode, "entryScriptFile");	
+		if(node != NULL)
+			strncpy((char*)&_toolInfo.entryScriptFile, xml->getValStr(node).c_str(), MAX_NAME - 1);
+
+		node = xml->enterNode(rootNode, "internalInterface");	
+		if(node != NULL)
+			strncpy((char*)&_toolInfo.internalInterface, xml->getValStr(node).c_str(), MAX_NAME - 1);
+
+		node = xml->enterNode(rootNode, "archivePeriod");
+		if(node != NULL)
+			_toolInfo.archivePeriod = float(xml->getValFloat(node));
+				
+		node = xml->enterNode(rootNode, "backupPeriod");
+		if(node != NULL)
+			_toolInfo.backupPeriod = float(xml->getValFloat(node));
+		
+		node = xml->enterNode(rootNode, "backUpUndefinedProperties");
+		if(node != NULL)
+			_toolInfo.backUpUndefinedProperties = xml->getValInt(node) > 0;
+			
+		node = xml->enterNode(rootNode, "loadSmoothingBias");
+		if(node != NULL)
+			_toolInfo.loadSmoothingBias = float(xml->getValFloat(node));
+		
+		node = xml->enterNode(rootNode, "ids");
+		if(node != NULL)
+		{
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "criticallyLowSize");
+			if(childnode)
+			{
+				_toolInfo.ids_criticallyLowSize = xml->getValInt(childnode);
+				if (_toolInfo.ids_criticallyLowSize < 100)
+					_toolInfo.ids_criticallyLowSize = 100;
+			}
+		}
+	
+		node = xml->enterNode(rootNode, "profiles");
+		if(node != NULL)
+		{
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "cprofile");
+			if(childnode)
+			{
+				_toolInfo.profiles.open_cprofile = (xml->getValStr(childnode) == "true");
+			}
+
+			childnode = xml->enterNode(node, "pyprofile");
+			if(childnode)
+			{
+				_toolInfo.profiles.open_pyprofile = (xml->getValStr(childnode) == "true");
+			}
+
+			childnode = xml->enterNode(node, "eventprofile");
+			if(childnode)
+			{
+				_toolInfo.profiles.open_eventprofile = (xml->getValStr(childnode) == "true");
+			}
+
+			childnode = xml->enterNode(node, "networkprofile");
+			if(childnode)
+			{
+				_toolInfo.profiles.open_networkprofile = (xml->getValStr(childnode) == "true");
+			}
+		}
+
+		node = xml->enterNode(rootNode, "SOMAXCONN");
+		if(node != NULL){
+			_toolInfo.tcp_SOMAXCONN = xml->getValInt(node);
+		}
+		
+		node = xml->enterNode(rootNode, "telnet_service");
+		if(node != NULL)
+		{
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "port");
+			if(childnode)
+			{
+				_toolInfo.telnet_port = xml->getValInt(childnode);
+			}
+
+			childnode = xml->enterNode(node, "password");
+			if(childnode)
+			{
+				_toolInfo.telnet_passwd = xml->getValStr(childnode);
+			}
+
+			childnode = xml->enterNode(node, "default_layer");
+			if(childnode)
+			{
+				_toolInfo.telnet_deflayer = xml->getValStr(childnode);
+			}
+		}
+
+		node = xml->enterNode(rootNode, "shutdown");
+		if(node != NULL)
+		{
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "perSecsDestroyEntitySize");
+			if(childnode)
+			{
+				_toolInfo.perSecsDestroyEntitySize = uint32(xml->getValInt(childnode));
+			}
+		}
+
+		node = xml->enterNode(rootNode, "respool");
+		if(node != NULL)
+		{
+			tinyxml2::XMLNode* childnode = xml->enterNode(node, "buffer_size");
+			if(childnode)
+				_toolInfo.respool_buffersize = xml->getValInt(childnode);
+
+			childnode = xml->enterNode(node, "timeout");
+			if(childnode)
+				_toolInfo.respool_timeout = uint64(xml->getValInt(childnode));
+
+			childnode = xml->enterNode(node, "checktick");
+			if(childnode)
+				Resmgr::respool_checktick = xml->getValInt(childnode);
+
+			Resmgr::respool_timeout = _baseAppInfo.respool_timeout;
+			Resmgr::respool_buffersize = _baseAppInfo.respool_buffersize;
+		}
+	}
+
+
 	if(email_service_config.size() > 0)
 	{
 		SmartPointer<XML> emailxml(new XML(Resmgr::getSingleton().matchRes(email_service_config).c_str()));
@@ -1549,7 +1675,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 			return false;
 		}
 
-		TiXmlNode* childnode = emailxml->getRootNode("smtp_server");
+		tinyxml2::XMLNode* childnode = emailxml->getRootNode("smtp_server");
 		if(childnode)
 			emailServerInfo_.smtp_server = emailxml->getValStr(childnode);
 
@@ -1571,10 +1697,10 @@ bool ServerConfig::loadConfig(std::string fileName)
 		if(childnode)
 			emailServerInfo_.smtp_auth = emailxml->getValInt(childnode);
 
-		TiXmlNode* rootNode1 = emailxml->getRootNode("email_activation");
+		tinyxml2::XMLNode* rootNode1 = emailxml->getRootNode("email_activation");
 		if(rootNode1 != NULL)
 		{
-			TiXmlNode* childnode1 = emailxml->enterNode(rootNode1, "subject");
+			tinyxml2::XMLNode* childnode1 = emailxml->enterNode(rootNode1, "subject");
 			if(childnode1)
 				emailAtivationInfo_.subject = childnode1->ToText()->Value();
 
@@ -1602,7 +1728,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		rootNode1 = emailxml->getRootNode("email_resetpassword");
 		if(rootNode1 != NULL)
 		{
-			TiXmlNode* childnode1 = emailxml->enterNode(rootNode1, "subject");
+			tinyxml2::XMLNode* childnode1 = emailxml->enterNode(rootNode1, "subject");
 			if(childnode1)
 				emailResetPasswordInfo_.subject = childnode1->ToText()->Value();
 
@@ -1630,7 +1756,7 @@ bool ServerConfig::loadConfig(std::string fileName)
 		rootNode1 = emailxml->getRootNode("email_bind");
 		if(rootNode1 != NULL)
 		{
-			TiXmlNode* childnode1 = emailxml->enterNode(rootNode1, "subject");
+			tinyxml2::XMLNode* childnode1 = emailxml->enterNode(rootNode1, "subject");
 			if(childnode1)
 				emailBindInfo_.subject = childnode1->ToText()->Value();
 
@@ -1718,8 +1844,13 @@ void ServerConfig::updateInfos(bool isPrint, COMPONENT_TYPE componentType, COMPO
 
 	if (g_dbmgr_addDefaultAddress)
 	{
-		Network::Address interfacesAddr(interfacesAddress_, interfacesPort_min_);
-		interfacesAddrs_.insert(interfacesAddrs_.begin(), interfacesAddr);
+		for (int interfacesPort = interfacesPort_min_; interfacesPort<= interfacesPort_max_; ++interfacesPort) 
+		{
+			Network::Address interfacesAddr(interfacesAddress_, interfacesPort);
+			interfacesAddrs_.push_back(interfacesAddr);
+			//interfacesAddrs_.insert(interfacesAddrs_.begin(), interfacesAddr);
+		}
+		
 	}
 
 	//updateExternalAddress(getBaseApp().externalTcpAddr);
@@ -1942,7 +2073,53 @@ void ServerConfig::updateInfos(bool isPrint, COMPONENT_TYPE componentType, COMPO
 			infostr += (fmt::format("\tcomponentID : {}\n", info.componentID));
 		}
 	}
+	else if (componentType == TOOL_TYPE)
+	{
+		ENGINE_COMPONENT_INFO info = getTool();
+		info.internalTcpAddr = const_cast<Network::Address*>(&internalTcpAddr);
+		info.externalTcpAddr = const_cast<Network::Address*>(&externalTcpAddr);
+		info.componentID = componentID;
 
+		if (info.ids_criticallyLowSize > getDBMgr().ids_increasing_range / 2)
+		{
+			info.ids_criticallyLowSize = getDBMgr().ids_increasing_range / 2;
+			ERROR_MSG(fmt::format("kbengine[_defs].xml->tool->ids->criticallyLowSize > dbmgr->ids->increasing_range / 2, Force adjustment to criticallyLowSize({})\n",
+				info.ids_criticallyLowSize));
+		}
+
+		if(isPrint)
+		{
+			INFO_MSG("server-configs:\n");
+			INFO_MSG(fmt::format("\tgameUpdateHertz : {}\n", gameUpdateHertz()));
+			INFO_MSG(fmt::format("\tentryScriptFile : {}\n", info.entryScriptFile));
+			INFO_MSG(fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
+			INFO_MSG(fmt::format("\texternalTcpAddr : {}\n", externalTcpAddr.c_str()));
+			INFO_MSG(fmt::format("\texternalUdpAddr : {}\n", externalUdpAddr.c_str()));
+
+			if(strlen(info.externalAddress) > 0)
+			{
+				INFO_MSG(fmt::format("\texternalCustomAddr : {}\n", info.externalAddress));
+			}
+
+			INFO_MSG(fmt::format("\tcomponentID : {}\n", info.componentID));
+
+			infostr += "server-configs:\n";
+			infostr += (fmt::format("\tgameUpdateHertz : {}\n", gameUpdateHertz()));
+			infostr += (fmt::format("\tentryScriptFile : {}\n", info.entryScriptFile));
+			infostr += (fmt::format("\tinternalTcpAddr : {}\n", internalTcpAddr.c_str()));
+			infostr += (fmt::format("\texternalTcpAddr : {}\n", externalTcpAddr.c_str()));
+			infostr += (fmt::format("\texternalUdpAddr : {}\n", externalUdpAddr.c_str()));
+
+			if(strlen(info.externalAddress) > 0)
+			{
+				infostr +=  (fmt::format("\texternalCustomAddr : {}\n", info.externalAddress));
+			}
+
+			infostr += (fmt::format("\tcomponentID : {}\n", info.componentID));
+		}
+
+	}
+	
 #if KBE_PLATFORM == PLATFORM_WIN32
 	if(infostr.size() > 0)
 	{

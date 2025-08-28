@@ -366,6 +366,29 @@ inline void parseMainCommandArgs(int argc, char* argv[])
 
 			continue;
 		}
+				
+		findcmd = "--uid=";
+		fi1 = cmd.find(findcmd);
+		if(fi1 != std::string::npos)
+		{
+			cmd.erase(fi1, findcmd.size());
+			if(cmd.size() > 0)
+			{
+				int32 uid = 0;
+				try
+				{
+					StringConv::str2value(uid, cmd.c_str());
+					getUserUID(uid);
+
+				}
+				catch(...)
+				{
+					ERROR_MSG("parseCommandArgs: --uid=? invalid, no set! type is int32\n");
+				}
+			}
+
+			continue;
+		}
 	}
 }
 
@@ -374,9 +397,9 @@ inline void parseMainCommandArgs(int argc, char* argv[])
 kbeMain(int argc, char* argv[]);																						\
 int main(int argc, char* argv[])																						\
 {																														\
-	loadConfig();																										\
 	g_componentID = genUUID64();																						\
 	parseMainCommandArgs(argc, argv);																					\
+	loadConfig();																										\
 	char dumpname[MAX_BUF] = {0};																						\
 	kbe_snprintf(dumpname, MAX_BUF, "%" PRAppID, g_componentID);														\
 	KBEngine::exception::installCrashHandler(1, dumpname);																\
@@ -392,9 +415,9 @@ int kbeMain
 kbeMain(int argc, char* argv[]);																						\
 int main(int argc, char* argv[])																						\
 {																														\
-	loadConfig();																										\
 	g_componentID = genUUID64();																						\
 	parseMainCommandArgs(argc, argv);																					\
+	loadConfig();																										\
 	return kbeMain(argc, argv);																							\
 }																														\
 int kbeMain

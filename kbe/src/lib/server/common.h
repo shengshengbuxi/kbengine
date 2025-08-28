@@ -147,6 +147,11 @@ namespace KBEngine {
 				BUNDLE.newMessage(InterfacesInterface::MESSAGENAME);										\
 			}																								\
 			break;																							\
+		case TOOL_TYPE:																				    \
+			{																								\
+				BUNDLE.newMessage(ToolInterface::MESSAGENAME);												\
+			}																								\
+			break;																							\
 		default:																							\
 			ERROR_MSG(fmt::format("not support componentType={}({})\n",										\
 					COMPONENTTYPE, COMPONENT_NAME_EX(COMPONENTTYPE)));										\
@@ -166,6 +171,11 @@ namespace KBEngine {
 		case BASEAPP_TYPE:																					\
 			{																								\
 				BUNDLE.newMessage(BaseappInterface::MESSAGENAME);											\
+			}																								\
+			break;																							\
+		case TOOL_TYPE:																					\
+			{																								\
+				BUNDLE.newMessage(ToolInterface::MESSAGENAME);												\
 			}																								\
 			break;																							\
 		default:																							\
@@ -204,7 +214,7 @@ void autoFixUserDigestUID();
 #define KBE_NEXT_ONLY								2
 
 /** c/c++数据类别转换成KBEDataTypeID */
-#define KBE_DATATYPE2ID_MAX							21
+#define KBE_DATATYPE2ID_MAX							22
 uint16 datatype2id(std::string datatype);
 
 /** c/c++数据类别转换成原生类别UINT16 ... */

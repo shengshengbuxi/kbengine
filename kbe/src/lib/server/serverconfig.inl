@@ -62,6 +62,11 @@ INLINE ENGINE_COMPONENT_INFO& ServerConfig::getInterfaces(void)
 {
 	return _interfacesInfo;
 }
+//-------------------------------------------------------------------------------------		
+INLINE ENGINE_COMPONENT_INFO& ServerConfig::getTool(void)
+{
+	return _toolInfo;
+}
 
 //-------------------------------------------------------------------------------------	
 INLINE ENGINE_COMPONENT_INFO& ServerConfig::getConfig()
@@ -90,6 +95,8 @@ INLINE ENGINE_COMPONENT_INFO& ServerConfig::getComponent(COMPONENT_TYPE componen
 		return getKBMachine();
 	case LOGGER_TYPE:
 		return getLogger();
+	case TOOL_TYPE:
+		return getTool();
 	default:
 		return getCellApp();
 	};

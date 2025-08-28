@@ -23,6 +23,7 @@
 #include "../../server/tools/logger/logger_interface.h"
 #include "../../server/tools/bots/bots_interface.h"
 #include "../../server/tools/interfaces/interfaces_interface.h"
+#include "../../server/tools/tool/tool_interface.h"
 
 #include "../../server/machine/machine_interface.h"
 
@@ -47,6 +48,7 @@ _loggers(),
 _interfaceses(),
 _bots(),
 _consoles(),
+_tool(),
 _pNetworkInterface(NULL),
 _globalOrderLog(),
 _baseappGrouplOrderLog(),
@@ -112,6 +114,10 @@ void Components::initialize(Network::NetworkInterface * pNetworkInterface, COMPO
 		break;
 	case DBMGR_TYPE:
 		findComponentTypes_[0] = LOGGER_TYPE;
+		break;
+	case TOOL_TYPE:
+		findComponentTypes_[0] = LOGGER_TYPE;
+		findComponentTypes_[1] = DBMGR_TYPE;
 		break;
 	default:
 		if(componentType_ != LOGGER_TYPE && 
@@ -236,6 +242,8 @@ void Components::addComponent(int32 uid, const char* username,
 	case LOGINAPP_TYPE:
 		_loginappGrouplOrderLog[uid]++;
 		componentInfos.groupOrderid = _loginappGrouplOrderLog[uid];
+		break;
+	case TOOL_TYPE:
 		break;
 	default:
 		break;
@@ -588,6 +596,8 @@ Components::COMPONENTS& Components::getComponents(COMPONENT_TYPE componentType)
 		return _interfaceses;	
 	case BOTS_TYPE:
 		return _bots;	
+	case TOOL_TYPE:
+		return _tool;
 	default:
 		break;
 	};
@@ -857,6 +867,11 @@ bool Components::updateComponentInfos(const Components::ComponentInfos* info)
 			recvsize += sizeof(entitySize) + sizeof(clientsSize) + sizeof(proxicesSize) + sizeof(telnet_port);
 		}
 
+		if (info->componentType == TOOL_TYPE)
+		{
+			recvsize += sizeof(entitySize) + sizeof(telnet_port);
+		}
+
 		int len = epListen.recv(packet.data(), recvsize);
 		packet.wpos(len);
 		
@@ -883,6 +898,11 @@ bool Components::updateComponentInfos(const Components::ComponentInfos* info)
 			packet >> entitySize >> clientsSize >> proxicesSize >> telnet_port;
 		}
 
+		if (ctype == TOOL_TYPE)
+		{
+			packet >> entitySize >> telnet_port;
+		}
+
 		if(ctype != info->componentType || cid != info->cid)
 		{
 			WARNING_MSG(fmt::format("Components::updateComponentInfos: invalid component(ctype={}, cid={}).\n",
@@ -907,6 +927,11 @@ bool Components::updateComponentInfos(const Components::ComponentInfos* info)
 				winfo->extradata = entitySize;
 				winfo->extradata1 = clientsSize;
 				winfo->extradata2 = proxicesSize;
+				winfo->extradata3 = telnet_port;
+			}
+			else if (ctype == TOOL_TYPE)
+			{
+				winfo->extradata = entitySize;
 				winfo->extradata3 = telnet_port;
 			}
 		}
@@ -1057,9 +1082,9 @@ void Components::onChannelDeregister(Network::Channel * pChannel, bool isShuting
 //-------------------------------------------------------------------------------------
 bool Components::findLogger()
 {
-	if (g_componentType == LOGGER_TYPE || g_componentType == MACHINE_TYPE || g_componentType == TOOL_TYPE ||
+	if (g_componentType == LOGGER_TYPE || g_componentType == MACHINE_TYPE || g_componentType == CMD_TYPE ||
 		g_componentType == CONSOLE_TYPE || g_componentType == CLIENT_TYPE || g_componentType == BOTS_TYPE ||
-		g_componentType == WATCHER_TYPE || componentType_ == INTERFACES_TYPE)
+		g_componentType == WATCHER_TYPE || componentType_ == INTERFACES_TYPE || g_componentType == TOOL_TYPE)
 	{
 		DebugHelper::getSingleton().onNoLogger();
 		return true;

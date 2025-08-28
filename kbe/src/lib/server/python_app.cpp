@@ -199,6 +199,11 @@ bool PythonApp::installPyScript()
 		pyPaths += user_scripts_path + L"server_common;";
 		pyPaths += user_scripts_path + L"logger;";
 		break;
+	case TOOL_TYPE:
+		pyPaths += user_scripts_path + L"server_common;";
+		pyPaths += user_scripts_path + L"tool;";
+		pyPaths += user_scripts_path + L"tool/interfaces;";
+		pyPaths += user_scripts_path + L"tool/components;";
 	default:
 		pyPaths += user_scripts_path + L"client;";
 		pyPaths += user_scripts_path + L"client/interfaces;";
@@ -259,6 +264,11 @@ bool PythonApp::installPyModules()
 	else if (componentType() == LOGGER_TYPE)
 	{
 		ENGINE_COMPONENT_INFO& info = g_kbeSrvConfig.getLogger();
+		entryScriptFileName = PyUnicode_FromString(info.entryScriptFile);
+	}
+	else if (componentType() == TOOL_TYPE)
+	{
+		ENGINE_COMPONENT_INFO& info = g_kbeSrvConfig.getTool();
 		entryScriptFileName = PyUnicode_FromString(info.entryScriptFile);
 	}
 	else
@@ -444,21 +454,22 @@ PyObject* PythonApp::__py_hasRes(PyObject* self, PyObject* args)
 PyObject* PythonApp::__py_kbeOpen(PyObject* self, PyObject* args)
 {
 	int argCount = PyTuple_Size(args);
-	if(argCount != 2)
+	if (argCount < 1)
 	{
 		PyErr_Format(PyExc_TypeError, "KBEngine::open(): args error!");
 		PyErr_PrintEx(0);
-		S_Return;
+		return 0;
 	}
 
 	char* respath = NULL;
 	char* fargs = NULL;
+	char* encodingArg = NULL;
 
-	if(!PyArg_ParseTuple(args, "s|s", &respath, &fargs))
+	if (!PyArg_ParseTuple(args, "s|ss", &respath, &fargs, &encodingArg))
 	{
 		PyErr_Format(PyExc_TypeError, "KBEngine::open(): args error!");
 		PyErr_PrintEx(0);
-		S_Return;
+		return 0;
 	}
 
 	std::string sfullpath = Resmgr::getSingleton().matchRes(respath);
@@ -466,14 +477,26 @@ PyObject* PythonApp::__py_kbeOpen(PyObject* self, PyObject* args)
 	PyObject *ioMod = PyImport_ImportModule("io");
 
 	// SCOPED_PROFILE(SCRIPTCALL_PROFILE);
-	PyObject *openedFile = PyObject_CallMethod(ioMod, const_cast<char*>("open"), 
-		const_cast<char*>("ss"), 
-		const_cast<char*>(sfullpath.c_str()), 
-		fargs);
+	PyObject *openedFile = NULL;
+	if (argCount > 1)
+	{
+		openedFile = PyObject_CallMethod(ioMod, const_cast<char*>("open"),
+			const_cast<char*>("ssis"),
+			const_cast<char*>(sfullpath.c_str()),
+			fargs,
+			-1,
+			encodingArg);
+	}
+	else
+	{
+		openedFile = PyObject_CallMethod(ioMod, const_cast<char*>("open"),
+			const_cast<char*>("s"),
+			const_cast<char*>(sfullpath.c_str()));
+	}
 
 	Py_DECREF(ioMod);
 	
-	if(openedFile == NULL)
+	if (openedFile == NULL)
 	{
 		SCRIPT_ERROR_CHECK();
 	}

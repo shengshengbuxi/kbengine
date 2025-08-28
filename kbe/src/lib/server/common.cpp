@@ -62,6 +62,8 @@ uint16 datatype2id(std::string datatype)
 		return 19;
 	else if (datatype == "ENTITYCALL")
 		return 20;
+	else if (datatype == "TEXT")
+		return 21;
 	else if (datatype == "KBE_DATATYPE2ID_MAX")
 		return KBE_DATATYPE2ID_MAX;
 
@@ -139,6 +141,9 @@ std::string datatype2nativetype(uint16 datatype)
 		break;
 	case 20:
 		return "ENTITYCALL";
+		break;
+	case 21:
+		return "TEXT";
 		break;
 	default:
 		break;
