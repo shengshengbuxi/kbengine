@@ -362,6 +362,7 @@ bool SpaceMemory::update()
 void SpaceMemory::addEntityAndEnterWorld(Entity* pEntity, bool isRestore)
 {
 	addEntity(pEntity);
+	pEntity->onEnterSpace(this);
 	addEntityToNode(pEntity);
 	onEnterWorld(pEntity);
 }
@@ -372,7 +373,7 @@ void SpaceMemory::addEntity(Entity* pEntity)
 	pEntity->spaceID(this->id_);
 	pEntity->spaceEntityIdx(entities_.size());
 	entities_.push_back(pEntity);
-	pEntity->onEnterSpace(this);
+	//pEntity->onEnterSpace(this);
 }
 
 //-------------------------------------------------------------------------------------

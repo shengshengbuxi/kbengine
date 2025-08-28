@@ -73,7 +73,8 @@ bool MoveToEntityHandler::update()
 		pController_.reset();
 	}
 
-	return MoveToPointHandler::update();
+	//return MoveToPointHandler::update();
+	return  move();
 }
 
 //-------------------------------------------------------------------------------------

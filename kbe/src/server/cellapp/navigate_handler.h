@@ -18,6 +18,9 @@ public:
 
 	NavigateHandler();
 	virtual ~NavigateHandler();
+
+	virtual bool update();
+
 	
 	void addToStream(KBEngine::MemoryStream& s);
 	void createFromStream(KBEngine::MemoryStream& s);

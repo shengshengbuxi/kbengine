@@ -48,6 +48,9 @@ public:
 		velocity_ = v;
 	}
 
+protected: 
+	bool move(float* pRemainingTicks = NULL);
+
 protected:
 	Position3D destPos_;
 	float velocity_;			// ËÙ¶È

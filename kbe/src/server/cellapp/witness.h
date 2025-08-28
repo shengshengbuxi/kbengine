@@ -204,6 +204,7 @@ private:
 	Direction3D								lastBaseDir_;
 
 	uint16									clientViewSize_;
+	std::vector<ENTITY_ID>					clientViewEntities_;
 };
 
 }

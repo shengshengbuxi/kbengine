@@ -23,6 +23,7 @@
 #include "navigation/navigation.h"
 #include "client_lib/client_interface.h"
 #include "common/sha1.h"
+#include "navigation/navigation_tile_handle.h"
 
 #include "../../server/baseappmgr/baseappmgr_interface.h"
 #include "../../server/cellappmgr/cellappmgr_interface.h"
@@ -166,6 +167,21 @@ bool Cellapp::installPyModules()
 		{
 			ERROR_MSG(fmt::format("Cellapp::onInstallPyModules: Unable to set KBEngine.{}.\n", fiter->second));
 		}
+	}
+
+	if(PyModule_AddIntConstant(this->getScript().getModule(), "DETAIL_LEVEL_NEAR", DETAIL_LEVEL_NEAR))
+	{
+		ERROR_MSG( "Cellapp::installPyModules: Unable to set KBEngine.DETAIL_LEVEL_NEAR.\n");
+	}
+
+	if(PyModule_AddIntConstant(this->getScript().getModule(), "DETAIL_LEVEL_MEDIUM", DETAIL_LEVEL_MEDIUM))
+	{
+		ERROR_MSG( "EntityApp::installPyModules: Unable to set KBEngine.DETAIL_LEVEL_MEDIUM.\n");
+	}
+
+	if(PyModule_AddIntConstant(this->getScript().getModule(), "DETAIL_LEVEL_FAR", DETAIL_LEVEL_FAR))
+	{
+		ERROR_MSG( "EntityApp::installPyModules: Unable to set KBEngine.DETAIL_LEVEL_FAR.\n");
 	}
 
 	// 注册创建entity的方法到py
@@ -958,9 +974,17 @@ void Cellapp::onCreateCellEntityInNewSpaceFromBaseapp(Network::Channel* pChannel
 		e->createNamespace(cellData, true);
 
 		space->addEntity(e);
+		
+		Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
+		(*pBundle).newMessage(BaseappInterface::onEntityGetCell);
+		BaseappInterface::onEntityGetCellArgs3::staticAddToBundle((*pBundle), entitycallEntityID, componentID_, spaceID);
+		cinfos->pChannel->send(pBundle);
+
 		//e->spaceID(space->id());
 		//e->initializeEntity(cellData, true);
 		e->initializeScript();
+		
+		e->onEnterSpace(space);
 		Py_XDECREF(cellData);
 
 		// 添加到space
@@ -975,10 +999,6 @@ void Cellapp::onCreateCellEntityInNewSpaceFromBaseapp(Network::Channel* pChannel
 			space->onEnterWorld(e);
 		}
 
-		Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
-		(*pBundle).newMessage(BaseappInterface::onEntityGetCell);
-		BaseappInterface::onEntityGetCellArgs3::staticAddToBundle((*pBundle), entitycallEntityID, componentID_, spaceID);
-		cinfos->pChannel->send(pBundle);
 
 		return;
 	}
@@ -1233,6 +1253,8 @@ void Cellapp::_onCreateCellEntityFromBaseapp(std::string& entityType, ENTITY_ID 
 		{
 			e->onRestore();
 		}
+
+		e->onEnterSpace(space);
 
 		Py_XDECREF(cellData);
 		

@@ -32,6 +32,8 @@
 #include "navigation/navigation.h"
 #include "math/math.h"
 #include "common/sha1.h"
+#include "navigation/navigation_tile_handle.h"
+
 
 #include "../../server/baseapp/baseapp_interface.h"
 #include "../../server/cellapp/cellapp_interface.h"
@@ -65,6 +67,10 @@ SCRIPT_METHOD_DECLARE("teleport",					pyTeleport,						METH_VARARGS,				0)
 SCRIPT_METHOD_DECLARE("destroySpace",				pyDestroySpace,					METH_VARARGS,				0)
 SCRIPT_METHOD_DECLARE("debugView",					pyDebugView,					METH_VARARGS,				0)
 SCRIPT_METHOD_DECLARE("getWitnesses",				pyGetWitnesses,					METH_VARARGS,				0)
+SCRIPT_METHOD_DECLARE("entityInWitnessed",			pyEntityInWitnessed,			METH_VARARGS,				0)
+SCRIPT_METHOD_DECLARE("clientIn",					pyClientIn,						METH_VARARGS,				0)
+SCRIPT_METHOD_DECLARE("setDetailLevel",				pySetDetailLevel,				METH_VARARGS,				0)
+SCRIPT_METHOD_DECLARE("getDetailLevel",				pyGetDetailLevel,				METH_VARARGS,				0)
 ENTITY_METHOD_DECLARE_END()
 
 SCRIPT_MEMBER_DECLARE_BEGIN(Entity)
@@ -136,7 +142,10 @@ pCustomVolatileinfo_(NULL)
 	if(g_kbeSrvConfig.getCellApp().use_coordinate_system)
 	{
 		pEntityCoordinateNode_ = new EntityCoordinateNode(this);
+
 	}
+
+	memcpy((void*)&detailLevel_.level[0], (void*)&pScriptModule_->getDetailLevel().level[0], sizeof(pScriptModule_->getDetailLevel().level));
 
 	script::PyGC::incTracing("Entity");
 }
@@ -717,7 +726,7 @@ void Entity::onDefDataChanged(EntityComponent* pEntityComponent, const PropertyD
 		}
 	}
 	
-	const Position3D& basePos = this->position(); 
+	//const Position3D& basePos = this->position(); 
 	if((flags & ENTITY_BROADCAST_OTHER_CLIENT_FLAGS) > 0)
 	{
 		DETAIL_TYPE propertyDetailLevel = propertyDescription->getDetailLevel();
@@ -2506,6 +2515,287 @@ PyObject* Entity::pyGetWitnesses()
 }
 
 //-------------------------------------------------------------------------------------
+PyObject* Entity::pyEntityInWitnessed(int entityID)
+{
+	if (entityInWitnessed(entityID)) {
+		Py_RETURN_TRUE;
+	}
+
+	Py_RETURN_FALSE;
+}
+
+
+//-------------------------------------------------------------------------------------
+PyObject* Entity::pyClientIn(ENTITY_ID entityID)
+{
+	if(!isReal())
+	{
+		PyErr_Format(PyExc_AssertionError, "%s::pyClientIn: not is real entity(%d).", 
+			scriptName(), id());
+		PyErr_PrintEx(0);
+		return 0;
+	}
+
+	if(this->isDestroyed())
+	{
+		PyErr_Format(PyExc_AssertionError, "%s::pyClientIn: %d is destroyed!\n",		
+			scriptName(), id());		
+		PyErr_PrintEx(0);
+		return 0;
+	}
+
+	if (entityID == id())
+	{
+		PyErr_Format(PyExc_AssertionError, "%s::pyClientIn: call your own method using entity.client! id=%d\n",
+			scriptName(), id());
+		PyErr_PrintEx(0);
+		return 0;
+	}
+
+	return new ClientEntity(entityID, id());
+}
+
+//-------------------------------------------------------------------------------------
+DetailLevel& Entity::getDetailLevel()
+{
+	return detailLevel_;
+}
+
+//-------------------------------------------------------------------------------------
+PyObject* Entity::__py_pySetDetailLevel(PyObject* self, PyObject* args)
+{
+	Entity* pobj = static_cast<Entity*>(self);
+
+	if(!pobj->isReal())
+	{
+		PyErr_Format(PyExc_AssertionError, "%s::__py_pySetDetailLevel: not is real entity(%d).", 
+			pobj->scriptName(), pobj->id());
+		PyErr_PrintEx(0);
+		return 0;
+	}
+
+	
+	uint16 argCount= PyTuple_Size(args);
+	if (argCount == 1)
+	{
+		PyObject* pyDetailLevels= NULL;
+
+		PyArg_ParseTuple(args, "O", &pyDetailLevels);
+
+		if (!pyDetailLevels)
+		{
+			
+			PyErr_Format(PyExc_AssertionError, "%s::__py_pySetDetailLevel: parse 1 argument error(%d).", 
+				pobj->scriptName(), pobj->id());
+			PyErr_PrintEx(0);
+
+			return 0;
+		}
+
+		int len = 0;
+
+		if (PyTuple_Check(pyDetailLevels) && PyTuple_Size(pyDetailLevels) == 3) 
+		{
+			len = PyTuple_Size(pyDetailLevels);
+		}
+		else if (PyList_Check(pyDetailLevels) && PyList_GET_SIZE(pyDetailLevels) == 3)
+		{
+			len = PyList_GET_SIZE(pyDetailLevels);
+		}
+		else
+		{	
+			PyErr_Format(PyExc_AssertionError, "%s::__py_pySetDetailLevel: detail levels type error or count != 3 (%d).", 
+				pobj->scriptName(), pobj->id());
+			PyErr_PrintEx(0);
+			return 0;
+		}
+
+		DetailLevel::Level level[3];
+		Py_ssize_t i;
+		float sumRadius = 0;
+		float oldLastSumRadius = 0;
+		float sumHyst = 0;
+		float oldLastSumHyst = 0;
+		for (i = 0; i < len; ++i) 
+		{
+            PyObject *v =
+                PySequence_GetItem(pyDetailLevels, i);
+
+			float radius = pobj->detailLevel_.level[i].radius - oldLastSumRadius;
+			float hyst = pobj->detailLevel_.level[i].hyst - oldLastSumHyst;
+
+			oldLastSumRadius = pobj->detailLevel_.level[i].radius;
+			oldLastSumHyst = pobj->detailLevel_.level[i].hyst;
+
+			if (PyTuple_Check(v))
+			{
+				if (PyTuple_Size(v) != 2)
+				{
+					PyErr_Format(PyExc_AssertionError, "%s::__py_pySetDetailLevel: detail levels tuple value count != 2 (%d).", 
+						pobj->scriptName(), pobj->id());
+					PyErr_PrintEx(0);
+
+					return 0;
+				}
+								
+				radius = (float)PyFloat_AsDouble(PySequence_GetItem(v, 0));
+				hyst = (float)PyFloat_AsDouble(PySequence_GetItem(v, 1));
+
+			}
+			else if (PyList_Check(v))
+			{
+				if (PyList_GET_SIZE(v) != 2)
+				{
+					PyErr_Format(PyExc_AssertionError, "%s::__py_pySetDetailLevel: detail levels list value count != 2 (%d).", 
+						pobj->scriptName(), pobj->id());
+					PyErr_PrintEx(0);
+
+					return 0;
+				}
+				
+				radius = (float)PyFloat_AsDouble(PySequence_GetItem(v, 0));
+				hyst = (float)PyFloat_AsDouble(PySequence_GetItem(v, 1));
+			}
+			else 
+			{
+				if (!PyFloat_Check(v))
+				{
+					PyErr_Format(PyExc_AssertionError, "%s::__py_pySetDetailLevel: detail levels radius value not float type (%d).", 
+						pobj->scriptName(), pobj->id());
+					PyErr_PrintEx(0);
+
+					return 0;
+					
+				}
+
+				radius = (float)PyFloat_AsDouble(v);
+
+			}
+
+			sumRadius += radius;
+			sumHyst += hyst;
+			level[i].radius = sumRadius;
+			level[i].hyst = sumHyst;
+		}
+		memcpy((void*)&pobj->detailLevel_.level[0], (void*)&level[0], sizeof(level));
+
+	}
+	else if (argCount == 2)
+	{
+		PyObject* v = NULL;
+
+		DETAIL_TYPE detailType;
+		
+		PyArg_ParseTuple(args, "BO", &detailType, &v);
+		
+		if (!v)
+		{
+			PyErr_Format(PyExc_AssertionError, "%s::__py_pySetDetailLevel: parse 2 argument error(%d).", 
+				pobj->scriptName(), pobj->id());
+			PyErr_PrintEx(0);
+
+			return 0;
+		}
+		float oldLastSumRadius = 0;
+		float oldLastSumHyst = 0;
+		if (detailType > 0) 
+		{
+			oldLastSumRadius = pobj->detailLevel_.level[detailType-1].radius;
+			oldLastSumHyst = pobj->detailLevel_.level[detailType-1].hyst;
+		}
+
+		float radius = pobj->detailLevel_.level[detailType].radius - oldLastSumRadius;
+		float hyst = pobj->detailLevel_.level[detailType].hyst - oldLastSumHyst;
+
+		
+		if (PyTuple_Check(v))
+		{
+			if (PyTuple_Size(v) != 2)
+			{
+				PyErr_Format(PyExc_AssertionError, "%s::__py_pySetDetailLevel: detail levels tuple value count != 2 (%d).", 
+					pobj->scriptName(), pobj->id());
+				PyErr_PrintEx(0);
+
+				return 0;
+			}
+								
+			radius = (float)PyFloat_AsDouble(PySequence_GetItem(v, 0));
+			hyst = (float)PyFloat_AsDouble(PySequence_GetItem(v, 1));
+
+		}
+		else if (PyList_Check(v))
+		{
+			if (PyList_GET_SIZE(v) != 2)
+			{
+				PyErr_Format(PyExc_AssertionError, "%s::__py_pySetDetailLevel: detail levels list value count != 2 (%d).", 
+					pobj->scriptName(), pobj->id());
+				PyErr_PrintEx(0);
+
+				return 0;
+			}
+				
+			radius = (float)PyFloat_AsDouble(PySequence_GetItem(v, 0));
+			hyst = (float)PyFloat_AsDouble(PySequence_GetItem(v, 1));
+		}
+		else 
+		{
+			if (!PyFloat_Check(v))
+			{
+				PyErr_Format(PyExc_AssertionError, "%s::__py_pySetDetailLevel: detail levels radius value not float type (%d).", 
+					pobj->scriptName(), pobj->id());
+				PyErr_PrintEx(0);
+
+				return 0;
+					
+			}
+
+			radius = (float)PyFloat_AsDouble(v);
+		}
+
+		radius = oldLastSumRadius + radius - pobj->detailLevel_.level[detailType].radius;
+		hyst = oldLastSumHyst + hyst - pobj->detailLevel_.level[detailType].hyst;
+
+		for (int i = detailType; i <= DETAIL_LEVEL_FAR; ++i) 
+		{
+			pobj->detailLevel_.level[i].radius += radius;
+			pobj->detailLevel_.level[i].hyst += hyst;
+		}
+	}
+	else
+	{
+		PyErr_Format(PyExc_AssertionError, "%s::__py_pySetDetailLevel: detail levels list value count error (%d).", 
+			pobj->scriptName(), pobj->id());
+		PyErr_PrintEx(0);
+
+		return 0;
+	}
+
+	S_RETURN;
+}
+
+//-------------------------------------------------------------------------------------
+PyObject* Entity::pyGetDetailLevel(void)
+{
+	int count = sizeof(detailLevel_.level) / sizeof(detailLevel_.level[0]);
+	PyObject* pTuple = PyTuple_New(count);
+
+	for (uint8 i = 0; i < sizeof(detailLevel_.level); ++i)
+	{
+		PyObject* level = PyTuple_New(2);
+
+		PyTuple_SET_ITEM(level, 0, PyFloat_FromDouble(detailLevel_.level[i].radius));
+		PyTuple_SET_ITEM(level, 1, PyFloat_FromDouble(detailLevel_.level[i].hyst));
+
+		PyTuple_SET_ITEM(pTuple, i, level);
+	}
+
+	Py_INCREF(pTuple);
+
+	return pTuple;
+}
+
+
+//-------------------------------------------------------------------------------------
 float Entity::getViewHystArea(void) const
 {
 	if(pWitness_)
@@ -3226,7 +3516,7 @@ PyObject* Entity::entitiesInView(bool pending)
 	{
 		Entity* pEntity = (*iter)->pEntity();
 		
-		if(pEntity && (pending || (pEntity->flags() & ENTITYREF_FLAG_ENTER_CLIENT_PENDING) <= 0))
+		if(pEntity && (pending || ((*iter)->flags() & ENTITYREF_FLAG_ENTER_CLIENT_PENDING) <= 0))
 		{
 			PyList_Append(pyList, pEntity);
 		}

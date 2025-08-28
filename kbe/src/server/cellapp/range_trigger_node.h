@@ -19,7 +19,9 @@ public:
 	INLINE void range(float xz, float y);
 	INLINE void old_range(float xz, float y);
 	INLINE float range_xz() const;
+	INLINE float old_range_xz() const;
 	INLINE float range_y() const;
+
 
 	INLINE RangeTrigger* pRangeTrigger() const;
 	INLINE void pRangeTrigger(RangeTrigger* pRangeTrigger);
@@ -32,13 +34,13 @@ public:
 	virtual float yy() const;
 	virtual float zz() const;
 
-	INLINE bool isInXRange(CoordinateNode * pNode);
-	INLINE bool isInYRange(CoordinateNode * pNode);
-	INLINE bool isInZRange(CoordinateNode * pNode);
+	INLINE virtual bool isInXRange(CoordinateNode * pNode);
+	INLINE virtual bool isInYRange(CoordinateNode * pNode);
+	INLINE virtual bool isInZRange(CoordinateNode * pNode);
 
-	INLINE bool wasInXRange(CoordinateNode * pNode);
-	bool wasInYRange(CoordinateNode * pNode);
-	INLINE bool wasInZRange(CoordinateNode * pNode);
+	INLINE virtual bool wasInXRange(CoordinateNode * pNode);
+	virtual bool wasInYRange(CoordinateNode * pNode);
+	INLINE virtual bool wasInZRange(CoordinateNode * pNode);
 
 	virtual void resetOld()
 	{ 

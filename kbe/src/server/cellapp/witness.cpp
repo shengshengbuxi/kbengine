@@ -41,7 +41,8 @@ pViewTrigger_(NULL),
 pViewHysteresisAreaTrigger_(NULL),
 viewEntities_(),
 viewEntities_map_(),
-clientViewSize_(0)
+clientViewSize_(0),
+clientViewEntities_()
 {
 	updatableName = "Witness";
 }
@@ -218,6 +219,7 @@ void Witness::clear(Entity* pEntity)
 
 	viewEntities_.clear();
 	viewEntities_map_.clear();
+	clientViewEntities_.clear();
 
 	Cellapp::getSingleton().removeUpdatable(this);
 }
@@ -393,6 +395,12 @@ void Witness::onEnterView(ViewTrigger* pViewTrigger, Entity* pEntity)
 
 					KBE_ASSERT(clientViewSize_ > 0);
 					--clientViewSize_;
+					
+					clientViewEntities_.erase(clientViewEntities_.begin() + pEntityRef->aliasID());
+					for (uint32 clientViewEntitiesIndex = pEntityRef->aliasID(); clientViewEntitiesIndex < clientViewEntities_.size(); ++clientViewEntitiesIndex)
+					{
+						viewEntities_map_[clientViewEntities_.at(clientViewEntitiesIndex)]->aliasID(clientViewEntitiesIndex);
+					}
 
 					VIEW_ENTITIES::iterator iter1 = viewEntities_.begin();
 					for (; iter1 != viewEntities_.end(); iter1++)
@@ -403,9 +411,9 @@ void Witness::onEnterView(ViewTrigger* pViewTrigger, Entity* pEntity)
 							break;
 						}
 					}
-
+					
 					viewEntities_.push_back(pEntityRef);
-					updateEntitiesAliasID();
+					//updateEntitiesAliasID();
 				}
 			}
 
@@ -474,6 +482,13 @@ void Witness::_onLeaveView(EntityRef* pEntityRef)
 void Witness::resetViewEntities()
 {
 	clientViewSize_ = 0;
+	for (std::vector<ENTITY_ID>::iterator clientViewEntitiesIt = clientViewEntities_.begin(); clientViewEntitiesIt != clientViewEntities_.end(); ++clientViewEntitiesIt)
+	{
+		viewEntities_map_[*clientViewEntitiesIt]->aliasID(0);
+	}
+
+	clientViewEntities_.clear();
+
 	VIEW_ENTITIES::iterator iter = viewEntities_.begin();
 	for(; iter != viewEntities_.end(); )
 	{
@@ -489,7 +504,8 @@ void Witness::resetViewEntities()
 		++iter;
 	}
 	
-	updateEntitiesAliasID();
+	//updateEntitiesAliasID();
+	
 }
 
 //-------------------------------------------------------------------------------------
@@ -554,6 +570,7 @@ void Witness::onLeaveSpace(SpaceMemory* pSpace)
 	viewEntities_map_.clear();
 
 	clientViewSize_ = 0;
+	clientViewEntities_.clear();
 }
 
 //-------------------------------------------------------------------------------------
@@ -790,7 +807,7 @@ bool Witness::update()
 					viewEntities_map_.erase(pEntityRef->id());
 					EntityRef::reclaimPoolObject(pEntityRef);
 					iter = viewEntities_.erase(iter);
-					updateEntitiesAliasID();
+					//updateEntitiesAliasID();
 					continue;
 				}
 				
@@ -819,6 +836,12 @@ bool Witness::update()
 				KBE_ASSERT(clientViewSize_ != 65535);
 
 				++clientViewSize_;
+				//if (clientViewEntities_.size() <= 255) {
+				pEntityRef->aliasID(clientViewEntities_.size());
+				//}
+				
+				clientViewEntities_.push_back(pEntityRef->id());
+				
 			}
 			else if((pEntityRef->flags() & ENTITYREF_FLAG_LEAVE_CLIENT_PENDING) > 0)
 			{
@@ -832,12 +855,19 @@ bool Witness::update()
 					
 					KBE_ASSERT(clientViewSize_ > 0);
 					--clientViewSize_;
+					
+					clientViewEntities_.erase(clientViewEntities_.begin() + pEntityRef->aliasID());
+					for (uint32 clientViewEntitiesIndex = pEntityRef->aliasID(); clientViewEntitiesIndex < clientViewEntities_.size(); ++clientViewEntitiesIndex)
+					{
+						viewEntities_map_[clientViewEntities_.at(clientViewEntitiesIndex)]->aliasID(clientViewEntitiesIndex);
+					}
+					
 				}
 
 				viewEntities_map_.erase(pEntityRef->id());
 				EntityRef::reclaimPoolObject(pEntityRef);
 				iter = viewEntities_.erase(iter);
-				updateEntitiesAliasID();
+				//updateEntitiesAliasID();
 				continue;
 			}
 			else
@@ -845,12 +875,19 @@ bool Witness::update()
 				Entity* otherEntity = pEntityRef->pEntity();
 				if(otherEntity == NULL)
 				{
+					--clientViewSize_;
+							
+					clientViewEntities_.erase(clientViewEntities_.begin() + pEntityRef->aliasID());
+					for (uint32 clientViewEntitiesIndex = pEntityRef->aliasID(); clientViewEntitiesIndex < clientViewEntities_.size(); ++clientViewEntitiesIndex)
+					{
+						viewEntities_map_[clientViewEntities_.at(clientViewEntitiesIndex)]->aliasID(clientViewEntitiesIndex);
+					}
+
 					viewEntities_map_.erase(pEntityRef->id());
 					EntityRef::reclaimPoolObject(pEntityRef);
 					iter = viewEntities_.erase(iter);
 					KBE_ASSERT(clientViewSize_ > 0);
-					--clientViewSize_;
-					updateEntitiesAliasID();
+					//updateEntitiesAliasID();
 					continue;
 				}
 				

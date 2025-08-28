@@ -16,7 +16,7 @@ public:
 	RangeTrigger(CoordinateNode* origin, float xz, float y);
 	virtual ~RangeTrigger();
 
-	bool install();
+	virtual bool install();
 	bool uninstall();
 	bool reinstall(CoordinateNode* pCoordinateNode);
 	INLINE bool isInstalled() const;

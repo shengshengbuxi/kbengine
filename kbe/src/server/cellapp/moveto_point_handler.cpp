@@ -96,15 +96,14 @@ bool MoveToPointHandler::requestMoveOver(const Position3D& oldPos)
 	return true;
 }
 
-//-------------------------------------------------------------------------------------
-bool MoveToPointHandler::update()
-{
+bool MoveToPointHandler::move(float* pRemainingTicks) 
+{	
 	if (isDestroyed_)
 	{
 		delete this;
 		return false;
 	}
-	
+
 	Entity* pEntity = pController_->pEntity();
 	Py_INCREF(pEntity);
 
@@ -113,13 +112,18 @@ bool MoveToPointHandler::update()
 	Position3D currpos_backup = currpos;
 	Direction3D direction = pEntity->direction();
 
+	float metresToGo = velocity_;
+
+	if (pRemainingTicks)
+		metresToGo = *pRemainingTicks * velocity_;
+
 	Vector3 movement = dstPos - currpos;
 	if (!moveVertically_) movement.y = 0.f;
 	
 	bool ret = true;
 	float dist_len = KBEVec3Length(&movement);
 
-	if (dist_len < velocity_ + distance_)
+	if (dist_len < metresToGo + distance_)
 	{
 		float y = currpos.y;
 
@@ -139,6 +143,9 @@ bool MoveToPointHandler::update()
 			currpos = dstPos;
 		}
 
+		if (pRemainingTicks)
+			*pRemainingTicks *= (metresToGo - movement.length()) / velocity_;
+
 		if (!moveVertically_)
 			currpos.y = y;
 
@@ -150,8 +157,12 @@ bool MoveToPointHandler::update()
 		KBEVec3Normalize(&movement, &movement); 
 
 		// 移动位置
-		movement *= velocity_;
+		movement *= metresToGo;
 		currpos += movement;
+
+		if (pRemainingTicks) 
+			*pRemainingTicks = 0.f;
+
 	}
 	
 	// 是否需要改变面向
@@ -163,6 +174,7 @@ bool MoveToPointHandler::update()
 		if (movement.y != 0.f)
 			direction.pitch(movement.pitch());
 	}
+	
 	
 	// 设置entity的新位置和面向
 	if(!isDestroyed_)
@@ -187,6 +199,100 @@ bool MoveToPointHandler::update()
 
 	Py_DECREF(pEntity);
 	return true;
+}
+//-------------------------------------------------------------------------------------
+bool MoveToPointHandler::update()
+{
+	//if (isDestroyed_)
+	//{
+	//	delete this;
+	//	return false;
+	//}
+	//
+	//Entity* pEntity = pController_->pEntity();
+	//Py_INCREF(pEntity);
+
+	//const Position3D& dstPos = destPos();
+	//Position3D currpos = pEntity->position();
+	//Position3D currpos_backup = currpos;
+	//Direction3D direction = pEntity->direction();
+
+	//Vector3 movement = dstPos - currpos;
+	//if (!moveVertically_) movement.y = 0.f;
+	//
+	//bool ret = true;
+	//float dist_len = KBEVec3Length(&movement);
+
+	//if (dist_len < velocity_ + distance_)
+	//{
+	//	float y = currpos.y;
+
+	//	if (distance_ > 0.0f)
+	//	{
+	//		// 单位化向量
+	//		KBEVec3Normalize(&movement, &movement); 
+	//			
+	//		if(dist_len > distance_)
+	//		{
+	//			movement *= distance_;
+	//			currpos = dstPos - movement;
+	//		}
+	//	}
+	//	else
+	//	{
+	//		currpos = dstPos;
+	//	}
+
+	//	if (!moveVertically_)
+	//		currpos.y = y;
+
+	//	ret = false;
+	//}
+	//else
+	//{
+	//	// 单位化向量
+	//	KBEVec3Normalize(&movement, &movement); 
+
+	//	// 移动位置
+	//	movement *= velocity_;
+	//	currpos += movement;
+	//}
+	//
+	//// 是否需要改变面向
+	//if (faceMovement_)
+	//{
+	//	if (movement.x != 0.f || movement.z != 0.f)
+	//		direction.yaw(movement.yaw());
+
+	//	if (movement.y != 0.f)
+	//		direction.pitch(movement.pitch());
+	//}
+	//
+	//// 设置entity的新位置和面向
+	//if(!isDestroyed_)
+	//	pEntity->setPositionAndDirection(currpos, direction);
+
+	//// 非navigate都不能确定其在地面上
+	//if(!isDestroyed_)
+	//	pEntity->isOnGround(isOnGround());
+
+	//// 通知脚本
+	//if(!isDestroyed_)
+	//	pEntity->onMove(pController_->id(), layer_, currpos_backup, pyuserarg_);
+
+	//// 如果在onMove过程中被停止，又或者达到目的地了，则直接销毁并返回false
+	//if (isDestroyed_ || 
+	//	(!ret && requestMoveOver(currpos_backup)))
+	//{
+	//	Py_DECREF(pEntity);
+	//	delete this;
+	//	return false;
+	//}
+
+	//Py_DECREF(pEntity);
+	//return true;
+
+	return move();
 }
 
 //-------------------------------------------------------------------------------------

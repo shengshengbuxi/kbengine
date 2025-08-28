@@ -257,6 +257,27 @@ public:
 	*/
 	DECLARE_PY_MOTHOD_ARG0(pyGetWitnesses);
 
+	/**
+		返回观察该实体的所有观察者
+	*/
+	DECLARE_PY_MOTHOD_ARG1(pyEntityInWitnessed, int);
+	
+	/**
+		获取本实体在对应的客户端视野范围内的客户端实体
+	*/
+	DECLARE_PY_MOTHOD_ARG1(pyClientIn, int);
+
+
+	/**
+	*	设置细节级别
+	*/
+
+	DetailLevel& getDetailLevel();
+
+	static PyObject* __py_pySetDetailLevel(PyObject* self, PyObject* args);
+
+	DECLARE_PY_MOTHOD_ARG0(pyGetDetailLevel);
+
 	/** 
 		当前entity是否为real 
 	*/
@@ -684,6 +705,9 @@ protected:
 
 	// 如果用户有设置过Volatileinfo，则此处创建Volatileinfo，否则为NULL使用ScriptDefModule的Volatileinfo
 	VolatileInfo*											pCustomVolatileinfo_;
+	
+	// entity的详情级别数据
+	DetailLevel							detailLevel_;
 };
 
 }

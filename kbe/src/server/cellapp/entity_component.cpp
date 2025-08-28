@@ -12,6 +12,7 @@ SCRIPT_METHOD_DECLARE_BEGIN(EntityComponent)
 SCRIPT_METHOD_DECLARE("addTimer",						pyAddTimer,				METH_VARARGS,		0)
 SCRIPT_METHOD_DECLARE("delTimer",						pyDelTimer,				METH_VARARGS,		0)
 SCRIPT_METHOD_DECLARE("clientEntity",					pyClientEntity,			METH_VARARGS,		0)
+SCRIPT_METHOD_DECLARE("clientIn",						pyClientIn,			METH_VARARGS,		0)
 SCRIPT_METHOD_DECLARE_END()
 
 SCRIPT_GETSET_DECLARE_BEGIN(EntityComponent)

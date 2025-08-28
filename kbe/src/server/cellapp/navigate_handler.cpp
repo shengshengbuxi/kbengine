@@ -64,5 +64,120 @@ bool NavigateHandler::requestMoveOver(const Position3D& oldPos)
 }
 
 //-------------------------------------------------------------------------------------
+bool NavigateHandler::update()
+{
+	if (isDestroyed_)
+	{
+		delete this;
+		return false;
+	}
+
+	float tick = 1.f;
+
+	int numOfLoops = 0;
+	float distance = distance_;
+
+	bool ret = true;
+
+	do
+	{
+
+		distance_ = 0;
+
+		if (destPosIdx_ >= ((int)paths_->size()))
+			distance_ = distance;
+
+		ret = move(&tick);
+
+		if (ret) 
+		{
+			distance_ = distance;
+
+			if (++numOfLoops > 100)
+			{
+
+				if(pController_ && pController_->pEntity())
+					pController_->pEntity()->onMoveFailure(pController_->id(), pyuserarg_);
+
+			
+				if(pController_)
+					pController_->destroy();
+		
+				pController_.reset();
+			}
+		}
+		
+	}	while (!almostZero(tick) && ret);
+
+
+	//if (isDestroyed_)
+	//{
+	//	delete this;
+	//	return false;
+	//}
+	//
+
+	//float distance = distance_;
+	//float velocity = velocity_;
+
+	//bool ret = true;
+	//float remainingTicks = 1.f;
+
+	//while (ret && remainingTicks  > 0.f)
+	//{		
+	//	if (isDestroyed_)
+	//	{
+	//		delete this;
+	//		return false;
+	//	}
+
+	//	
+	//	Entity* pEntity = pController_->pEntity();
+	//	Position3D pos = pEntity->position();
+
+
+
+	//	int oldDestPosIdx = destPosIdx_;
+
+
+	//	if (destPosIdx_ < (int)paths_->size()-1) 
+	//	{
+	//		distance_ = 0;
+	//	}
+	//	else
+	//	{
+	//		distance_ = distance;
+	//	}
+
+	//	
+	//	velocity_ = remainingTicks * velocity;
+
+
+	//	ret = MoveToPointHandler::update();
+
+	//	if (ret)
+	//	{
+	//		distance_ = distance;
+	//		
+	//		Vector3 movement = pEntity->position() - pos;
+	//			
+	//		if (!moveVertically_) movement.y = 0.f;
+	//			
+	//		float dist_len = KBEVec3Length(&movement);
+
+	//
+	//		remainingTicks -= dist_len / velocity;
+
+	//		velocity_ = velocity;
+	//	}
+
+	//};
+
+
+	//
+	return ret;
+}
+
+//-------------------------------------------------------------------------------------
 }
 

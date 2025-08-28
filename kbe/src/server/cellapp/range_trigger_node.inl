@@ -74,6 +74,12 @@ INLINE float RangeTriggerNode::range_xz() const
 }
 
 //-------------------------------------------------------------------------------------
+INLINE float RangeTriggerNode::old_range_xz() const
+{
+	return old_range_xz_;
+}
+
+//-------------------------------------------------------------------------------------
 INLINE float RangeTriggerNode::range_y() const
 {
 	return range_y_;
