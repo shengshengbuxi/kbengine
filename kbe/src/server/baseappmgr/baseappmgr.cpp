@@ -880,6 +880,100 @@ void Baseappmgr::onReqAccountBindEmailCBFromLoginapp(Network::Channel* pChannel,
 	cinfos->pChannel->send(pBundleToBaseapp);
 }
 
+
+
+//-------------------------------------------------------------------------------------
+void Baseappmgr::reqCreateNewEntityAnywhereByDB(Network::Channel* pChannel, MemoryStream& s)
+{
+	//Components::ComponentInfos* cinfos =
+	//	Components::getSingleton().findComponent(pChannel);
+
+	//// 此时肯定是在运行状态中，但有可能在等待创建space
+	//// 所以初始化进度没有完成, 在只有一个baseapp的情况下如果这
+	//// 里不进行设置将是一个相互等待的状态
+	//if (cinfos)
+	//	cinfos->state = COMPONENT_STATE_RUN;
+
+	//updateBestBaseapp();
+
+	//if (bestBaseappID_ == 0 && numLoadBalancingApp() == 0)
+	//{
+	//	ERROR_MSG(fmt::format("Baseappmgr::reqCreateEntityAnywhereFromDBIDQueryBestBaseappID: Unable to allocate baseapp for load balancing! baseappSize={}.\n",
+	//		baseapps_.size()));
+	//}
+
+	//if (cinfos)
+	//{
+	//	Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
+	//	(*pBundle).newMessage(BaseappInterface::onGetCreateNewEntityAnywhereByDBBestBaseappID);
+
+	//	(*pBundle) << bestBaseappID_;
+	//	(*pBundle).append((char*)s.data() + s.rpos(), (int)s.length());
+	//	cinfos->pChannel->send(pBundle);
+	//}
+
+	//s.done();
+
+
+	Components::ComponentInfos* cinfos = 
+		Components::getSingleton().findComponent(pChannel);
+
+	// 此时肯定是在运行状态中，但有可能在等待创建space
+	// 所以初始化进度没有完成, 在只有一个baseapp的情况下如果这
+	// 里不进行设置将是一个相互等待的状态
+	if(cinfos)
+		cinfos->state = COMPONENT_STATE_RUN;
+
+	updateBestBaseapp();
+
+	if (bestBaseappID_ == 0 && numLoadBalancingApp() == 0)
+	{
+		ERROR_MSG(fmt::format("Baseappmgr::reqCreateNewEntityAnywhereByDB: Unable to allocate baseapp for load balancing! baseappSize={}.\n",
+			baseapps_.size()));
+	}
+
+	cinfos = Components::getSingleton().findComponent(BASEAPP_TYPE, bestBaseappID_);
+	if (cinfos == NULL || cinfos->pChannel == NULL || cinfos->state != COMPONENT_STATE_RUN)
+	{
+		Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
+		ForwardItem* pFI = new AppForwardItem();
+		pFI->pBundle = pBundle;
+		(*pBundle).newMessage(BaseappInterface::onCreateNewEntityAnywhereByDB);
+		(*pBundle).append((char*)s.data() + s.rpos(), (int)s.length());
+		s.done();
+
+		int runstate = -1;
+		if (cinfos)
+			runstate = (int)cinfos->state;
+
+		WARNING_MSG(fmt::format("Baseappmgr::reqCreateNewEntityAnywhereByDB: not found baseapp({}, runstate={}, pChannel={}), message is buffered.\n",
+			bestBaseappID_, runstate, (cinfos && cinfos->pChannel ? cinfos->pChannel->c_str() : "NULL")));
+
+		pFI->pHandler = NULL;
+		forward_anywhere_baseapp_messagebuffer_.push(pFI);
+		return;
+	}
+	
+	//DEBUG_MSG("Baseappmgr::reqCreateEntityAnywhere: %s opsize=%d, selBaseappIdx=%d.\n", 
+	//	pChannel->c_str(), s.opsize(), currentBaseappIndex);
+
+	Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
+	(*pBundle).newMessage(BaseappInterface::onCreateNewEntityAnywhereByDB);
+
+	(*pBundle).append((char*)s.data() + s.rpos(), (int)s.length());
+	cinfos->pChannel->send(pBundle);
+	s.done();
+
+	// 预先将实体数量增加
+	std::map< COMPONENT_ID, Baseapp >::iterator baseapps_iter = baseapps_.find(bestBaseappID_);
+	if (baseapps_iter != baseapps_.end())
+	{
+		baseapps_iter->second.incNumEntities();
+	}
+
+}
+
+
 //-------------------------------------------------------------------------------------
 
 }

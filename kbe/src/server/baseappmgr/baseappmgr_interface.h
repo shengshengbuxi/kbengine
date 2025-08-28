@@ -135,6 +135,11 @@ NETWORK_INTERFACE_DECLARE_BEGIN(BaseappmgrInterface)
 									std::string,										loginappCBHost, 
 									uint16,												loginappCBPort)
 
+
+										
+	
+	BASEAPPMGR_MESSAGE_DECLARE_STREAM(reqCreateNewEntityAnywhereByDB, NETWORK_VARIABLE_MESSAGE)
+
 	NETWORK_INTERFACE_DECLARE_END()
 
 #ifdef DEFINE_IN_INTERFACE
