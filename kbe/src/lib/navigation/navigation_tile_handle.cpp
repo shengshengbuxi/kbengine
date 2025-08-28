@@ -409,9 +409,21 @@ int NavTileHandle::getMap(int x, int y)
 	if(!validTile(x, y))
 		return TILE_STATE_CLOSED;	 
 
-	Tmx::MapTile& mapTile = pTilemap->GetLayer(currentLayer)->GetTile(x, y);
+	const Tmx::Layer* layer = pTilemap->GetLayer(currentLayer);
+
+	if (Tmx::TMX_LAYERTYPE_TILE != layer->GetLayerType()) {
+		return TILE_STATE_CLOSED;
+	}
 	
-	return (int)mapTile.id;
+	const Tmx::MapTile& mapTile = static_cast<const Tmx::TileLayer*>(layer)->GetTile(x, y);
+	
+	if (mapTile.tilesetId == -1) {
+		return TILE_STATE_CLOSED;
+	}
+	
+	//return (int)mapTile.id;
+	return TILE_STATE_OPENED_COST1;
+
 }
 
 //-------------------------------------------------------------------------------------
