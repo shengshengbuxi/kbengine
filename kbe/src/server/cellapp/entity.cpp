@@ -726,7 +726,7 @@ void Entity::onDefDataChanged(EntityComponent* pEntityComponent, const PropertyD
 		}
 	}
 	
-	//const Position3D& basePos = this->position(); 
+	const Position3D& basePos = this->position(); 
 	if((flags & ENTITY_BROADCAST_OTHER_CLIENT_FLAGS) > 0)
 	{
 		DETAIL_TYPE propertyDetailLevel = propertyDescription->getDetailLevel();
