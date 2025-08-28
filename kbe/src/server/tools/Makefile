@@ -19,6 +19,7 @@ endif
 	$(MAKE) -C interfaces $@
 	$(MAKE) -C logger $@
 	$(MAKE) -C kbcmd $@
+	$(MAKE) -C tool $@
 
 ifdef KBE_CONFIG
 	@echo completed $@ \(KBE_CONFIG = $(KBE_CONFIG)\)
