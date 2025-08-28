@@ -153,7 +153,7 @@ bool Resmgr::initialize()
 
 	if(getPySysResPath() == "" || getPyUserResPath() == "" || getPyUserScriptsPath() == "")
 	{
-		if (UNKNOWN_COMPONENT_TYPE != g_componentType && g_componentType != TOOL_TYPE)
+		if (UNKNOWN_COMPONENT_TYPE != g_componentType && g_componentType != CMD_TYPE)
 		{
 			printf("[ERROR] Resmgr::initialize: not set environment, (KBE_ROOT=%s, KBE_RES_PATH=%s, KBE_BIN_PATH=%s) invalid!\n",
 				kb_env_.root_path.c_str(), kb_env_.res_path.c_str(), kb_env_.bin_path.c_str());
@@ -521,6 +521,8 @@ std::string Resmgr::getPyUserComponentScriptsPath(COMPONENT_TYPE componentType)
 				path += "bots/";
 			else if (g_componentType == CLIENT_TYPE)
 				path += "client/";
+			else if (g_componentType == TOOL_TYPE)
+				path += "tool/";
 			else
 				KBE_ASSERT(false);
 		}
@@ -543,6 +545,8 @@ std::string Resmgr::getPyUserComponentScriptsPath(COMPONENT_TYPE componentType)
 				path += "bots/";
 			else if (componentType == CLIENT_TYPE)
 				path += "client/";
+			else if (componentType == TOOL_TYPE)
+				path += "tool/";
 			else
 				KBE_ASSERT(false);
 		}
