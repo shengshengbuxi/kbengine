@@ -28,6 +28,7 @@ ProfileHandler(networkInterface, timinglen, name, addr)
 PyProfileHandler::~PyProfileHandler()
 {
 	if(name_ != "kbengine" || !(g_componentType == BASEAPP_TYPE ? g_kbeSrvConfig.getBaseApp().profiles.open_pyprofile : 
+		g_componentType == TOOL_TYPE ? g_kbeSrvConfig.getTool().profiles.open_pyprofile : 
 		g_kbeSrvConfig.getCellApp().profiles.open_pyprofile))
 		script::PyProfile::remove(name_);
 }
@@ -36,6 +37,7 @@ PyProfileHandler::~PyProfileHandler()
 void PyProfileHandler::timeout()
 {
 	if(name_ != "kbengine" || !(g_componentType == BASEAPP_TYPE ? g_kbeSrvConfig.getBaseApp().profiles.open_pyprofile : 
+		g_componentType == TOOL_TYPE ? g_kbeSrvConfig.getTool().profiles.open_pyprofile : 
 		g_kbeSrvConfig.getCellApp().profiles.open_pyprofile))
 		script::PyProfile::stop(name_);
 
@@ -43,6 +45,7 @@ void PyProfileHandler::timeout()
 	script::PyProfile::addToStream(name_, &s);
 
 	if(name_ == "kbengine" && (g_componentType == BASEAPP_TYPE ? g_kbeSrvConfig.getBaseApp().profiles.open_pyprofile : 
+		g_componentType == TOOL_TYPE ? g_kbeSrvConfig.getTool().profiles.open_pyprofile : 
 		g_kbeSrvConfig.getCellApp().profiles.open_pyprofile))
 		script::PyProfile::start(name_);
 	

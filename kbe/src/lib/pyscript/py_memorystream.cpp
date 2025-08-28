@@ -332,7 +332,7 @@ PyObject* PyMemoryStream::__py_append(PyObject* self, PyObject* args, PyObject* 
 		const char* s = PyUnicode_AsUTF8AndSize(pyVal, NULL);
 		pyobj->stream() << s;
 	}
-	else if(strcmp(type, "UNICODE") == 0)
+	else if(strcmp(type, "UNICODE") == 0 || strcmp(type, "TEXT") == 0)
 	{
 		Py_ssize_t size;
 		const char* s = PyUnicode_AsUTF8AndSize(pyVal, &size);
@@ -485,7 +485,7 @@ PyObject* PyMemoryStream::__py_pop(PyObject* self, PyObject* args, PyObject* kwa
 			return PyUnicode_FromString(s.c_str());
 			
 		}
-		else if(strcmp(type, "UNICODE") == 0)
+		else if(strcmp(type, "UNICODE") == 0 || strcmp(type, "TEXT") == 0)
 		{
 			std::string s;
 			pyobj->stream().readBlob(s);
