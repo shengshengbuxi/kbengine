@@ -104,18 +104,18 @@ BOOL CStartServerLayoutWindow::OnInitDialog()
 void CStartServerLayoutWindow::saveHistory()
 {
     //创建一个XML的文档对象。
-    TiXmlDocument *pDocument = new TiXmlDocument();
+    tinyxml2::XMLDocument *pDocument = new tinyxml2::XMLDocument();
 
 	int i = 0;
 	std::deque<CString>::iterator iter = m_historyCommand.begin();
-	TiXmlElement *rootElement = new TiXmlElement("root");
+	tinyxml2::XMLElement* rootElement = pDocument->NewElement("root");
 	pDocument->LinkEndChild(rootElement);
 
 	for(; iter != m_historyCommand.end(); iter++)
 	{
 		char key[256] = {0};
 		kbe_snprintf(key, 256, "item%d", i++);
-		TiXmlElement *rootElementChild = new TiXmlElement(key);
+		tinyxml2::XMLElement* rootElementChild = pDocument->NewElement(key);
 		rootElement->LinkEndChild(rootElementChild);
 
 		char buffer[4096] = {0};
@@ -126,7 +126,7 @@ void CStartServerLayoutWindow::saveHistory()
 		buffer[len + 1] = '\0';
 
 
-		TiXmlText *content = new TiXmlText(buffer);
+		tinyxml2::XMLText* content = pDocument->NewText(buffer);
 		rootElementChild->LinkEndChild(content);
 	}
 
@@ -160,12 +160,12 @@ void CStartServerLayoutWindow::loadHistory()
 	WideCharToMultiByte(CP_ACP,0, fullPath, fullPath.GetLength(), fname, len, NULL, NULL);
 	fname[len + 1] = '\0';
 
-	TiXmlDocument *pDocument = new TiXmlDocument(fname);
-	if(pDocument == NULL || !pDocument->LoadFile(TIXML_ENCODING_UTF8))
+	tinyxml2::XMLDocument *pDocument = new tinyxml2::XMLDocument();
+	if(pDocument == NULL || tinyxml2::XML_SUCCESS != pDocument->LoadFile(fname))
 		return;
 
-	TiXmlElement *rootElement = pDocument->RootElement();
-	TiXmlNode* node = rootElement->FirstChild();
+	tinyxml2::XMLElement *rootElement = pDocument->RootElement();
+	tinyxml2::XMLNode* node = rootElement->FirstChild();
 	if(node)
 	{
 		do																				

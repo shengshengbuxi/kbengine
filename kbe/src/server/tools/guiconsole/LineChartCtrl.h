@@ -4,7 +4,7 @@
 
 #define MAX_POINTS 2048 //1 pixel per point, 2048 is the ordinary screen pixels count
 
-using namespace std;
+//using namespace std;
 class CLine
 {
 public:
@@ -32,8 +32,8 @@ public:
 	void RemoveUselessPoints();
 
 private:
-	vector<double> m_dXValue;
-	vector<double> m_dYValue;
+	std::vector<double> m_dXValue;
+	std::vector<double> m_dYValue;
 	CRITICAL_SECTION g_cs ;
 
 };
@@ -113,7 +113,7 @@ private:
 	CAxis m_axisY;       //Y axis
 	CAxis m_axisX;     //X axis
 
-	vector<CLine> m_lines;
+	std::vector<CLine> m_lines;
 
 	COLORREF m_clrBkColor; //plot control background color
 	int      m_nRate;      //update interval

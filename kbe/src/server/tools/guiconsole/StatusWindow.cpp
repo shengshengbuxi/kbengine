@@ -19,6 +19,7 @@
 #include "../../../server/tools/logger/logger_interface.h"
 #include "../../../server/tools/bots/bots_interface.h"
 #include "../../../server/tools/interfaces/interfaces_interface.h"
+#include "../../../server/tools/tool/tool_interface.h"
 
 class LookAppTask : public thread::TPTask
 {

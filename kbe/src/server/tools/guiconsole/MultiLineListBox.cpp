@@ -38,11 +38,11 @@ void CMultiLineListBox::Clear(bool destroy)
 	if(!destroy)
 		this->ResetContent();
 
-	vector<LISTBOXINFO*>::const_iterator iter1 = m_sArray.begin();
+	std::vector<LISTBOXINFO*>::const_iterator iter1 = m_sArray.begin();
 	for(; iter1 != m_sArray.end(); ++iter1)
 	{
 		LISTBOXINFO* pNode = *iter1;
-		vector<LISTBOXINFO::SUBNODEINFO*>::const_iterator iter2 = pNode->subArray.begin();
+		std::vector<LISTBOXINFO::SUBNODEINFO*>::const_iterator iter2 = pNode->subArray.begin();
 		for(; iter2 != pNode->subArray.end(); ++iter2)
 		{
 			LISTBOXINFO::SUBNODEINFO* pSubNode = *iter2;
@@ -199,7 +199,7 @@ void CMultiLineListBox::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 			rcItem.right = rect.right;
 			rcItem.bottom = rcItem.top + nItemHeight;
 
-			vector<LISTBOXINFO::SUBNODEINFO*>::const_iterator iter = pListBox->subArray.begin();
+			std::vector<LISTBOXINFO::SUBNODEINFO*>::const_iterator iter = pListBox->subArray.begin();
 			for(; iter != pListBox->subArray.end(); ++iter)
 			{
 				LISTBOXINFO::SUBNODEINFO* pSubNode = *iter;

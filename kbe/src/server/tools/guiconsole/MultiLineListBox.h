@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-using namespace std;
+//using namespace std;
 // CMultiLineListBox
 
 #define RGB_FOREGROUND RGB(0, 0, 0)
@@ -44,7 +44,7 @@ public:
 	}SUBNODEINFO, *PSUBNODEINFO;
 
 public:
-	vector<SUBNODEINFO*> subArray;
+	std::vector<SUBNODEINFO*> subArray;
 	CString strText;
 	COLORREF fgColor;
 	COLORREF bgColor;
@@ -70,7 +70,7 @@ protected:
 
 protected:
 	static int m_nFocusIndex;
-	vector<LISTBOXINFO*> m_sArray;
+	std::vector<LISTBOXINFO*> m_sArray;
 	int m_nMaxWidth; 
 	bool m_autoScroll;
 public:

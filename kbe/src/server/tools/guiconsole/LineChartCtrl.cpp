@@ -79,9 +79,9 @@ void CLine::RemoveUselessPoints()
 	EnterCriticalSection ( & g_cs ) ;
 	for(int i=0;i<MAX_POINTS;i++)
 	{
-		vector<double>::iterator itx = m_dXValue.begin();
+		std::vector<double>::iterator itx = m_dXValue.begin();
 		m_dXValue.erase(itx);
-		vector<double>::iterator ity = m_dYValue.begin();
+		std::vector<double>::iterator ity = m_dYValue.begin();
 		m_dYValue.erase(ity);
 	}
 	LeaveCriticalSection ( & g_cs ) ;

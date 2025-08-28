@@ -360,12 +360,12 @@ void CStartServerWindow::loadLayouts()
 	WideCharToMultiByte(CP_ACP,0, fullPath, fullPath.GetLength(), fname, len, NULL, NULL);
 	fname[len + 1] = '\0';
 
-	TiXmlDocument *pDocument = new TiXmlDocument(fname);
-	if(pDocument == NULL || !pDocument->LoadFile(TIXML_ENCODING_UTF8))
+	tinyxml2::XMLDocument *pDocument = new tinyxml2::XMLDocument();
+	if(pDocument == NULL || tinyxml2::XML_SUCCESS != pDocument->LoadFile(fname))
 		return;
 
-	TiXmlElement *rootElement = pDocument->RootElement();
-	TiXmlNode* node = rootElement->FirstChild();
+	tinyxml2::XMLElement *rootElement = pDocument->RootElement();
+	tinyxml2::XMLNode* node = rootElement->FirstChild();
 	if(node)
 	{
 		do																				
@@ -376,7 +376,7 @@ void CStartServerWindow::loadLayouts()
 			m_layoutlist.AddString(ws);
 			free(ws);
 
-			TiXmlNode* childnode = node->FirstChild();
+			tinyxml2::XMLNode* childnode = node->FirstChild();
 			if(childnode == NULL)
 				break;
 			do
@@ -396,28 +396,29 @@ void CStartServerWindow::loadLayouts()
 void CStartServerWindow::saveLayouts()
 {
     //创建一个XML的文档对象。
-    TiXmlDocument *pDocument = new TiXmlDocument();
+    tinyxml2::XMLDocument *pDocument = new tinyxml2::XMLDocument();
 
 	int i = 0;
 	KBEUnordered_map< std::string, std::vector<LAYOUT_ITEM> >::iterator iter = layouts_.begin();
-	TiXmlElement *rootElement = new TiXmlElement("root");
+	tinyxml2::XMLElement* rootElement = pDocument->NewElement("root");
+	
 	pDocument->LinkEndChild(rootElement);
 
 	for(; iter != layouts_.end(); iter++)
 	{
 		std::vector<LAYOUT_ITEM>::iterator iter1 = iter->second.begin();
 
-		TiXmlElement *rootElementChild = new TiXmlElement(iter->first.c_str());
+		tinyxml2::XMLElement* rootElementChild = pDocument->NewElement(iter->first.c_str());
 		rootElement->LinkEndChild(rootElementChild);
 
 		for(; iter1 != iter->second.end(); iter1++)
 		{
 			LAYOUT_ITEM& item = (*iter1);
 
-			TiXmlElement *rootElementChild1 = new TiXmlElement(item.componentName.c_str());
+			tinyxml2::XMLElement* rootElementChild1 = pDocument->NewElement(item.componentName.c_str());
 			rootElementChild->LinkEndChild(rootElementChild1);
 
-			TiXmlText *content = new TiXmlText(item.addr.c_str());
+			tinyxml2::XMLText* content = pDocument->NewText(item.addr.c_str());
 			rootElementChild1->LinkEndChild(content);
 		}
 	}
