@@ -64,6 +64,12 @@
 #define DEFINE_IN_INTERFACE
 #include "tools/interfaces/interfaces_interface.h"
 
+#undef DEFINE_IN_INTERFACE
+#include "tools/tool/tool_interface.h"
+#define DEFINE_IN_INTERFACE
+#include "tools/tool/tool_interface.h"
+
+
 using namespace KBEngine;
 
 #define PARSE_COMMAND_ARG_BEGIN()	\
@@ -460,7 +466,7 @@ int process_help(int argc, char* argv[])
 
 int main(int argc, char* argv[])
 {
-	g_componentType = TOOL_TYPE;
+	g_componentType = CMD_TYPE;
 	g_componentID = 0;
 
 	if (argc == 1)

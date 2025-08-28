@@ -339,7 +339,7 @@ bool ClientSDK::writeServerErrorDescrsModule()
 	std::map<uint16, std::pair< std::string, std::string> > errsDescrs;
 
 	{
-		TiXmlNode *rootNode = NULL;
+		tinyxml2::XMLNode *rootNode = NULL;
 		SmartPointer<XML> xml(new XML(Resmgr::getSingleton().matchRes("server/server_errors_defaults.xml").c_str()));
 
 		if (!xml->isGood())
@@ -355,8 +355,8 @@ bool ClientSDK::writeServerErrorDescrsModule()
 		{
 			XML_FOR_BEGIN(rootNode)
 			{
-				TiXmlNode* node = xml->enterNode(rootNode->FirstChild(), "id");
-				TiXmlNode* node1 = xml->enterNode(rootNode->FirstChild(), "descr");
+				tinyxml2::XMLNode* node = xml->enterNode(rootNode->FirstChild(), "id");
+				tinyxml2::XMLNode* node1 = xml->enterNode(rootNode->FirstChild(), "descr");
 				errsDescrs[xml->getValInt(node)] = std::make_pair< std::string, std::string>(xml->getKey(rootNode), xml->getVal(node1));
 			}
 			XML_FOR_END(rootNode);
@@ -364,7 +364,7 @@ bool ClientSDK::writeServerErrorDescrsModule()
 	}
 
 	{
-		TiXmlNode *rootNode = NULL;
+		tinyxml2::XMLNode *rootNode = NULL;
 
 		FILE* f = Resmgr::getSingleton().openRes("server/server_errors.xml");
 
@@ -380,8 +380,8 @@ bool ClientSDK::writeServerErrorDescrsModule()
 				{
 					XML_FOR_BEGIN(rootNode)
 					{
-						TiXmlNode* node = xml->enterNode(rootNode->FirstChild(), "id");
-						TiXmlNode* node1 = xml->enterNode(rootNode->FirstChild(), "descr");
+						tinyxml2::XMLNode* node = xml->enterNode(rootNode->FirstChild(), "id");
+						tinyxml2::XMLNode* node1 = xml->enterNode(rootNode->FirstChild(), "descr");
 						errsDescrs[xml->getValInt(node)] = std::make_pair< std::string, std::string>(xml->getKey(rootNode), xml->getVal(node1));
 					}
 					XML_FOR_END(rootNode);
@@ -1315,6 +1315,11 @@ bool ClientSDK::writeTypes()
 					if (!writeTypeItemType_ENTITYCALL(itemTypeName, itemTypeAliasName))
 						return false;
 				}
+				else if (type == "TEXT")
+				{
+					if (!writeTypeItemType_TEXT(itemTypeName, itemTypeAliasName))
+						return false;
+				}
 			}
 
 			if (!writeTypeEnd(typeName, pFixedDictType))
@@ -1570,7 +1575,10 @@ bool ClientSDK::writeEntityProperty(ScriptDefModule* pEntityScriptDefModule,
 	{
 		return writeEntityProperty_ENTITYCALL(pEntityScriptDefModule, pCurrScriptDefModule, pPropertyDescription);
 	}
-
+	else if (type == "TEXT")
+	{
+		return writeEntityProperty_TEXT(pEntityScriptDefModule, pCurrScriptDefModule, pPropertyDescription);
+	}
 	assert(false);
 	return false;
 }

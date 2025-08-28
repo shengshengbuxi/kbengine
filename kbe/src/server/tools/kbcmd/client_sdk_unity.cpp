@@ -75,7 +75,7 @@ std::string ClientSDKUnity::typeToType(const std::string& type)
 	{
 		return "string";
 	}
-	else if (type == "UNICODE")
+	else if (type == "UNICODE" || type == "TEXT")
 	{
 		return "string";
 	}
@@ -1486,7 +1486,7 @@ bool ClientSDKUnity::writeTypeItemType_AliasName(const std::string& itemName, co
 		sourcefileBody_ += fmt::format("\t\tpublic static {} MinValue\n\t\t{{\n", ntype);
 		sourcefileBody_ += fmt::format("\t\t\tget\n\t\t\t{{\n\t\t\t\treturn {}.MinValue;\n\t\t\t}}\n\t\t}}\n", ntype);
 	}
-	else if (childItemName == "STRING" || childItemName == "UNICODE")
+	else if (childItemName == "STRING" || childItemName == "UNICODE" || childItemName == "TEXT")
 	{
 		std::string ntype = typeToType(childItemName);
 		sourcefileBody_ += fmt::format("\t\t{} value;\n\n", ntype);

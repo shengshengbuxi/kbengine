@@ -79,7 +79,7 @@ std::string ClientSDKUE4::typeToType(const std::string& type)
 	{
 		return "FString";
 	}
-	else if (type == "UNICODE" || type == fmt::format("{}UNICODE", ConflictTypePrefix))
+	else if (type == "UNICODE" || type == fmt::format("{}UNICODE", ConflictTypePrefix) || type == "TEXT")
 	{
 		return "FString";
 	}
@@ -1899,7 +1899,7 @@ bool ClientSDKUE4::writeTypeItemType_AliasName(const std::string& itemName, cons
 		std::string ntype = typeToType(childItemName);
 		fileBody() += fmt::format("typedef {} {};\n\n", ntype, itemName);
 	}
-	else if (childItemName == "UNICODE")
+	else if (childItemName == "UNICODE" || childItemName == "TEXT")
 	{
 		std::string ntype = typeToType(childItemName);
 		fileBody() += fmt::format("typedef {} {}{};\n\n", ntype, ConflictTypePrefix, itemName);

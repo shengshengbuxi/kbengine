@@ -225,6 +225,11 @@ public:
 		return false;
 	}
 
+	virtual bool writeTypeItemType_TEXT(const std::string& itemName, const std::string& childItemName)
+	{
+		return false;
+	}
+
 	virtual bool writeTypeItemType_AliasName(const std::string& itemName, const std::string& childItemName)
 	{
 		return false;
@@ -358,6 +363,11 @@ public:
 	}
 
 	virtual bool writeEntityProperty_ENTITYCALL(ScriptDefModule* pEntityScriptDefModule,
+		ScriptDefModule* pCurrScriptDefModule, PropertyDescription* pPropertyDescription) {
+		return false;
+	}
+
+	virtual bool writeEntityProperty_TEXT(ScriptDefModule* pEntityScriptDefModule,
 		ScriptDefModule* pCurrScriptDefModule, PropertyDescription* pPropertyDescription) {
 		return false;
 	}
