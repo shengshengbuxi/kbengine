@@ -1062,8 +1062,8 @@ def createNewEntityByDB(  entityType, params={}, callback=None, shouldAutoLoad=-
 	
 	@writeConcern
 	bool，可选参数，是否写入数据库时，需要确认写入成功，默认为False
-		kbengine_default.xml->dbmgr->databaseInterfaces 中的dbInterfaceName的autoIncrementInit 有值的话，
-		当前服务雪花算法生成的dbid，则是立即创建实体，并且设置dbid，进行回调
+		kbengine_default.xml->dbmgr->databaseInterfaces 中的dbInterfaceName的autoIncrementInit 有值的话，会把数据表的自增索引设置成对应的值，dbid是用自增索引，创建新实体是异步回调
+		没值的话，则是当前服务（进程）用雪花算法生成的dbid，立即创建实体，并且设置dbid，进行回调
 
 
 	"""
@@ -1110,8 +1110,8 @@ def createNewEntityAnywhereByDB(  entityType, params={}, callback=None, shouldAu
 	
 	@writeConcern
 	bool，可选参数，是否写入数据库时，需要确认写入成功，默认为False
-		kbengine_default.xml->dbmgr->databaseInterfaces 中的dbInterfaceName的autoIncrementInit 有值的话，
-		当前服务雪花算法生成的dbid，则是立即创建实体，并且设置dbid，进行回调
+		kbengine_default.xml->dbmgr->databaseInterfaces 中的dbInterfaceName的autoIncrementInit  有值的话，会把数据表的自增索引设置成对应的值，dbid是用自增索引，创建新实体是异步回调
+		没值的话，则是当前服务（进程）用雪花算法生成的dbid，立即创建实体，并且设置dbid，进行回调
 
 
 	"""
