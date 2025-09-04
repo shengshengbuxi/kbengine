@@ -368,6 +368,9 @@
 					<characterSet> utf8mb4 </characterSet> 						<!-- Type: String -->
 					<collation> utf8mb4_bin </collation> 						<!-- Type: String -->
 				</unicodeString>
+
+				<!-- 数据库表的自增起始id，如果没有值，则database id 是64位 唯一ID -->
+				<autoIncrementInit> 1 </autoIncrementInit>
 			</default>
 		</databaseInterfaces>
 
