@@ -72,6 +72,10 @@ NETWORK_INTERFACE_DECLARE_BEGIN(ToolInterface)
 									uint16,											extport,
 									std::string,									extaddrEx)
 
+	// 某app请求获取一个entityID段的回调
+	TOOL_MESSAGE_DECLARE_ARGS2(onReqAllocEntityID,								NETWORK_FIXED_MESSAGE,
+									ENTITY_ID,										startID,
+									ENTITY_ID,										endID)
 
 
 	// 某app请求获取一个entityID段的回调

@@ -526,6 +526,8 @@ void Dbmgr::onReqAllocEntityID(Network::Channel* pChannel, COMPONENT_ORDER compo
 
 	if(ct == BASEAPP_TYPE)
 		(*pBundle).newMessage(BaseappInterface::onReqAllocEntityID);
+	else if (ct == TOOL_TYPE)
+		(*pBundle).newMessage(ToolInterface::onReqAllocEntityID);
 	else	
 		(*pBundle).newMessage(CellappInterface::onReqAllocEntityID);
 
