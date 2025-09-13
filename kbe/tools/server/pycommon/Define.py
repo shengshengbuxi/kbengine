@@ -17,8 +17,9 @@ LOGGER_TYPE				= 10
 BOTS_TYPE				= 11
 WATCHER_TYPE			= 12
 INTERFACES_TYPE			= 13
-TOOL_TYPE			= 14
-COMPONENT_END_TYPE		= 15
+CMD_TYPE				= 14
+TOOL_TYPE				= 15
+COMPONENT_END_TYPE		= 16
 
 VALID_COMPONENT_TYPE_FOR_RUN = [
 	DBMGR_TYPE, 
@@ -29,7 +30,7 @@ VALID_COMPONENT_TYPE_FOR_RUN = [
 	BASEAPP_TYPE, 
 	LOGGER_TYPE, 
 	BOTS_TYPE, 
-	INTERFACES_TYPE, 
+	INTERFACES_TYPE,
 	TOOL_TYPE,
 ]
 
@@ -49,6 +50,7 @@ COMPONENT_NAME2TYPE = {
 	"bots" 			: BOTS_TYPE,
 	"watcher" 		: WATCHER_TYPE,
 	"interfaces" 	: INTERFACES_TYPE,
+	"cmd": CMD_TYPE,
 	"tool" 	: TOOL_TYPE,
 }
 
@@ -68,6 +70,7 @@ COMPONENT_NAME = (
 	"bots",
 	"watcher",
 	"interfaces",
+	"cmd",
 	"tool"
 )
 

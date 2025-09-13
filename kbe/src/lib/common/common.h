@@ -88,7 +88,7 @@ enum COMPONENT_TYPE
 	INTERFACES_TYPE			= 13,
 	CMD_TYPE				= 14,
 	TOOL_TYPE				= 15,
-	COMPONENT_END_TYPE		= 17,
+	COMPONENT_END_TYPE		= 16,
 };
 
 /** 当前服务器组件类别和ID */
