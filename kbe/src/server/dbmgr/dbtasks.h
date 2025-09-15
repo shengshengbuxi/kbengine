@@ -175,6 +175,8 @@ public:
 		return "DBTaskWriteEntity";
 	}
 
+	bool writeEntityLog_;
+
 protected:
 	COMPONENT_ID componentID_;
 	COMPONENT_TYPE componentType_;
@@ -184,6 +186,7 @@ protected:
 	CALLBACK_ID callbackID_;
 	int8 shouldAutoLoad_;
 	bool success_;
+
 };
 
 /**
