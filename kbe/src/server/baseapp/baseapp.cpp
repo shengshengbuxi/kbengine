@@ -5910,7 +5910,7 @@ PyObject* Baseapp::__py_createNewEntityByDB(PyObject* self, PyObject* args, PyOb
 	if (!pyCallback || !PyCallable_Check(pyCallback))
 	{
 			
-		PyErr_Format(PyExc_TypeError, "Baseapp::__py_createNewEntityByDB: args error, isToDB is True, require callback arguemnt (%s)!");
+		PyErr_Format(PyExc_TypeError, "Baseapp::__py_createNewEntityByDB: args error, callback arguemnt!");
 
 		PyErr_PrintEx(0);
 
@@ -6020,7 +6020,7 @@ void Baseapp::createNewEntityByDB(const char* entityType, PyObject* params, PyOb
 	(*pBundle) << shouldAutoLoad;
 	
 	
-	if (dbid == 0)
+	//if (dbid == 0)
 	{ // 为了对齐dbmgr的读取流程
 		
 		uint32 ip = 0;
@@ -6345,7 +6345,7 @@ void Baseapp::onCreateNewEntityAnywhereByDB(Network::Channel* pChannel, KBEngine
 	(*pBundle) << shouldAutoLoad;
 	
 
-	if (dbid == 0)
+	//if (dbid == 0)
 	{ // 为了对齐dbmgr的读取流程
 		
 		uint32 ip = 0;

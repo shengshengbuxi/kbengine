@@ -321,7 +321,8 @@ entityDBID_(entityDBID),
 sid_(0),
 callbackID_(0),
 shouldAutoLoad_(-1),
-success_(false)
+success_(false),
+writeEntityLog_(false)
 {
 }
 
@@ -338,12 +339,15 @@ bool DBTaskWriteEntity::db_thread_process()
 	(*pDatas_) >> sid_ >> callbackID_ >> shouldAutoLoad_;
 
 	ScriptDefModule* pModule = EntityDef::findScriptModule(sid_);
-	bool writeEntityLog = (entityDBID_ == 0);
 
+	
+	writeEntityLog_ = writeEntityLog_ || (entityDBID_ == 0);
+
+	
 	uint32 ip = 0;
 	uint16 port = 0;
 
-	if(writeEntityLog)
+	if(writeEntityLog_)
 	{
 		if (pDatas_->length() < (sizeof(uint32) + sizeof(uint16)))
 		{
@@ -362,7 +366,7 @@ bool DBTaskWriteEntity::db_thread_process()
 	entityDBID_ = entityTables.writeEntity(pdbi_, entityDBID_, shouldAutoLoad_, pDatas_, pModule, pEntityDBIDVersionData());
 	success_ = entityDBID_ > 0;
 
-	if(writeEntityLog && success_)
+	if(writeEntityLog_ && success_)
 	{
 		success_ = false;
 
@@ -427,6 +431,7 @@ sourceComponentID_(sourceComponentID)
 {
 	//s_ = MemoryStream::createPoolObject(OBJECTPOOL_POINT);
 	//s_->append(datas);
+	writeEntityLog_ = true;
 
 }
 
@@ -439,15 +444,6 @@ DBTaskWriteNewEntity::~DBTaskWriteNewEntity()
 //-------------------------------------------------------------------------------------
 bool DBTaskWriteNewEntity::db_thread_process()
 {
-	/*(*s_).read_skip<ENTITY_SCRIPT_UID>();
-	(*s_).read_skip<CALLBACK_ID>();
-	(*s_).read_skip<int8>();
-
-	if (entityDBID_ == 0)
-	{
-		(*s_).read_skip<uint32>();
-		(*s_).read_skip<uint16>();
-	}*/
 
 	pDatas_->readBlob(strInitData_);
 
@@ -460,7 +456,7 @@ bool DBTaskWriteNewEntity::db_thread_process()
 thread::TPTask::TPTaskState DBTaskWriteNewEntity::presentMainThread()
 {
 	ScriptDefModule* pModule = EntityDef::findScriptModule(sid_);
-	DEBUG_MSG(fmt::format("Dbmgr::writeEntity: {0}({1}).\n", pModule->getName(), entityDBID_));
+	DEBUG_MSG(fmt::format("Dbmgr::writeNewEntity: {0}({1}).\n", pModule->getName(), entityDBID_));
 
 	// 返回写entity的结果， 成功或者失败
 
