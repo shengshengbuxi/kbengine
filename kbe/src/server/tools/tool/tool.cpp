@@ -487,6 +487,8 @@ bool Tool::installPyModules()
 	APPEND_SCRIPT_MODULE_METHOD(getScript().getModule(), 		getAppFlags,					__py_getFlags,												METH_VARARGS,			0);
 	APPEND_SCRIPT_MODULE_METHOD(getScript().getModule(),		addTimer,						__py_addTimer,											METH_VARARGS,	0);
 	APPEND_SCRIPT_MODULE_METHOD(getScript().getModule(),		delTimer,						__py_delTimer,											METH_VARARGS,	0);
+	APPEND_SCRIPT_MODULE_METHOD(getScript().getModule(), 		createNewEntityByDB,			__py_createNewEntityByDB,									METH_VARARGS|METH_KEYWORDS,			0);
+
 		
 	return EntityApp<Entity>::installPyModules();
 }
@@ -730,67 +732,6 @@ PyObject* Tool::__py_createEntity(PyObject* self, PyObject* args)
 	PyObject* params = NULL;
 	char* entityType = NULL;
 	int ret = 0;
-	DBID dbid = 0;
-	uint16 dbInterfaceIndex = 0;
-
-	if (argCount == 4) 
-		ret = PyArg_ParseTuple(args, "s|O|L|U", &entityType, &params, &dbid, &dbInterfaceIndex);
-	else if (argCount == 3) 
-		ret = PyArg_ParseTuple(args, "s|O|L", &entityType, &params, &dbid);
-	else if (argCount == 2)
-		ret = PyArg_ParseTuple(args, "s|O", &entityType, &params);
-	else
-		ret = PyArg_ParseTuple(args, "s", &entityType);
-
-	if (entityType == NULL || !ret)
-	{
-		PyErr_Format(PyExc_AssertionError, "Tool::createEntity: args error!");
-		PyErr_PrintEx(0);
-		return NULL;
-	}
-
-	if (dbid != 0) 
-	{
-		if (strlen(g_kbeSrvConfig.dbInterface(g_kbeSrvConfig.dbInterfaceIndex2dbInterfaceName(dbInterfaceIndex))->db_autoIncrementInit) != 0)
-		{
-			PyErr_Format(PyExc_AssertionError, "Tool::createEntity: database is auto increment, dbid not assigned!");
-			PyErr_PrintEx(0);
-			return NULL;
-		}
-	}
-
-	PyObject* e = Tool::getSingleton().createEntity(entityType, params, false);
-	if (e != NULL)
-	{
-		if (strlen(g_kbeSrvConfig.dbInterface(g_kbeSrvConfig.dbInterfaceIndex2dbInterfaceName(dbInterfaceIndex))->db_autoIncrementInit) == 0) 
-		{
-			if (dbid == 0) 
-				dbid = genUUID64();
-
-			static_cast<Entity*>(e)->dbid(dbInterfaceIndex, dbid);
-		}
-
-		static_cast<Entity*>(e)->initializeEntity(params);
-
-		//if (strlen(g_kbeSrvConfig.dbInterface(g_kbeSrvConfig.dbInterfaceIndex2dbInterfaceName(static_cast<Entity*>(e)->dbInterfaceIndex()))->db_autoIncrementInit) == 0) 
-		//{
-		//	static_cast<Entity*>(e)->writeToDB(NULL, NULL, NULL);
-		//}
-			
-		Py_INCREF(e);
-	}
-
-	return e;
-}
-
-
-//-------------------------------------------------------------------------------------
-PyObject* Tool::__py_createEntityLocally(PyObject* self, PyObject* args)
-{
-	int argCount = (int)PyTuple_Size(args);
-	PyObject* params = NULL;
-	char* entityType = NULL;
-	int ret = 0;
 
 	if (argCount == 2)
 		ret = PyArg_ParseTuple(args, "s|O", &entityType, &params);
@@ -809,6 +750,13 @@ PyObject* Tool::__py_createEntityLocally(PyObject* self, PyObject* args)
 		Py_INCREF(e);
 
 	return e;
+}
+
+
+//-------------------------------------------------------------------------------------
+PyObject* Tool::__py_createEntityLocally(PyObject* self, PyObject* args)
+{
+	return __py_createEntity(self, args);
 }
 
 //-------------------------------------------------------------------------------------
@@ -2003,6 +1951,459 @@ PyObject* Tool::__py_delTimer(PyObject* self, PyObject* args)
 	return PyLong_FromLong(timerID);
 }
 
+//-------------------------------------------------------------------------------------
+PyObject* Tool::__py_createNewEntityByDB(PyObject* self, PyObject* args, PyObject* kwargs)
+{
+	
+	int argCount = (int)PyTuple_Size(args);
+	if (kwargs) 
+		argCount += (int)PyDict_Size(kwargs);
+	
+	
+
+	PyObject* params = NULL;
+	
+	PyObject* pyCallback = NULL;
+	const char* entityType = NULL;
+	int ret = 0;
+	
+	PyObject* pyDBInterfaceName = NULL;
+	int8 shouldAutoLoad = 0;
+	bool writeConcern = false;
+	DBID dbid = 0;
+
+
+	static const char* keywords[] = { "entityType", "params", "callback", "shouldAutoLoad", "dbInterfaceName", "writeConcern", "dbid", NULL};
+
+
+	if (argCount > 7 || argCount < 1)
+	{
+		PyErr_Format(PyExc_AssertionError, "%s: args error argCount > 7 || argCount < 1, gived %d!\n",
+			__FUNCTION__, argCount);
+		PyErr_PrintEx(0);
+		return NULL;
+	}
+
+		
+	ret = PyArg_ParseTupleAndKeywords(args, kwargs, "s|OObObL", const_cast<char**>(keywords), &entityType, &params, &pyCallback, &shouldAutoLoad, &pyDBInterfaceName, &writeConcern, &dbid);
+		
+	if (!ret)
+	{
+		PyErr_Format(PyExc_TypeError, "KBEngine::__py_createNewEntityByDB: args error!");
+		PyErr_PrintEx(0);
+		return NULL;
+	}
+
+
+	if(entityType == NULL || strlen(entityType) <= 0)
+	{
+		PyErr_Format(PyExc_AssertionError, "Tool::__py_createNewEntityByDB: args error, entityType=%s!", 
+			(entityType ? entityType : "NULL"));
+
+		PyErr_PrintEx(0);
+		return NULL;
+	}
+
+	ScriptDefModule* sm = EntityDef::findScriptModule(entityType);
+	if(sm == NULL)
+	{
+		PyErr_Format(PyExc_AssertionError, "Tool::__py_createNewEntityByDB: entityType error!");
+		PyErr_PrintEx(0);
+		return NULL;
+	}
+
+	if (params && !PyDict_Check(params))
+	{
+		PyErr_Format(PyExc_AssertionError, "Tool::__py_createNewEntityByDB: param require dict!");
+		PyErr_PrintEx(0);
+		return NULL;
+	}
+	Components::ComponentInfos* dbmgrinfos = Components::getSingleton().getDbmgr();
+	if(dbmgrinfos == NULL || dbmgrinfos->pChannel == NULL || dbmgrinfos->cid == 0)
+	{
+		PyErr_Format(PyExc_AssertionError, "Tool::__py_createNewEntityByDB: not found dbmgr!\n");
+		PyErr_PrintEx(0);
+		return NULL;
+	}
+
+	int dbInterfaceIndex = 0;
+	std::string dbInterfaceName = "default";
+	if (pyDBInterfaceName)
+	{
+		dbInterfaceName = PyUnicode_AsUTF8AndSize(pyDBInterfaceName, NULL);
+
+		DBInterfaceInfo* pDBInterfaceInfo = g_kbeSrvConfig.dbInterface(dbInterfaceName);
+		if (pDBInterfaceInfo->isPure)
+		{
+			ERROR_MSG(fmt::format("Tool::__py_createNewEntityByDB: dbInterface({}) is a pure database does not support Entity! "
+				"kbengine[_defs].xml->dbmgr->databaseInterfaces->*->pure\n",
+				dbInterfaceName.c_str()));
+
+			return NULL;
+		}
+
+		dbInterfaceIndex = pDBInterfaceInfo->index;
+		if (dbInterfaceIndex < 0)
+		{
+			PyErr_Format(PyExc_TypeError, "Tool::__py_createNewEntityByDB: not found dbInterface(%s)!",
+				dbInterfaceName.c_str());
+
+			PyErr_PrintEx(0);
+			return NULL;
+		}
+	}
+	
+	if (dbid != 0) 
+	{
+		if (strlen(g_kbeSrvConfig.dbInterface(dbInterfaceName)->db_autoIncrementInit) != 0)
+		{
+			PyErr_Format(PyExc_AssertionError, "Tool::createEntity: database is auto increment, dbid not assigned!");
+			PyErr_PrintEx(0);
+			return NULL;
+		}
+	}
+
+	if (pyCallback && !PyCallable_Check(pyCallback))
+	{
+			
+		PyErr_Format(PyExc_TypeError, "Tool::__py_createNewEntityByDB: callback arguemnt type error!");
+
+		PyErr_PrintEx(0);
+
+		return NULL;
+	}
+
+		
+	Tool::getSingleton().createNewEntityByDB(entityType, params, pyCallback, shouldAutoLoad, dbInterfaceName, writeConcern, dbid);
+
+	S_RETURN;
+	
+
+}
+
+//-------------------------------------------------------------------------------------
+void Tool::createNewEntityByDB(const char* entityType, PyObject* params, PyObject* pyCallback, int8 shouldAutoLoad, std::string& dbInterfaceName, bool writeConcern, DBID dbid)
+{
+
+	ScriptDefModule* sm = EntityDef::findScriptModule(entityType);	
+		
+	MemoryStream* s = MemoryStream::createPoolObject(OBJECTPOOL_POINT);
+
+	std::string strInitData = "";
+	uint32 initDataLength = 0;
+
+	if (params) 
+	{
+		try 
+		{
+			Py_INCREF(params);
+			Entity::addPersistentsDataToStreamEx(sm, params, NULL, ED_FLAG_ALL, s);
+		}
+		catch (MemoryStreamWriteOverflow & err)
+		{
+			ERROR_MSG(fmt::format("{}::createEntity(): {}\n",
+				sm->getName(), err.what()));
+
+			MemoryStream::reclaimPoolObject(s);
+			return;
+		}
+
+	}
+		
+	CALLBACK_ID callbackID = 0;
+	//DBID dbid = 0; 
+	PyObject* pyEntity = NULL;
+	ENTITY_ID eid = Tool::getSingleton().idClient_.alloc();
+	KBE_ASSERT(eid> 0);
+
+	DBInterfaceInfo* dbInterfaceInfo = g_kbeSrvConfig.dbInterface(dbInterfaceName.c_str());
+	int dbInterfaceIndex = dbInterfaceInfo->index;
+	if (dbid == 0 && strlen(dbInterfaceInfo->db_autoIncrementInit) == 0) 
+	{
+		dbid = genUUID64();
+
+		if (!writeConcern) 
+		{
+			pyEntity = Tool::getSingleton().createEntity(entityType, params, false, eid);
+			if (pyEntity == NULL)
+			{
+				ERROR_MSG(fmt::format("Tool::__py_createNewEntityByDB: create {}({}) is failed, e == NULL!\n", 
+					entityType, dbid));
+				
+				if(pyCallback)
+				{
+					// 不需要通知脚本
+				}
+				MemoryStream::reclaimPoolObject(s);
+				return;
+			}
+
+			Py_INCREF(pyEntity);
+
+			static_cast<Entity*>(pyEntity)->dbid(dbInterfaceInfo->index, dbid);
+		}
+	}
+
+	if (!pyEntity) 
+	{
+		if (pyCallback != NULL)
+			callbackID = Tool::getSingleton().callbackMgr().save(pyCallback);
+
+		if (params)
+		{
+			strInitData = script::Pickler::pickle(params);
+			initDataLength = (uint32)strInitData.length();
+		}
+	}
+
+	Network::Bundle* pBundle = Network::Bundle::createPoolObject(OBJECTPOOL_POINT);
+		
+	(*pBundle).newMessage(DbmgrInterface::writeNewEntity);
+
+	(*pBundle) << componentID_;
+	(*pBundle) << componentType_;
+
+	(*pBundle) << eid;
+	(*pBundle) << dbid;
+	(*pBundle) << (uint16)dbInterfaceIndex;
+	(*pBundle) << writeConcern;
+	(*pBundle) << componentID_;
+
+	(*pBundle) << initDataLength;
+	if (initDataLength > 0) 
+		(*pBundle).append(strInitData.data(), initDataLength);
+
+	(*pBundle) << sm->getUType();
+	(*pBundle) << callbackID;
+	(*pBundle) << shouldAutoLoad;
+	
+	
+	//if (dbid == 0)
+	{ // 为了对齐dbmgr的读取流程
+		
+		uint32 ip = 0;
+		uint16 port = 0;
+		
+		(*pBundle) << ip;
+		(*pBundle) << port;
+	}
+		
+	(*pBundle).append(*s);
+
+
+	Components::ComponentInfos* dbmgrinfos = Components::getSingleton().getDbmgr();
+	dbmgrinfos->pChannel->send(pBundle);
+
+	if (pyEntity)
+	{
+		if (s->length() > 0)
+		{
+		
+			KBE_SHA1 sha;
+			uint32 digest[5];
+			sha.Input(s->data(), s->length());
+			sha.Result(digest);
+			
+			static_cast<Entity*>(pyEntity)->setDirty((uint32*)&digest[0]);
+		}
+		
+		static_cast<Entity*>(pyEntity)->initializeEntity(params);
+		
+		if (pyCallback != NULL)
+		{
+			SCOPED_PROFILE(SCRIPTCALL_PROFILE);
+			PyObject* pyResult = PyObject_CallFunction(pyCallback, 
+												const_cast<char*>("OK"), 
+												pyEntity, dbid);
+
+			if(pyResult != NULL)
+				Py_DECREF(pyResult);
+			else
+				SCRIPT_ERROR_CHECK();
+		}
+	}
+
+	MemoryStream::reclaimPoolObject(s);
+
+}
+
+
+//-------------------------------------------------------------------------------------
+void Tool::onWriteNewEntityToDBCallback(Network::Channel* pChannel, KBEngine::MemoryStream& s)
+{
+	if(pChannel->isExternal())
+		return;
+
+	ENTITY_ID eid;
+	DBID entityDBID;
+	ENTITY_SCRIPT_UID sid;
+	uint16 dbInterfaceIndex;
+	CALLBACK_ID callbackID;
+	bool success;
+	bool writeConcern;
+	COMPONENT_ID sourceComponentID;
+
+	s >> eid >> entityDBID >> dbInterfaceIndex >> success >> writeConcern >> sourceComponentID >> sid >> callbackID;
+	
+	if(sourceComponentID != componentID_)
+	{
+		WARNING_MSG("Tool::onWriteNewEntityToDBCallback: sourceComponentID not match self componentID.\n");
+
+		s.done();
+		return;
+		
+	}
+
+	if (!writeConcern)
+	{
+		if (strlen(g_kbeSrvConfig.dbInterface(g_kbeSrvConfig.dbInterfaceIndex2dbInterfaceName(dbInterfaceIndex))->db_autoIncrementInit) == 0)
+		{
+			s.done();
+			return;
+		}
+	}
+
+	ScriptDefModule* sm = EntityDef::findScriptModule(sid);
+
+	if (static_cast<Entity*>(this->findEntity(eid)) != NULL)
+	{
+		ERROR_MSG(fmt::format("Tool::onWriteNewEntityToDBCallback: entity exist, id be created ! entityType={}, sourceComponentID={}, callbackID={}\n", 
+			sm->getName(), sourceComponentID, callbackID));
+
+		s.done();
+		return;		
+	}
+	
+	std::string strInitData = "";
+
+	s.readBlob(strInitData);
+
+	PyObject* params = NULL;
+
+	if(strInitData.length() > 0) 
+	{
+		params = script::Pickler::unpickle(strInitData);	
+	}
+
+	
+	EntityDef::context().currEntityID = eid;
+	EntityDef::context().currComponentType = TOOL_TYPE;
+	//PyObject* pyDict = createDictDataFromPersistentStream(s, sm->getName());
+
+	PyObject* e = Tool::getSingleton().createEntity(sm->getName(), params, false, eid);
+	if (e == NULL)
+	{
+		ERROR_MSG(fmt::format("Tool::onWriteNewEntityToDBCallback: create error! entityType={}, sourceComponentID={}, callbackID={}\n", 
+			sm->getName(), sourceComponentID, callbackID));
+		if (params)
+			Py_DECREF(params);
+
+		s.done();
+		return;
+	}
+
+	Py_INCREF(e);
+				
+	Entity* entity = static_cast<Entity*>(e);
+
+	entity->dbid(dbInterfaceIndex, entityDBID);
+
+
+	if (params != NULL)
+	{
+		MemoryStream* tempStream = MemoryStream::createPoolObject(OBJECTPOOL_POINT);
+
+		Py_INCREF(params);
+		Entity::addPersistentsDataToStreamEx(sm, params, NULL, ED_FLAG_ALL, tempStream);
+		
+		if (tempStream->length() > 0)
+		{
+			KBE_SHA1 sha;
+			uint32 digest[5];
+			sha.Input(tempStream->data(), tempStream->length());
+			sha.Result(digest);
+		
+		
+			entity->setDirty((uint32*)&digest[0]);
+		}
+
+		MemoryStream::reclaimPoolObject(tempStream);
+	
+		
+	}
+
+	entity->initializeEntity(params);
+
+	if (params)
+		Py_DECREF(params);
+
+	//KBE_SHA1 sha;
+	//uint32 digest[5];
+	//sha.Input(s.data(), s.length());
+	//sha.Result(digest);
+	//entity->setDirty((uint32*)&digest[0]);
+	
+	
+	_onCreateNewEntityByDBCallback(callbackID, sm->getName(), eid, entityDBID, componentID_);
+	
+	s.done();
+
+}
+
+
+//-------------------------------------------------------------------------------------
+void Tool::_onCreateNewEntityByDBCallback(CALLBACK_ID callbackID, const char* entityType, ENTITY_ID eid, DBID entityDBID, COMPONENT_ID componentID)
+{
+	if (callbackID == 0)
+	{
+		// 没有设定回调
+		//ERROR_MSG(fmt::format("Tool::_onCreateEntityRemotelyCallback: error(callbackID == 0)! entityType={}, componentID={}\n", 
+		//	entityType, componentID));
+
+		return;
+	}
+
+	PyObjectPtr pyCallback = callbackMgr().take(callbackID);
+	PyObject* pyargs = PyTuple_New(2);
+
+	Entity* pEntity = pEntities_->find(eid);
+	if (pEntity == NULL)
+	{
+		ERROR_MSG(fmt::format("Tool::onCreateEntityRemotelyCallback: can't found entity:{}.\n", eid));
+		Py_DECREF(pyargs);
+		return;
+	}
+
+	Py_INCREF(pEntity);
+	PyTuple_SET_ITEM(pyargs, 0, pEntity);
+		
+	PyTuple_SET_ITEM(pyargs, 1, PyLong_FromUnsignedLongLong(entityDBID));
+	//PyTuple_SET_ITEM(pyargs, 2, PyUnicode_FromString(g_kbeSrvConfig.dbInterfaceIndex2dbInterfaceName(dbInterfaceIndex)));
+
+	SCOPED_PROFILE(SCRIPTCALL_PROFILE);
+
+	if (pyCallback != NULL)
+	{
+		PyObject* pyRet = PyObject_CallObject(pyCallback.get(), pyargs);
+		if (pyRet == NULL)
+		{
+			SCRIPT_ERROR_CHECK();
+		}
+		else
+		{
+			Py_DECREF(pyRet);
+		}
+	}
+	else
+	{
+		ERROR_MSG(fmt::format("Tool::onCreateEntityRemotelyCallback: not found callback:{}.\n",
+			callbackID));
+	}
+	
+
+	SCRIPT_ERROR_CHECK();
+	Py_DECREF(pyargs);
+}
 //-------------------------------------------------------------------------------------
 
 }

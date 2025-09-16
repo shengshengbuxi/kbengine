@@ -314,6 +314,7 @@ DBTaskWriteEntity::DBTaskWriteEntity(const Network::Address& addr,
 									 COMPONENT_ID componentID, COMPONENT_TYPE componentType, ENTITY_ID eid, 
 									 DBID entityDBID, MemoryStream& datas):
 EntityDBTask(addr, datas, eid, entityDBID),
+writeEntityLog_(false),
 componentID_(componentID),
 componentType_(componentType),
 eid_(eid),
@@ -321,8 +322,7 @@ entityDBID_(entityDBID),
 sid_(0),
 callbackID_(0),
 shouldAutoLoad_(-1),
-success_(false),
-writeEntityLog_(false)
+success_(false)
 {
 }
 
@@ -464,6 +464,20 @@ thread::TPTask::TPTaskState DBTaskWriteNewEntity::presentMainThread()
 	if (componentType_ == BASEAPP_TYPE)	
 	{
 		(*pBundle).newMessage(BaseappInterface::onWriteNewEntityToDBCallback);
+		//BaseappInterface::onWriteNewEntityToDBCallbackArgs8::staticAddToBundle((*pBundle), 
+
+		(*pBundle) << eid_ << entityDBID_ << pdbi_->dbIndex() << success_ << writeConcern_ << sourceComponentID_ << sid_ << callbackID_;
+
+		(*pBundle) << (uint32)strInitData_.length();
+
+		if (strInitData_.length() > 0) 
+		{
+			(*pBundle).append(strInitData_.data(), strInitData_.length());
+		}
+	}
+	else if (componentType_ == TOOL_TYPE)
+	{
+		(*pBundle).newMessage(ToolInterface::onWriteNewEntityToDBCallback);
 		//BaseappInterface::onWriteNewEntityToDBCallbackArgs8::staticAddToBundle((*pBundle), 
 
 		(*pBundle) << eid_ << entityDBID_ << pdbi_->dbIndex() << success_ << writeConcern_ << sourceComponentID_ << sid_ << callbackID_;

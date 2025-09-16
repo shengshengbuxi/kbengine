@@ -253,6 +253,12 @@ public:
 	static ScriptTimers &scriptTimers() { return scriptTimers_; }
 
 	
+	static PyObject* __py_createNewEntityByDB(PyObject* self, PyObject* args, PyObject* kwargs);
+
+	void createNewEntityByDB(const char* entityType, PyObject* params, PyObject* pyCallback, int8 shouldAutoLoad, std::string& dbInterfaceName, bool writeConcern, DBID dbid);
+	void onWriteNewEntityToDBCallback(Network::Channel* pChannel, KBEngine::MemoryStream& s);
+	void _onCreateNewEntityByDBCallback(CALLBACK_ID callbackID, const char* entityType, ENTITY_ID eid, DBID entityDBID, COMPONENT_ID componentID);
+
 protected:
 	static ScriptTimers										scriptTimers_;
 

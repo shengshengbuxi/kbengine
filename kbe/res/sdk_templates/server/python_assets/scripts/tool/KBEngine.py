@@ -508,51 +508,49 @@ def MemoryStream(  ):
 	pass
 
 
-def createEntity( entityType, params, dbid, dbInterfaceIndex ):
-	"""	
+def createNewEntityByDB(  entityType, params={}, callback=None, shouldAutoLoad=-1, dbInterfaceName="default", writeConcern=False, dbid=0 ):
+	"""
 	功能说明：
-	创建一个新的Entity实体。
-	函数参数需要提供创建的实体的类型，还有一个Python字典作为参数来初始化实体的值。
-	
-	这个Python字典不需要用户提供所有的属性，没有提供的属性默认为实体定义文件".def"提供的默认值。
-	
-	KBEngine.createEntityAnywhere应该作为这个方法的首选，因为服务端可以灵活地
-	在合适的Tool上创建实体。
-	
-	例子：
-	
-	params = {
-		"name" : "kbe", # base, BASE_AND_CLIENT
-		"HP" : 100,	# cell, ALL_CLIENT, in cellData
-		"tmp" : "tmp"	# baseEntity.tmp
-	}
-	
-	baseEntity = createEntityLocally("Avatar", params)
-	
-	
-	
-	参数：
-	
-	
+	创建一个新的Entity实体，
+
 	@entityType
-	string，指定要创建的Entity实体的类型。有效的实体类型在/scripts/entities.xml列出。
-	
+	string, 指定要创建的Entity实体的类型。有效的实体类型在/scripts/entities.xml列出。
 	
 	@params
 	可选参数, 一个Python字典对象。
-	如果一个指定的键是一个Entity属性，他的值会用来初始化这个Entity实体的属性。
-	如果这个键是一个Cell属性，它会被添加到Entity实体的'cellData'属性，这个'cellData'属性是一个Python字典，
-	然后在后面会用来初始化cell实体的属性。
 	
+	@callback
+	函数，可选参数。
+		
+	@shouldAutoLoad
+		这个可选参数指定这个实体在服务启动的时候是否需要从数据库加载。
+		注意：服务器启动时自动加载实体，底层默认将会调用createEntityAnywhereFromDBID将实体创建到一个负载最小的baseapp上，整个过程将会在第一个启动的baseapp调用onBaseAppReady之前完成。
+		脚本层可以在个性化脚本(kbengine_defaults.xml->baseapp->entryScriptFile定义)中重新实现实体的创建方法，例如：
+		def onAutoLoadEntityCreate(entityType, dbid): 
+		          KBEngine.createEntityFromDBID(entityType, dbid)
+		
+		
+	@dbInterfaceName
+	string，可选参数，指定由某个数据库接口来完成, 默认使用"default"接口。数据库接口由kbengine_defaults.xml->dbmgr->databaseInterfaces中定义。
+
+	@writeConcern
+	bool，可选参数，是否写入数据库时，需要确认写入成功，默认为False
+		如果是False 并且 kbengine_default.xml->dbmgr->databaseInterfaces 中的dbInterfaceName的autoIncrementInit 有值的话，
+		当前服务雪花算法生成的dbid，则是立即创建实体，并且设置dbid，有callback参数即回调
+
 	@dbid
 	可选参数，数据库DBID
 	
-	
+	"""
+ 
+def createEntity( entityType, params, dbInterfaceIndex ):
+	"""	
+	同 createEntityLocally
 	
 	返回：
 	
 	新创建的Entity实体（参考Entity）
-	
+
 	"""
 	pass
 
@@ -564,8 +562,6 @@ def createEntityLocally( entityType, params ):
 	
 	这个Python字典不需要用户提供所有的属性，没有提供的属性默认为实体定义文件".def"提供的默认值。
 	
-	KBEngine.createEntityAnywhere应该作为这个方法的首选，因为服务端可以灵活地
-	在合适的Tool上创建实体。
 	
 	例子：
 	

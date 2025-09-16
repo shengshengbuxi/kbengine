@@ -5907,10 +5907,10 @@ PyObject* Baseapp::__py_createNewEntityByDB(PyObject* self, PyObject* args, PyOb
 		}
 	}
 		
-	if (!pyCallback || !PyCallable_Check(pyCallback))
+	if (pyCallback && !PyCallable_Check(pyCallback))
 	{
 			
-		PyErr_Format(PyExc_TypeError, "Baseapp::__py_createNewEntityByDB: args error, callback arguemnt!");
+		PyErr_Format(PyExc_TypeError, "Baseapp::__py_createNewEntityByDB: callback arguemnt type error!");
 
 		PyErr_PrintEx(0);
 
@@ -5990,7 +5990,9 @@ void Baseapp::createNewEntityByDB(const char* entityType, PyObject* params, PyOb
 
 	if (!pyEntity) 
 	{
-		callbackID = Baseapp::getSingleton().callbackMgr().save(pyCallback);
+		if (pyCallback != NULL)
+			callbackID = Baseapp::getSingleton().callbackMgr().save(pyCallback);
+
 		if (params)
 		{
 			strInitData = script::Pickler::pickle(params);
@@ -6038,9 +6040,6 @@ void Baseapp::createNewEntityByDB(const char* entityType, PyObject* params, PyOb
 
 	if (pyEntity)
 	{
-		static_cast<Entity*>(pyEntity)->initializeEntity(params);
-
-		
 		if (s->length() > 0)
 		{
 		
@@ -6052,16 +6051,23 @@ void Baseapp::createNewEntityByDB(const char* entityType, PyObject* params, PyOb
 			static_cast<Entity*>(pyEntity)->setDirty((uint32*)&digest[0]);
 		}
 
+		static_cast<Entity*>(pyEntity)->initializeEntity(params);
 
-		SCOPED_PROFILE(SCRIPTCALL_PROFILE);
-		PyObject* pyResult = PyObject_CallFunction(pyCallback, 
+		
+		if (pyCallback)
+		{
+			SCOPED_PROFILE(SCRIPTCALL_PROFILE);
+			PyObject* pyResult = PyObject_CallFunction(pyCallback, 
 											const_cast<char*>("OK"), 
 											pyEntity, dbid);
 
-		if(pyResult != NULL)
-			Py_DECREF(pyResult);
-		else
-			SCRIPT_ERROR_CHECK();
+		
+
+			if(pyResult != NULL)
+				Py_DECREF(pyResult);
+			else
+				SCRIPT_ERROR_CHECK();
+		}
 	}
 
 	MemoryStream::reclaimPoolObject(s);
@@ -6164,10 +6170,10 @@ PyObject* Baseapp::__py_createNewEntityAnywhereByDB(PyObject* self, PyObject* ar
 		}
 	}
 		
-	if (!pyCallback || !PyCallable_Check(pyCallback))
+	if (pyCallback && !PyCallable_Check(pyCallback))
 	{
 			
-		PyErr_Format(PyExc_TypeError, "Baseapp::__py_createNewEntityAnywhereByDB: args error, isToDB is True, require callback arguemnt (%s)!");
+		PyErr_Format(PyExc_TypeError, "Baseapp::__py_createNewEntityAnywhereByDB: callback arguemnt type error!");
 
 		PyErr_PrintEx(0);
 
@@ -6204,7 +6210,8 @@ void Baseapp::createNewEntityAnywhereByDB(const char* entityType, PyObject* para
 
 	CALLBACK_ID callbackID = 0;
 	
-	callbackID = callbackMgr().save(pyCallback);
+	if (pyCallback != NULL)
+		callbackID = callbackMgr().save(pyCallback);
 	
 
 	(*pBundle) << callbackID;
@@ -6308,6 +6315,9 @@ void Baseapp::onCreateNewEntityAnywhereByDB(Network::Channel* pChannel, KBEngine
 				ERROR_MSG(fmt::format("Baseapp::onCreateEntityAnywhere: create error! entityType={}, componentID={}, callbackID={}\n", 
 					entityType, componentID, callbackID));
 
+				if (params)
+					Py_DECREF(params);
+
 				MemoryStream::reclaimPoolObject(s);
 				stream.done();
 				return;
@@ -6364,8 +6374,7 @@ void Baseapp::onCreateNewEntityAnywhereByDB(Network::Channel* pChannel, KBEngine
 
 	if (entity)
 	{
-		entity->initializeEntity(params);
-
+		
 		if (s->length() > 0)
 		{
 		
@@ -6378,6 +6387,9 @@ void Baseapp::onCreateNewEntityAnywhereByDB(Network::Channel* pChannel, KBEngine
 			
 		}
 
+		entity->initializeEntity(params);
+
+		
 		if(componentID != componentID_)
 		{
 			Components::ComponentInfos* cinfos = Components::getSingleton().findComponent(componentID);
@@ -6396,7 +6408,9 @@ void Baseapp::onCreateNewEntityAnywhereByDB(Network::Channel* pChannel, KBEngine
 				(*pBundle) << componentID_;
 				forward_messagebuffer_.push(componentID, pFI);
 				WARNING_MSG("Baseapp::onCreateEntityAnywhere: not found baseapp, message is buffered.\n");
-				
+
+				if (params)
+					Py_DECREF(params);
 				MemoryStream::reclaimPoolObject(s);
 				stream.done();
 				return;
@@ -6422,6 +6436,9 @@ void Baseapp::onCreateNewEntityAnywhereByDB(Network::Channel* pChannel, KBEngine
 		}
 	}
 	
+	if (params)
+		Py_DECREF(params);
+
 	MemoryStream::reclaimPoolObject(s);
 
 	stream.done();
@@ -6514,6 +6531,8 @@ void Baseapp::onWriteNewEntityToDBCallback(Network::Channel* pChannel, KBEngine:
 	{
 		ERROR_MSG(fmt::format("Baseapp::onWriteNewEntityToDBCallback: create error! entityType={}, sourceComponentID={}, callbackID={}\n", 
 			sm->getName(), sourceComponentID, callbackID));
+		if (params)
+			Py_DECREF(params);
 		s.done();
 		return;
 	}
@@ -6524,29 +6543,35 @@ void Baseapp::onWriteNewEntityToDBCallback(Network::Channel* pChannel, KBEngine:
 
 	entity->dbid(dbInterfaceIndex, entityDBID);
 
-	entity->initializeEntity(params);
 
-	if (params)
+	if (params != NULL)
 	{
 		MemoryStream* tempStream = MemoryStream::createPoolObject(OBJECTPOOL_POINT);
 
 		Py_INCREF(params);
 		Entity::addPersistentsDataToStreamEx(sm, params, NULL, ED_FLAG_ALL, tempStream);
 
+		if (tempStream->length() > 0)
+		{
+			KBE_SHA1 sha;
+			uint32 digest[5];
+			sha.Input(tempStream->data(), tempStream->length());
+			sha.Result(digest);
 		
-		KBE_SHA1 sha;
-		uint32 digest[5];
-		sha.Input(tempStream->data(), tempStream->length());
-		sha.Result(digest);
 		
+			entity->setDirty((uint32*)&digest[0]);
+		}
+
 		MemoryStream::reclaimPoolObject(tempStream);
-		
-		entity->setDirty((uint32*)&digest[0]);
+
 	
-		Py_DECREF(params);
-		
 	}
 
+	entity->initializeEntity(params);
+
+	if (params)
+		Py_DECREF(params);
+	
 	//KBE_SHA1 sha;
 	//uint32 digest[5];
 	//sha.Input(s.data(), s.length());

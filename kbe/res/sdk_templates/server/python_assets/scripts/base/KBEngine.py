@@ -1043,11 +1043,8 @@ def createNewEntityByDB(  entityType, params={}, callback=None, shouldAutoLoad=-
 	@params
 	可选参数, 一个Python字典对象。
 
-	@isToDB
-	bool，可选参数，是否写入数据库，为True则创建的实体会持久化到数据库。
-	
 	@callback
-	函数，可选参数，写入数据库后的回调，isToDB为True时，必须设置。
+	函数，可选参数，写入数据库后的回调。
 		
 	@shouldAutoLoad
 		这个可选参数指定这个实体在服务启动的时候是否需要从数据库加载。
@@ -1062,8 +1059,8 @@ def createNewEntityByDB(  entityType, params={}, callback=None, shouldAutoLoad=-
 	
 	@writeConcern
 	bool，可选参数，是否写入数据库时，需要确认写入成功，默认为False
-		kbengine_default.xml->dbmgr->databaseInterfaces 中的dbInterfaceName的autoIncrementInit 有值的话，会把数据表的自增索引设置成对应的值，dbid是用自增索引，创建新实体是异步回调
-		没值的话，则是当前服务（进程）用雪花算法生成的dbid，立即创建实体，并且设置dbid，进行回调
+		如果是False 并且 kbengine_default.xml->dbmgr->databaseInterfaces 中的dbInterfaceName的autoIncrementInit 有值的话，
+		当前服务雪花算法生成的dbid，则是立即创建实体，并且设置dbid，有callback参数即回调
 
 
 	"""
@@ -1091,11 +1088,8 @@ def createNewEntityAnywhereByDB(  entityType, params={}, callback=None, shouldAu
 	@params
 	可选参数, 一个Python字典对象。
 
-	@isToDB
-	bool，可选参数，是否写入数据库，为True则创建的实体会持久化到数据库。
-	
 	@callback
-	函数，可选参数，写入数据库后的回调，isToDB为True时，必须设置。
+	函数，可选参数，写入数据库后的回调。
 		
 	@shouldAutoLoad
 		这个可选参数指定这个实体在服务启动的时候是否需要从数据库加载。
@@ -1110,8 +1104,8 @@ def createNewEntityAnywhereByDB(  entityType, params={}, callback=None, shouldAu
 	
 	@writeConcern
 	bool，可选参数，是否写入数据库时，需要确认写入成功，默认为False
-		kbengine_default.xml->dbmgr->databaseInterfaces 中的dbInterfaceName的autoIncrementInit  有值的话，会把数据表的自增索引设置成对应的值，dbid是用自增索引，创建新实体是异步回调
-		没值的话，则是当前服务（进程）用雪花算法生成的dbid，立即创建实体，并且设置dbid，进行回调
+		如果是False 并且 kbengine_default.xml->dbmgr->databaseInterfaces 中的dbInterfaceName的autoIncrementInit 有值的话，
+		当前服务雪花算法生成的dbid，则是立即创建实体，并且设置dbid，有callback参数即回调
 
 
 	"""
