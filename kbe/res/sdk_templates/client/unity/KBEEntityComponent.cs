@@ -9,7 +9,7 @@ namespace KBEngine
 	/*
 		实体组件模块基础类
 	*/
-	public class EntityComponent
+	public class KBEEntityComponent
 	{
 		public UInt16 entityComponentPropertyID = 0;
 		public UInt16 componentType = 0;
@@ -56,12 +56,12 @@ namespace KBEngine
 			return null;
 		}
 
-		public virtual void onRemoteMethodCall(UInt16 methodUtype, MemoryStream stream)
+		public virtual void onRemoteMethodCall(UInt16 methodUtype, KBEMemoryStream stream)
 		{
 			// 动态生成
 		}
 
-		public virtual void onUpdatePropertys(UInt16 propUtype, MemoryStream stream, int maxCount)
+		public virtual void onUpdatePropertys(UInt16 propUtype, KBEMemoryStream stream, int maxCount)
 		{
 			// 动态生成
 		}
@@ -71,7 +71,7 @@ namespace KBEngine
 			// 动态生成
 		}
 
-		public virtual void createFromStream(MemoryStream stream)
+		public virtual void createFromStream(KBEMemoryStream stream)
 		{
 			componentType = (UInt16)stream.readInt32();
 			ownerID = stream.readInt32();

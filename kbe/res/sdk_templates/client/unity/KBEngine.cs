@@ -91,7 +91,9 @@
 		public string clientVersion = "@{KBE_VERSION}";
 		public string serverScriptVersion = "";
 		public string clientScriptVersion = "@{KBE_SCRIPT_VERSION}";
+		public bool isCheckProtocolMD5 = true;
 		public string serverProtocolMD5 = "@{KBE_SERVER_PROTO_MD5}";
+		public bool isCheckEntityDefMD5 = true;
 		public string serverEntitydefMD5 = "@{KBE_SERVER_ENTITYDEF_MD5}";
 		
 		// 当前玩家的实体id与实体类别
@@ -114,7 +116,7 @@
 		
 		// 在玩家View范围小于256个实体时我们可以通过一字节索引来找到entity
 		private List<Int32> _entityIDAliasIDList = new List<Int32>();
-		private Dictionary<Int32, MemoryStream> _bufferedCreateEntityMessages = new Dictionary<Int32, MemoryStream>(); 
+		private Dictionary<Int32, KBEMemoryStream> _bufferedCreateEntityMessages = new Dictionary<Int32, KBEMemoryStream>(); 
 		
 		// 所有服务端错误码对应的错误描述
 		private ServerErrorDescrs _serverErrs = new ServerErrorDescrs(); 
@@ -406,7 +408,7 @@
 		/*
 			握手之后服务端的回调
 		*/
-		public void Client_onHelloCB(MemoryStream stream)
+		public void Client_onHelloCB(KBEMemoryStream stream)
 		{
 			string str_serverVersion = stream.readString();
 			serverScriptVersion = stream.readString();
@@ -422,20 +424,24 @@
 			{
 				serverVersion = str_serverVersion;
 
-				/* 
-				if(serverProtocolMD5 != currentServerProtocolMD5)
+				if(isCheckProtocolMD5)
 				{
-					Dbg.ERROR_MSG("Client_onHelloCB: digest not match! serverProtocolMD5=" + serverProtocolMD5 + "(server: " + currentServerProtocolMD5 + ")");
-					Event.fireAll(EventOutTypes.onVersionNotMatch, clientVersion, serverVersion);
-					return;
+					if (serverProtocolMD5 != currentServerProtocolMD5)
+					{
+						Dbg.ERROR_MSG("Client_onHelloCB: digest not match! serverProtocolMD5=" + serverProtocolMD5 + "(server: " + currentServerProtocolMD5 + ")");
+						Event.fireAll(EventOutTypes.onVersionNotMatch, clientVersion, serverVersion);
+						return;
+					}
 				}
-				*/
-				
-				if (serverEntitydefMD5 != currentServerEntitydefMD5)
+			
+				if(isCheckEntityDefMD5)
 				{
-					Dbg.ERROR_MSG("Client_onHelloCB: digest not match! serverEntitydefMD5=" + serverEntitydefMD5 + "(server: " + currentServerEntitydefMD5 + ")");
-					Event.fireAll(EventOutTypes.onVersionNotMatch, clientVersion, serverVersion);
-					return;
+					if (serverEntitydefMD5 != currentServerEntitydefMD5)
+					{
+						Dbg.ERROR_MSG("Client_onHelloCB: digest not match! serverEntitydefMD5=" + serverEntitydefMD5 + "(server: " + currentServerEntitydefMD5 + ")");
+						Event.fireAll(EventOutTypes.onVersionNotMatch, clientVersion, serverVersion);
+						return;
+					}
 				}
 			}
 
@@ -460,7 +466,7 @@
 		/*
 			服务端错误描述导入了
 		*/
-		public void Client_onImportServerErrorsDescr(MemoryStream stream)
+		public void Client_onImportServerErrorsDescr(KBEMemoryStream stream)
 		{
 			// 无需实现，已由插件生成静态代码
 		}
@@ -468,7 +474,7 @@
 		/*
 			从服务端返回的二进制流导入客户端消息协议
 		*/
-		public void Client_onImportClientMessages(MemoryStream stream)
+		public void Client_onImportClientMessages(KBEMemoryStream stream)
 		{
 			// 无需实现，已由插件生成静态代码
 		}
@@ -476,12 +482,12 @@
 		/*
 			从服务端返回的二进制流导入客户端消息协议
 		*/
-		public void Client_onImportClientEntityDef(MemoryStream stream)
+		public void Client_onImportClientEntityDef(KBEMemoryStream stream)
 		{
 			// 无需实现，已由插件生成静态代码
 		}
 
-		public void Client_onImportClientSDK(MemoryStream stream)
+		public void Client_onImportClientSDK(KBEMemoryStream stream)
 		{
 			int remainingFiles = 0;
 			remainingFiles = stream.readInt32();
@@ -501,7 +507,7 @@
 		/*
 			引擎版本不匹配
 		*/
-		public void Client_onVersionNotMatch(MemoryStream stream)
+		public void Client_onVersionNotMatch(KBEMemoryStream stream)
 		{
 			serverVersion = stream.readString();
 			
@@ -512,7 +518,7 @@
 		/*
 			脚本版本不匹配
 		*/
-		public void Client_onScriptVersionNotMatch(MemoryStream stream)
+		public void Client_onScriptVersionNotMatch(KBEMemoryStream stream)
 		{
 			serverScriptVersion = stream.readString();
 			
@@ -894,7 +900,7 @@
 		/*
 			登录loginapp失败了
 		*/
-		public void Client_onLoginFailed(MemoryStream stream)
+		public void Client_onLoginFailed(KBEMemoryStream stream)
 		{
 			UInt16 failedcode = stream.readUint16();
 			_serverdatas = stream.readBlob();
@@ -905,7 +911,7 @@
 		/*
 			登录loginapp成功了
 		*/
-		public void Client_onLoginSuccessfully(MemoryStream stream)
+		public void Client_onLoginSuccessfully(KBEMemoryStream stream)
 		{
 			var accountName = stream.readString();
 			username = accountName;
@@ -941,7 +947,7 @@
 		/*
 			登录baseapp成功了
 		*/
-		public void Client_onReloginBaseappSuccessfully(MemoryStream stream)
+		public void Client_onReloginBaseappSuccessfully(KBEMemoryStream stream)
 		{
 			entity_uuid = stream.readUint64();
 			Dbg.DEBUG_MSG("KBEngine::Client_onReloginBaseappSuccessfully: name(" + username + ")!");
@@ -979,7 +985,7 @@
 
 				entities[eid] = entity;
 				
-				MemoryStream entityMessage = null;
+				KBEMemoryStream entityMessage = null;
 				_bufferedCreateEntityMessages.TryGetValue(eid, out entityMessage);
 				
 				if(entityMessage != null)
@@ -998,7 +1004,7 @@
 			}
 			else
 			{
-				MemoryStream entityMessage = null;
+				KBEMemoryStream entityMessage = null;
 				_bufferedCreateEntityMessages.TryGetValue(eid, out entityMessage);
 				
 				if(entityMessage != null)
@@ -1025,7 +1031,7 @@
 		/*
 			通过流数据获得View实体的ID
 		*/
-		public Int32 getViewEntityIDFromStream(MemoryStream stream)
+		public Int32 getViewEntityIDFromStream(KBEMemoryStream stream)
 		{
 			if (!_args.useAliasEntityID)
 				return stream.readInt32();
@@ -1054,7 +1060,7 @@
 		/*
 			服务端使用优化的方式更新实体属性数据
 		*/
-		public void Client_onUpdatePropertysOptimized(MemoryStream stream)
+		public void Client_onUpdatePropertysOptimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 			onUpdatePropertys_(eid, stream);
@@ -1063,26 +1069,26 @@
 		/*
 			服务端更新实体属性数据
 		*/
-		public void Client_onUpdatePropertys(MemoryStream stream)
+		public void Client_onUpdatePropertys(KBEMemoryStream stream)
 		{
 			Int32 eid = stream.readInt32();
 			onUpdatePropertys_(eid, stream);
 		}
 		
-		public void onUpdatePropertys_(Int32 eid, MemoryStream stream)
+		public void onUpdatePropertys_(Int32 eid, KBEMemoryStream stream)
 		{
 			Entity entity = null;
 			
 			if(!entities.TryGetValue(eid, out entity))
 			{
-				MemoryStream entityMessage = null;
+				KBEMemoryStream entityMessage = null;
 				if(_bufferedCreateEntityMessages.TryGetValue(eid, out entityMessage))
 				{
 					Dbg.ERROR_MSG("KBEngine::Client_onUpdatePropertys: entity(" + eid + ") not found!");
 					return;
 				}
 
-				MemoryStream stream1 = MemoryStream.createObject();
+				KBEMemoryStream stream1 = KBEMemoryStream.createObject();
 				stream1.wpos = stream.wpos;
 				stream1.rpos = stream.rpos - 4;
 				Array.Copy(stream.data(), stream1.data(), stream.wpos);
@@ -1096,7 +1102,7 @@
 		/*
 			服务端使用优化的方式调用实体方法
 		*/
-		public void Client_onRemoteMethodCallOptimized(MemoryStream stream)
+		public void Client_onRemoteMethodCallOptimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 			onRemoteMethodCall_(eid, stream);
@@ -1105,13 +1111,13 @@
 		/*
 			服务端调用实体方法
 		*/
-		public void Client_onRemoteMethodCall(MemoryStream stream)
+		public void Client_onRemoteMethodCall(KBEMemoryStream stream)
 		{
 			Int32 eid = stream.readInt32();
 			onRemoteMethodCall_(eid, stream);
 		}
 	
-		public void onRemoteMethodCall_(Int32 eid, MemoryStream stream)
+		public void onRemoteMethodCall_(Int32 eid, KBEMemoryStream stream)
 		{
 			Entity entity = null;
 			
@@ -1127,7 +1133,7 @@
 		/*
 			服务端通知一个实体进入了世界(如果实体是当前玩家则玩家第一次在一个space中创建了， 如果是其他实体则是其他实体进入了玩家的View)
 		*/
-		public void Client_onEntityEnterWorld(MemoryStream stream)
+		public void Client_onEntityEnterWorld(KBEMemoryStream stream)
 		{
 			Int32 eid = stream.readInt32();
 			if(entity_id > 0 && entity_id != eid)
@@ -1151,7 +1157,7 @@
 			
 			if(!entities.TryGetValue(eid, out entity))
 			{
-				MemoryStream entityMessage = null;
+				KBEMemoryStream entityMessage = null;
 				if(!_bufferedCreateEntityMessages.TryGetValue(eid, out entityMessage))
 				{
 					Dbg.ERROR_MSG("KBEngine::Client_onEntityEnterWorld: entity(" + eid + ") not found!");
@@ -1222,7 +1228,7 @@
 		/*
 			服务端使用优化的方式通知一个实体离开了世界(如果实体是当前玩家则玩家离开了space， 如果是其他实体则是其他实体离开了玩家的View)
 		*/
-		public void Client_onEntityLeaveWorldOptimized(MemoryStream stream)
+		public void Client_onEntityLeaveWorldOptimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 			KBEngineApp.app.Client_onEntityLeaveWorld(eid);
@@ -1263,7 +1269,7 @@
 		/*
 			服务端通知当前玩家进入了一个新的space
 		*/
-		public void Client_onEntityEnterSpace(MemoryStream stream)
+		public void Client_onEntityEnterSpace(KBEMemoryStream stream)
 		{
 			Int32 eid = stream.readInt32();
 			spaceID = stream.readUint32();
@@ -1306,7 +1312,7 @@
 		/*
 			账号创建返回结果
 		*/
-		public void Client_onCreateAccountResult(MemoryStream stream)
+		public void Client_onCreateAccountResult(KBEMemoryStream stream)
 		{
 			UInt16 retcode = stream.readUint16();
 			byte[] datas = stream.readBlob();
@@ -1534,7 +1540,7 @@
 		/*
 			服务端初始化客户端的spacedata， spacedata请参考API
 		*/
-		public void Client_initSpaceData(MemoryStream stream)
+		public void Client_initSpaceData(KBEMemoryStream stream)
 		{
 			clearSpace(false);
 			spaceID = stream.readUint32();
@@ -1648,7 +1654,7 @@
 			}
 		}
 
-		public void Client_onUpdateBaseDir(MemoryStream stream)
+		public void Client_onUpdateBaseDir(KBEMemoryStream stream)
 		{
 			float yaw, pitch, roll;
 			yaw = stream.readFloat() * 360 / ((float)System.Math.PI * 2);
@@ -1664,7 +1670,7 @@
 			}
 		}
 
-		public void Client_onUpdateData(MemoryStream stream)
+		public void Client_onUpdateData(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 			Entity entity = null;
@@ -1680,7 +1686,7 @@
 			服务端强制设置了玩家的坐标 
 			例如：在服务端使用avatar.position=(0,0,0), 或者玩家位置与速度异常时会强制拉回到一个位置
 		*/
-		public void Client_onSetEntityPosAndDir(MemoryStream stream)
+		public void Client_onSetEntityPosAndDir(KBEMemoryStream stream)
 		{
 			Int32 eid = stream.readInt32();
 			Entity entity = null;
@@ -1709,7 +1715,7 @@
 			entity.onPositionChanged(old_position);		
 		}
 		
-		public void Client_onUpdateData_ypr(MemoryStream stream)
+		public void Client_onUpdateData_ypr(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1720,7 +1726,7 @@
 			_updateVolatileData(eid, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, y, p, r, -1, false);
 		}
 		
-		public void Client_onUpdateData_yp(MemoryStream stream)
+		public void Client_onUpdateData_yp(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1730,7 +1736,7 @@
 			_updateVolatileData(eid, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, y, p, KBEMath.KBE_FLT_MAX, -1, false);
 		}
 		
-		public void Client_onUpdateData_yr(MemoryStream stream)
+		public void Client_onUpdateData_yr(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1740,7 +1746,7 @@
 			_updateVolatileData(eid, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, y, KBEMath.KBE_FLT_MAX, r, -1, false);
 		}
 		
-		public void Client_onUpdateData_pr(MemoryStream stream)
+		public void Client_onUpdateData_pr(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1750,7 +1756,7 @@
 			_updateVolatileData(eid, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, p, r, -1, false);
 		}
 		
-		public void Client_onUpdateData_y(MemoryStream stream)
+		public void Client_onUpdateData_y(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1759,7 +1765,7 @@
 			_updateVolatileData(eid, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, y, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, -1, false);
 		}
 		
-		public void Client_onUpdateData_p(MemoryStream stream)
+		public void Client_onUpdateData_p(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 			
@@ -1768,7 +1774,7 @@
 			_updateVolatileData(eid, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, p, KBEMath.KBE_FLT_MAX, -1, false);
 		}
 		
-		public void Client_onUpdateData_r(MemoryStream stream)
+		public void Client_onUpdateData_r(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1777,7 +1783,7 @@
 			_updateVolatileData(eid, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, r, -1, false);
 		}
 		
-		public void Client_onUpdateData_xz(MemoryStream stream)
+		public void Client_onUpdateData_xz(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1787,7 +1793,7 @@
 			_updateVolatileData(eid, x, KBEMath.KBE_FLT_MAX, z, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, 1, false);
 		}
 		
-		public void Client_onUpdateData_xz_ypr(MemoryStream stream)
+		public void Client_onUpdateData_xz_ypr(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1801,7 +1807,7 @@
 			_updateVolatileData(eid, x, KBEMath.KBE_FLT_MAX, z, y, p, r, 1, false);
 		}
 		
-		public void Client_onUpdateData_xz_yp(MemoryStream stream)
+		public void Client_onUpdateData_xz_yp(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1814,7 +1820,7 @@
 			_updateVolatileData(eid, x, KBEMath.KBE_FLT_MAX, z, y, p, KBEMath.KBE_FLT_MAX, 1, false);
 		}
 		
-		public void Client_onUpdateData_xz_yr(MemoryStream stream)
+		public void Client_onUpdateData_xz_yr(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1827,7 +1833,7 @@
 			_updateVolatileData(eid, x, KBEMath.KBE_FLT_MAX, z, y, KBEMath.KBE_FLT_MAX, r, 1, false);
 		}
 		
-		public void Client_onUpdateData_xz_pr(MemoryStream stream)
+		public void Client_onUpdateData_xz_pr(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1840,7 +1846,7 @@
 			_updateVolatileData(eid, x, KBEMath.KBE_FLT_MAX, z, KBEMath.KBE_FLT_MAX, p, r, 1, false);
 		}
 		
-		public void Client_onUpdateData_xz_y(MemoryStream stream)
+		public void Client_onUpdateData_xz_y(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1852,7 +1858,7 @@
 			_updateVolatileData(eid, x, KBEMath.KBE_FLT_MAX, z, yaw, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, 1, false);
 		}
 		
-		public void Client_onUpdateData_xz_p(MemoryStream stream)
+		public void Client_onUpdateData_xz_p(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1864,7 +1870,7 @@
 			_updateVolatileData(eid, x, KBEMath.KBE_FLT_MAX, z, KBEMath.KBE_FLT_MAX, p, KBEMath.KBE_FLT_MAX, 1, false);
 		}
 		
-		public void Client_onUpdateData_xz_r(MemoryStream stream)
+		public void Client_onUpdateData_xz_r(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1876,7 +1882,7 @@
 			_updateVolatileData(eid, x, KBEMath.KBE_FLT_MAX, z, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, r, 1, false);
 		}
 		
-		public void Client_onUpdateData_xyz(MemoryStream stream)
+		public void Client_onUpdateData_xyz(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1887,7 +1893,7 @@
 			_updateVolatileData(eid, x, y, z, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, 0, false);
 		}
 		
-		public void Client_onUpdateData_xyz_ypr(MemoryStream stream)
+		public void Client_onUpdateData_xyz_ypr(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1902,7 +1908,7 @@
 			_updateVolatileData(eid, x, y, z, yaw, p, r, 0, false);
 		}
 		
-		public void Client_onUpdateData_xyz_yp(MemoryStream stream)
+		public void Client_onUpdateData_xyz_yp(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1916,7 +1922,7 @@
 			_updateVolatileData(eid, x, y, z, yaw, p, KBEMath.KBE_FLT_MAX, 0, false);
 		}
 		
-		public void Client_onUpdateData_xyz_yr(MemoryStream stream)
+		public void Client_onUpdateData_xyz_yr(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1930,7 +1936,7 @@
 			_updateVolatileData(eid, x, y, z, yaw, KBEMath.KBE_FLT_MAX, r, 0, false);
 		}
 		
-		public void Client_onUpdateData_xyz_pr(MemoryStream stream)
+		public void Client_onUpdateData_xyz_pr(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1944,7 +1950,7 @@
 			_updateVolatileData(eid, x, y, z, KBEMath.KBE_FLT_MAX, p, r, 0, false);
 		}
 		
-		public void Client_onUpdateData_xyz_y(MemoryStream stream)
+		public void Client_onUpdateData_xyz_y(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1957,7 +1963,7 @@
 			_updateVolatileData(eid, x, y, z, yaw, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, 0, false);
 		}
 		
-		public void Client_onUpdateData_xyz_p(MemoryStream stream)
+		public void Client_onUpdateData_xyz_p(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1970,7 +1976,7 @@
 			_updateVolatileData(eid, x, y, z, KBEMath.KBE_FLT_MAX, p, KBEMath.KBE_FLT_MAX, 0, false);
 		}
 		
-		public void Client_onUpdateData_xyz_r(MemoryStream stream)
+		public void Client_onUpdateData_xyz_r(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 			
@@ -1983,7 +1989,7 @@
 			_updateVolatileData(eid, x, y, z, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, r, 0, false);
 		}
 
-		public void Client_onUpdateData_ypr_optimized(MemoryStream stream)
+		public void Client_onUpdateData_ypr_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -1994,7 +2000,7 @@
 			_updateVolatileData(eid, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, y, p, r, -1, true);
 		}
 
-		public void Client_onUpdateData_yp_optimized(MemoryStream stream)
+		public void Client_onUpdateData_yp_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -2004,7 +2010,7 @@
 			_updateVolatileData(eid, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, y, p, KBEMath.KBE_FLT_MAX, -1, true);
 		}
 
-		public void Client_onUpdateData_yr_optimized(MemoryStream stream)
+		public void Client_onUpdateData_yr_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -2014,7 +2020,7 @@
 			_updateVolatileData(eid, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, y, KBEMath.KBE_FLT_MAX, r, -1, true);
 		}
 
-		public void Client_onUpdateData_pr_optimized(MemoryStream stream)
+		public void Client_onUpdateData_pr_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -2024,7 +2030,7 @@
 			_updateVolatileData(eid, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, p, r, -1, true);
 		}
 
-		public void Client_onUpdateData_y_optimized(MemoryStream stream)
+		public void Client_onUpdateData_y_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -2033,7 +2039,7 @@
 			_updateVolatileData(eid, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, y, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, -1, true);
 		}
 
-		public void Client_onUpdateData_p_optimized(MemoryStream stream)
+		public void Client_onUpdateData_p_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -2042,7 +2048,7 @@
 			_updateVolatileData(eid, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, p, KBEMath.KBE_FLT_MAX, -1, true);
 		}
 
-		public void Client_onUpdateData_r_optimized(MemoryStream stream)
+		public void Client_onUpdateData_r_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -2051,7 +2057,7 @@
 			_updateVolatileData(eid, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, r, -1, true);
 		}
 
-		public void Client_onUpdateData_xz_optimized(MemoryStream stream)
+		public void Client_onUpdateData_xz_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -2060,7 +2066,7 @@
 			_updateVolatileData(eid, xz[0], KBEMath.KBE_FLT_MAX, xz[1], KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, 1, true);
 		}
 
-		public void Client_onUpdateData_xz_ypr_optimized(MemoryStream stream)
+		public void Client_onUpdateData_xz_ypr_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -2073,7 +2079,7 @@
 			_updateVolatileData(eid, xz[0], KBEMath.KBE_FLT_MAX, xz[1], y, p, r, 1, true);
 		}
 
-		public void Client_onUpdateData_xz_yp_optimized(MemoryStream stream)
+		public void Client_onUpdateData_xz_yp_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -2085,7 +2091,7 @@
 			_updateVolatileData(eid, xz[0], KBEMath.KBE_FLT_MAX, xz[1], y, p, KBEMath.KBE_FLT_MAX, 1, true);
 		}
 
-		public void Client_onUpdateData_xz_yr_optimized(MemoryStream stream)
+		public void Client_onUpdateData_xz_yr_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -2097,7 +2103,7 @@
 			_updateVolatileData(eid, xz[0], KBEMath.KBE_FLT_MAX, xz[1], y, KBEMath.KBE_FLT_MAX, r, 1, true);
 		}
 
-		public void Client_onUpdateData_xz_pr_optimized(MemoryStream stream)
+		public void Client_onUpdateData_xz_pr_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -2109,7 +2115,7 @@
 			_updateVolatileData(eid, xz[0], KBEMath.KBE_FLT_MAX, xz[1], KBEMath.KBE_FLT_MAX, p, r, 1, true);
 		}
 
-		public void Client_onUpdateData_xz_y_optimized(MemoryStream stream)
+		public void Client_onUpdateData_xz_y_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 			Vector2 xz = stream.readPackXZ();
@@ -2117,7 +2123,7 @@
 			_updateVolatileData(eid, xz[0], KBEMath.KBE_FLT_MAX, xz[1], yaw, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, 1, true);
 		}
 
-		public void Client_onUpdateData_xz_p_optimized(MemoryStream stream)
+		public void Client_onUpdateData_xz_p_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -2128,7 +2134,7 @@
 			_updateVolatileData(eid, xz[0], KBEMath.KBE_FLT_MAX, xz[1], KBEMath.KBE_FLT_MAX, p, KBEMath.KBE_FLT_MAX, 1, true);
 		}
 
-		public void Client_onUpdateData_xz_r_optimized(MemoryStream stream)
+		public void Client_onUpdateData_xz_r_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -2139,7 +2145,7 @@
 			_updateVolatileData(eid, xz[0], KBEMath.KBE_FLT_MAX, xz[1], KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, r, 1, true);
 		}
 
-		public void Client_onUpdateData_xyz_optimized(MemoryStream stream)
+		public void Client_onUpdateData_xyz_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -2149,7 +2155,7 @@
 			_updateVolatileData(eid, xz[0], y, xz[1], KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, 0, true);
 		}
 
-		public void Client_onUpdateData_xyz_ypr_optimized(MemoryStream stream)
+		public void Client_onUpdateData_xyz_ypr_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -2163,7 +2169,7 @@
 			_updateVolatileData(eid, xz[0], y, xz[1], yaw, p, r, 0, true);
 		}
 
-		public void Client_onUpdateData_xyz_yp_optimized(MemoryStream stream)
+		public void Client_onUpdateData_xyz_yp_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -2176,7 +2182,7 @@
 			_updateVolatileData(eid, xz[0], y, xz[1], yaw, p, KBEMath.KBE_FLT_MAX, 0, true);
 		}
 
-		public void Client_onUpdateData_xyz_yr_optimized(MemoryStream stream)
+		public void Client_onUpdateData_xyz_yr_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -2189,7 +2195,7 @@
 			_updateVolatileData(eid, xz[0], y, xz[1], yaw, KBEMath.KBE_FLT_MAX, r, 0, true);
 		}
 
-		public void Client_onUpdateData_xyz_pr_optimized(MemoryStream stream)
+		public void Client_onUpdateData_xyz_pr_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -2202,7 +2208,7 @@
 			_updateVolatileData(eid, xz[0], y, xz[1], KBEMath.KBE_FLT_MAX, p, r, 0, true);
 		}
 
-		public void Client_onUpdateData_xyz_y_optimized(MemoryStream stream)
+		public void Client_onUpdateData_xyz_y_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -2213,7 +2219,7 @@
 			_updateVolatileData(eid, xz[0], y, xz[1], yaw, KBEMath.KBE_FLT_MAX, KBEMath.KBE_FLT_MAX, 0, true);
 		}
 
-		public void Client_onUpdateData_xyz_p_optimized(MemoryStream stream)
+		public void Client_onUpdateData_xyz_p_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -2225,7 +2231,7 @@
 			_updateVolatileData(eid, xz[0], y, xz[1], KBEMath.KBE_FLT_MAX, p, KBEMath.KBE_FLT_MAX, 0, true);
 		}
 
-		public void Client_onUpdateData_xyz_r_optimized(MemoryStream stream)
+		public void Client_onUpdateData_xyz_r_optimized(KBEMemoryStream stream)
 		{
 			Int32 eid = getViewEntityIDFromStream(stream);
 
@@ -2310,7 +2316,7 @@
 			Event.fireOut(EventOutTypes.onStreamDataStarted, id, datasize, descr);
 		}
 		
-		public void Client_onStreamDataRecv(MemoryStream stream)
+		public void Client_onStreamDataRecv(KBEMemoryStream stream)
 		{
 			Int16 resID = stream.readInt16();
 			byte[] datas = stream.readBlob();
@@ -2436,7 +2442,14 @@
 			if(diff < 0)
 				diff = 0;
 			
-			System.Threading.Thread.Sleep(diff);
+			try
+			{
+				System.Threading.Thread.Sleep(diff);
+			}
+			catch (Exception e)
+			{
+				Dbg.DEBUG_MSG(e.ToString());
+			}
 			_lasttime = DateTime.Now;
 		}
 		

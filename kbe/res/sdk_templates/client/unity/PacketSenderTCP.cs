@@ -40,7 +40,7 @@
 			Dbg.DEBUG_MSG("PacketSenderTCP::~PacketSenderTCP(), destroyed!");
 		}
 
-		public override bool send(MemoryStream stream)
+		public override bool send(KBEMemoryStream stream)
 		{
 			int dataLength = (int)stream.length();
 			if (dataLength <= 0)

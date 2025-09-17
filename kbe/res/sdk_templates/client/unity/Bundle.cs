@@ -12,8 +12,8 @@
 	*/
 	public class Bundle : ObjectPool<Bundle>
     {
-		public MemoryStream stream = new MemoryStream();
-		public List<MemoryStream> streamList = new List<MemoryStream>();
+		public KBEMemoryStream stream = new KBEMemoryStream();
+		public List<KBEMemoryStream> streamList = new List<KBEMemoryStream>();
 		public int numMessage = 0;
 		public int messageLength = 0;
 		public Message msgtype = null;
@@ -37,7 +37,7 @@
             if(stream != null)
                 stream.clear();
             else
-                stream = MemoryStream.createObject();
+                stream = KBEMemoryStream.createObject();
 
 			numMessage = 0;
 			messageLength = 0;
@@ -77,7 +77,7 @@
 			if(msgtype.msglen != -1)
 				return;
 
-			MemoryStream stream = this.stream;
+			KBEMemoryStream stream = this.stream;
 			if(_curMsgStreamIndex > 0)
 			{
 				stream = streamList[streamList.Count - _curMsgStreamIndex];
@@ -93,7 +93,7 @@
 				writeMsgLength();
 
 				streamList.Add(stream);
-				stream = MemoryStream.createObject();
+				stream = KBEMemoryStream.createObject();
 			}
 			
 			if(issend)
@@ -113,7 +113,7 @@
 			{
 				for(int i=0; i<streamList.Count; i++)
 				{
-					MemoryStream tempStream = streamList[i];
+					KBEMemoryStream tempStream = streamList[i];
 					networkInterface.send(tempStream);
 				}
 			}
@@ -135,7 +135,7 @@
 			if(v > stream.space())
 			{
 				streamList.Add(stream);
-				stream = MemoryStream.createObject();
+				stream = KBEMemoryStream.createObject();
 				++ _curMsgStreamIndex;
 			}
 	

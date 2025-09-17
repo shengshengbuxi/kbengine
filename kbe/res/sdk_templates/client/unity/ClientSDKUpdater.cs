@@ -11,7 +11,7 @@ namespace KBEngine
     public class ClientSDKUpdater : MonoBehaviour
     {
         string warnUpdateSDK = "";
-        MemoryStream sdkFileStream = null;
+        KBEMemoryStream sdkFileStream = null;
         int downloadFiles = 0;
         string sdkPath = "";
         string sdkTempPath = "";
@@ -55,7 +55,7 @@ namespace KBEngine
         public void onImportClientSDK(int remainingFiles, string fileName, int fileSize, byte[] fileDatas)
         {
             if (sdkFileStream == null)
-                sdkFileStream = MemoryStream.createObject();
+                sdkFileStream = KBEMemoryStream.createObject();
 
             sdkFileStream.append(fileDatas, (uint)sdkFileStream.rpos, (uint)fileDatas.Length);
 

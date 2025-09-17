@@ -32,9 +32,9 @@
 			Dbg.DEBUG_MSG("PacketSenderKCP::~PacketSenderKCP(), destroyed!");
 		}
 
-		public override bool send(MemoryStream stream)
+		public override bool send(KBEMemoryStream stream)
 		{
-			//MemoryStream udpPacket = MemoryStream.createObject();
+			//KBEMemoryStream udpPacket = KBEMemoryStream.createObject();
 			//udpPacket.swap(stream);
 			return true;
 		}

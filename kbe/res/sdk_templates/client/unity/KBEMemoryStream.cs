@@ -13,7 +13,7 @@
 		二进制数据流模块
 		能够将一些基本类型序列化(writeXXX)成二进制流同时也提供了反序列化(readXXX)等操作
 	*/
-	public class MemoryStream : ObjectPool<MemoryStream>
+	public class KBEMemoryStream : ObjectPool<KBEMemoryStream>
     {
     	public const int BUFFER_MAX = 1460 * 4;
     	
@@ -44,7 +44,7 @@
 			return outBuf;
 		}
 
-		public void swap(MemoryStream stream)
+		public void swap(KBEMemoryStream stream)
 		{
 			int t_rpos = rpos;
 			int t_wpos = wpos;
