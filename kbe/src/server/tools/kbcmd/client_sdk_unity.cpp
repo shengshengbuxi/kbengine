@@ -183,6 +183,7 @@ bool ClientSDKUnity::writeServerErrorDescrsModuleBegin()
 	sourcefileBody_ += "\tusing System;\n";
 	sourcefileBody_ += "\tusing System.Collections;\n";
 	sourcefileBody_ += "\tusing System.Collections.Generic;\n\n";
+	sourcefileBody_ += "\tusing System.Text;\n";
 
 	sourcefileBody_ += fmt::format("\tpublic struct {}\n\t{{\n\t\tpublic string name;\n\t\tpublic string descr;\n\t\tpublic UInt16 id;\n", "ServerErr");
 	sourcefileBody_ += "\t}";
@@ -1578,10 +1579,6 @@ bool ClientSDKUnity::writeTypeItemType_INT16(const std::string& itemName, const 
 //-------------------------------------------------------------------------------------
 bool ClientSDKUnity::writeTypeItemType_INT32(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
-	ERROR_MSG("----------------------------------------------------------->>>>>");
-	ERROR_MSG("itemName = " + itemName);
-	ERROR_MSG("childItemName = " + childItemName);
-	ERROR_MSG("des = " + des);
 	if (des == "")
 		sourcefileBody_ += fmt::format("\t\tpublic Int32 {} = 0;\n", itemName);
 	else
