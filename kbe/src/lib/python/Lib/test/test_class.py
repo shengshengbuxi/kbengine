@@ -445,6 +445,20 @@ class ClassTests(unittest.TestCase):
         del testme.cardinal
         self.assertCallStack([('__delattr__', (testme, "cardinal"))])
 
+    def testHasAttrString(self):
+        import sys
+        from test.support import import_helper
+        _testcapi = import_helper.import_module('_testcapi')
+
+        class A:
+            def __init__(self):
+                self.attr = 1
+
+        a = A()
+        self.assertEqual(_testcapi.object_hasattrstring(a, b"attr"), 1)
+        self.assertEqual(_testcapi.object_hasattrstring(a, b"noattr"), 0)
+        self.assertIsNone(sys.exception())
+
     def testDel(self):
         x = []
 
@@ -489,6 +503,56 @@ class ClassTests(unittest.TestCase):
 
         self.assertRaises(TypeError, hash, C2())
 
+    def testPredefinedAttrs(self):
+        o = object()
+
+        class Custom:
+            pass
+
+        c = Custom()
+
+        methods = (
+            '__class__', '__delattr__', '__dir__', '__eq__', '__format__',
+            '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__',
+            '__init__', '__init_subclass__', '__le__', '__lt__', '__ne__',
+            '__new__', '__reduce__', '__reduce_ex__', '__repr__',
+            '__setattr__', '__sizeof__', '__str__', '__subclasshook__'
+        )
+        for name in methods:
+            with self.subTest(name):
+                self.assertTrue(callable(getattr(object, name, None)))
+                self.assertTrue(callable(getattr(o, name, None)))
+                self.assertTrue(callable(getattr(Custom, name, None)))
+                self.assertTrue(callable(getattr(c, name, None)))
+
+        not_defined = [
+            '__abs__', '__aenter__', '__aexit__', '__aiter__', '__anext__',
+            '__await__', '__bool__', '__bytes__', '__ceil__',
+            '__complex__', '__contains__', '__del__', '__delete__',
+            '__delitem__', '__divmod__', '__enter__', '__exit__',
+            '__float__', '__floor__', '__get__', '__getattr__', '__getitem__',
+            '__index__', '__int__', '__invert__', '__iter__', '__len__',
+            '__length_hint__', '__missing__', '__neg__', '__next__',
+            '__objclass__', '__pos__', '__rdivmod__', '__reversed__',
+            '__round__', '__set__', '__setitem__', '__trunc__'
+        ]
+        augment = (
+            'add', 'and', 'floordiv', 'lshift', 'matmul', 'mod', 'mul', 'pow',
+            'rshift', 'sub', 'truediv', 'xor'
+        )
+        not_defined.extend(map("__{}__".format, augment))
+        not_defined.extend(map("__r{}__".format, augment))
+        not_defined.extend(map("__i{}__".format, augment))
+        for name in not_defined:
+            with self.subTest(name):
+                self.assertFalse(hasattr(object, name))
+                self.assertFalse(hasattr(o, name))
+                self.assertFalse(hasattr(Custom, name))
+                self.assertFalse(hasattr(c, name))
+
+        # __call__() is defined on the metaclass but not the class
+        self.assertFalse(hasattr(o, "__call__"))
+        self.assertFalse(hasattr(c, "__call__"))
 
     def testSFBug532646(self):
         # Test for SF bug 532646
@@ -529,10 +593,20 @@ class ClassTests(unittest.TestCase):
             # In debug mode, printed XXX undetected error and
             #  raises AttributeError
             I()
-        except AttributeError as x:
+        except AttributeError:
             pass
         else:
             self.fail("attribute error for I.__init__ got masked")
+
+    def assertNotOrderable(self, a, b):
+        with self.assertRaises(TypeError):
+            a < b
+        with self.assertRaises(TypeError):
+            a > b
+        with self.assertRaises(TypeError):
+            a <= b
+        with self.assertRaises(TypeError):
+            a >= b
 
     def testHashComparisonOfMethods(self):
         # Test comparison and hash of methods
@@ -544,24 +618,30 @@ class ClassTests(unittest.TestCase):
             def g(self):
                 pass
             def __eq__(self, other):
-                return self.x == other.x
+                return True
             def __hash__(self):
-                return self.x
+                raise TypeError
         class B(A):
             pass
 
         a1 = A(1)
-        a2 = A(2)
-        self.assertEqual(a1.f, a1.f)
-        self.assertNotEqual(a1.f, a2.f)
-        self.assertNotEqual(a1.f, a1.g)
-        self.assertEqual(a1.f, A(1).f)
+        a2 = A(1)
+        self.assertTrue(a1.f == a1.f)
+        self.assertFalse(a1.f != a1.f)
+        self.assertFalse(a1.f == a2.f)
+        self.assertTrue(a1.f != a2.f)
+        self.assertFalse(a1.f == a1.g)
+        self.assertTrue(a1.f != a1.g)
+        self.assertNotOrderable(a1.f, a1.f)
         self.assertEqual(hash(a1.f), hash(a1.f))
-        self.assertEqual(hash(a1.f), hash(A(1).f))
 
-        self.assertNotEqual(A.f, a1.f)
-        self.assertNotEqual(A.f, A.g)
-        self.assertEqual(B.f, A.f)
+        self.assertFalse(A.f == a1.f)
+        self.assertTrue(A.f != a1.f)
+        self.assertFalse(A.f == A.g)
+        self.assertTrue(A.f != A.g)
+        self.assertTrue(B.f == A.f)
+        self.assertFalse(B.f != A.f)
+        self.assertNotOrderable(A.f, A.f)
         self.assertEqual(hash(B.f), hash(A.f))
 
         # the following triggers a SystemError in 2.4
@@ -594,6 +674,49 @@ class ClassTests(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             type.__setattr__(A, b'x', None)
+
+    def testTypeAttributeAccessErrorMessages(self):
+        class A:
+            pass
+
+        error_msg = "type object 'A' has no attribute 'x'"
+        with self.assertRaisesRegex(AttributeError, error_msg):
+            A.x
+        with self.assertRaisesRegex(AttributeError, error_msg):
+            del A.x
+
+    def testObjectAttributeAccessErrorMessages(self):
+        class A:
+            pass
+        class B:
+            y = 0
+            __slots__ = ('z',)
+
+        error_msg = "'A' object has no attribute 'x'"
+        with self.assertRaisesRegex(AttributeError, error_msg):
+            A().x
+        with self.assertRaisesRegex(AttributeError, error_msg):
+            del A().x
+
+        error_msg = "'B' object has no attribute 'x'"
+        with self.assertRaisesRegex(AttributeError, error_msg):
+            B().x
+        with self.assertRaisesRegex(AttributeError, error_msg):
+            del B().x
+        with self.assertRaisesRegex(AttributeError, error_msg):
+            B().x = 0
+
+        error_msg = "'B' object attribute 'y' is read-only"
+        with self.assertRaisesRegex(AttributeError, error_msg):
+            del B().y
+        with self.assertRaisesRegex(AttributeError, error_msg):
+            B().y = 0
+
+        error_msg = 'z'
+        with self.assertRaisesRegex(AttributeError, error_msg):
+            B().z
+        with self.assertRaisesRegex(AttributeError, error_msg):
+            del B().z
 
     def testConstructorErrorMessages(self):
         # bpo-31506: Improves the error message logic for object_new & object_init
@@ -649,6 +772,24 @@ class ClassTests(unittest.TestCase):
 
         with self.assertRaisesRegex(TypeError, error_msg):
             object.__init__(E(), 42)
+
+    def testClassWithExtCall(self):
+        class Meta(int):
+            def __init__(*args, **kwargs):
+                pass
+
+            def __new__(cls, name, bases, attrs, **kwargs):
+                return bases, kwargs
+
+        d = {'metaclass': Meta}
+
+        class A(**d): pass
+        self.assertEqual(A, ((), {}))
+        class A(0, 1, 2, 3, 4, 5, 6, 7, **d): pass
+        self.assertEqual(A, (tuple(range(8)), {}))
+        class A(0, *range(1, 8), **d, foo='bar'): pass
+        self.assertEqual(A, (tuple(range(8)), {'foo': 'bar'}))
+
 
 if __name__ == '__main__':
     unittest.main()

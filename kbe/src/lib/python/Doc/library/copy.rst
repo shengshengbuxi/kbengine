@@ -1,5 +1,5 @@
-:mod:`copy` --- Shallow and deep copy operations
-================================================
+:mod:`!copy` --- Shallow and deep copy operations
+=================================================
 
 .. module:: copy
    :synopsis: Shallow and deep copy operations.
@@ -27,10 +27,11 @@ Interface summary:
    Return a deep copy of *x*.
 
 
-.. exception:: error
+.. exception:: Error
 
    Raised for module specific errors.
 
+.. _shallow_vs_deep_copy:
 
 The difference between shallow and deep copying is only relevant for compound
 objects (objects that contain other objects, like lists or class instances):
@@ -59,7 +60,7 @@ The :func:`deepcopy` function avoids these problems by:
   components copied.
 
 This module does not copy types like module, method, stack trace, stack frame,
-file, socket, window, array, or any similar types.  It does "copy" functions and
+file, socket, window, or any similar types.  It does "copy" functions and
 classes (shallow and deeply), by returning the original object unchanged; this
 is compatible with the way these are treated by the :mod:`pickle` module.
 
@@ -67,7 +68,7 @@ Shallow copies of dictionaries can be made using :meth:`dict.copy`, and
 of lists by assigning a slice of the entire list, for example,
 ``copied_list = original_list[:]``.
 
-.. index:: module: pickle
+.. index:: pair: module; pickle
 
 Classes can use the same interfaces to control copying that they use to control
 pickling.  See the description of module :mod:`pickle` for information on these
@@ -79,12 +80,22 @@ pickle functions from the :mod:`copyreg` module.
    single: __deepcopy__() (copy protocol)
 
 In order for a class to define its own copy implementation, it can define
-special methods :meth:`__copy__` and :meth:`__deepcopy__`.  The former is called
-to implement the shallow copy operation; no additional arguments are passed.
-The latter is called to implement the deep copy operation; it is passed one
-argument, the ``memo`` dictionary.  If the :meth:`__deepcopy__` implementation needs
-to make a deep copy of a component, it should call the :func:`deepcopy` function
-with the component as first argument and the memo dictionary as second argument.
+special methods :meth:`~object.__copy__` and :meth:`~object.__deepcopy__`.
+
+.. method:: object.__copy__(self)
+   :noindexentry:
+
+   Called to implement the shallow copy operation;
+   no additional arguments are passed.
+
+.. method:: object.__deepcopy__(self, memo)
+   :noindexentry:
+
+   Called to implement the deep copy operation; it is passed one
+   argument, the *memo* dictionary.  If the ``__deepcopy__`` implementation needs
+   to make a deep copy of a component, it should call the :func:`deepcopy` function
+   with the component as first argument and the *memo* dictionary as second argument.
+   The *memo* dictionary should be treated as an opaque object.
 
 
 .. seealso::

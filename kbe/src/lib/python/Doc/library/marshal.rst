@@ -1,5 +1,5 @@
-:mod:`marshal` --- Internal Python object serialization
-=======================================================
+:mod:`!marshal` --- Internal Python object serialization
+========================================================
 
 .. module:: marshal
    :synopsis: Convert Python objects to streams of bytes and back (with different
@@ -10,13 +10,13 @@
 This module contains functions that can read and write Python values in a binary
 format.  The format is specific to Python, but independent of machine
 architecture issues (e.g., you can write a Python value to a file on a PC,
-transport the file to a Sun, and read it back there).  Details of the format are
+transport the file to a Mac, and read it back there).  Details of the format are
 undocumented on purpose; it may change between Python versions (although it
 rarely does). [#]_
 
 .. index::
-   module: pickle
-   module: shelve
+   pair: module; pickle
+   pair: module; shelve
 
 This is not a general "persistence" module.  For general persistence and
 transfer of Python objects through RPC calls, see the modules :mod:`pickle` and
@@ -38,8 +38,8 @@ supports a substantially wider range of objects than marshal.
 
 Not all Python object types are supported; in general, only objects whose value
 is independent from a particular invocation of Python can be written and read by
-this module.  The following types are supported: booleans, integers, floating
-point numbers, complex numbers, strings, bytes, bytearrays, tuples, lists, sets,
+this module.  The following types are supported: booleans, integers, floating-point
+numbers, complex numbers, strings, bytes, bytearrays, tuples, lists, sets,
 frozensets, dictionaries, and code objects, where it should be understood that
 tuples, lists, sets, frozensets and dictionaries are only supported as long as
 the values contained therein are themselves supported.  The
@@ -66,6 +66,8 @@ The module defines these functions:
    The *version* argument indicates the data format that ``dump`` should use
    (see below).
 
+   .. audit-event:: marshal.dumps value,version marshal.dump
+
 
 .. function:: load(file)
 
@@ -74,10 +76,17 @@ The module defines these functions:
    format), raise :exc:`EOFError`, :exc:`ValueError` or :exc:`TypeError`.  The
    file must be a readable :term:`binary file`.
 
+   .. audit-event:: marshal.load "" marshal.load
+
    .. note::
 
       If an object containing an unsupported type was marshalled with :func:`dump`,
       :func:`load` will substitute ``None`` for the unmarshallable type.
+
+   .. versionchanged:: 3.10
+
+      This call used to raise a ``code.__new__`` audit event for each code object. Now
+      it raises a single ``marshal.load`` event for the entire load operation.
 
 
 .. function:: dumps(value[, version])
@@ -89,12 +98,21 @@ The module defines these functions:
    The *version* argument indicates the data format that ``dumps`` should use
    (see below).
 
+   .. audit-event:: marshal.dumps value,version marshal.dump
+
 
 .. function:: loads(bytes)
 
    Convert the :term:`bytes-like object` to a value.  If no valid value is found, raise
    :exc:`EOFError`, :exc:`ValueError` or :exc:`TypeError`.  Extra bytes in the
    input are ignored.
+
+   .. audit-event:: marshal.loads bytes marshal.load
+
+   .. versionchanged:: 3.10
+
+      This call used to raise a ``code.__new__`` audit event for each code object. Now
+      it raises a single ``marshal.loads`` event for the entire load operation.
 
 
 In addition, the following constants are defined:
@@ -103,7 +121,7 @@ In addition, the following constants are defined:
 
    Indicates the format that the module uses. Version 0 is the historical
    format, version 1 shares interned strings and version 2 uses a binary format
-   for floating point numbers.
+   for floating-point numbers.
    Version 3 adds support for object instancing and recursion.
    The current version is 4.
 

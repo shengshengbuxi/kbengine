@@ -50,12 +50,12 @@ SelectorKey.__doc__ = """SelectorKey(fileobj, fd, events, data)
     Object used to associate a file object to its backing
     file descriptor, selected event mask, and attached data.
 """
-if sys.version_info >= (3, 5):
-    SelectorKey.fileobj.__doc__ = 'File object registered.'
-    SelectorKey.fd.__doc__ = 'Underlying file descriptor.'
-    SelectorKey.events.__doc__ = 'Events that must be waited for on this file object.'
-    SelectorKey.data.__doc__ = ('''Optional opaque data associated to this file object.
-    For example, this could be used to store a per-client session ID.''')
+SelectorKey.fileobj.__doc__ = 'File object registered.'
+SelectorKey.fd.__doc__ = 'Underlying file descriptor.'
+SelectorKey.events.__doc__ = 'Events that must be waited for on this file object.'
+SelectorKey.data.__doc__ = ('''Optional opaque data associated to this file object.
+For example, this could be used to store a per-client session ID.''')
+
 
 class _SelectorMapping(Mapping):
     """Mapping of file objects to selector keys."""
@@ -509,6 +509,7 @@ if hasattr(select, 'kqueue'):
         def __init__(self):
             super().__init__()
             self._selector = select.kqueue()
+            self._max_events = 0
 
         def fileno(self):
             return self._selector.fileno()
@@ -520,10 +521,12 @@ if hasattr(select, 'kqueue'):
                     kev = select.kevent(key.fd, select.KQ_FILTER_READ,
                                         select.KQ_EV_ADD)
                     self._selector.control([kev], 0, 0)
+                    self._max_events += 1
                 if events & EVENT_WRITE:
                     kev = select.kevent(key.fd, select.KQ_FILTER_WRITE,
                                         select.KQ_EV_ADD)
                     self._selector.control([kev], 0, 0)
+                    self._max_events += 1
             except:
                 super().unregister(fileobj)
                 raise
@@ -534,6 +537,7 @@ if hasattr(select, 'kqueue'):
             if key.events & EVENT_READ:
                 kev = select.kevent(key.fd, select.KQ_FILTER_READ,
                                     select.KQ_EV_DELETE)
+                self._max_events -= 1
                 try:
                     self._selector.control([kev], 0, 0)
                 except OSError:
@@ -543,6 +547,7 @@ if hasattr(select, 'kqueue'):
             if key.events & EVENT_WRITE:
                 kev = select.kevent(key.fd, select.KQ_FILTER_WRITE,
                                     select.KQ_EV_DELETE)
+                self._max_events -= 1
                 try:
                     self._selector.control([kev], 0, 0)
                 except OSError:
@@ -552,7 +557,10 @@ if hasattr(select, 'kqueue'):
 
         def select(self, timeout=None):
             timeout = None if timeout is None else max(timeout, 0)
-            max_ev = len(self._fd_to_key)
+            # If max_ev is 0, kqueue will ignore the timeout. For consistent
+            # behavior with the other selector classes, we prevent that here
+            # (using max). See https://bugs.python.org/issue29255
+            max_ev = self._max_events or 1
             ready = []
             try:
                 kev_list = self._selector.control(None, max_ev, timeout)
@@ -577,16 +585,39 @@ if hasattr(select, 'kqueue'):
             super().close()
 
 
+def _can_use(method):
+    """Check if we can use the selector depending upon the
+    operating system. """
+    # Implementation based upon https://github.com/sethmlarson/selectors2/blob/master/selectors2.py
+    selector = getattr(select, method, None)
+    if selector is None:
+        # select module does not implement method
+        return False
+    # check if the OS and Kernel actually support the method. Call may fail with
+    # OSError: [Errno 38] Function not implemented
+    try:
+        selector_obj = selector()
+        if method == 'poll':
+            # check that poll actually works
+            selector_obj.poll(0)
+        else:
+            # close epoll, kqueue, and devpoll fd
+            selector_obj.close()
+        return True
+    except OSError:
+        return False
+
+
 # Choose the best implementation, roughly:
 #    epoll|kqueue|devpoll > poll > select.
 # select() also can't accept a FD > FD_SETSIZE (usually around 1024)
-if 'KqueueSelector' in globals():
+if _can_use('kqueue'):
     DefaultSelector = KqueueSelector
-elif 'EpollSelector' in globals():
+elif _can_use('epoll'):
     DefaultSelector = EpollSelector
-elif 'DevpollSelector' in globals():
+elif _can_use('devpoll'):
     DefaultSelector = DevpollSelector
-elif 'PollSelector' in globals():
+elif _can_use('poll'):
     DefaultSelector = PollSelector
 else:
     DefaultSelector = SelectSelector

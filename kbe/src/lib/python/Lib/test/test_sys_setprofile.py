@@ -255,6 +255,25 @@ class ProfileHookTestCase(TestCaseBase):
                               (1, 'return', g_ident),
                               ])
 
+    def test_unfinished_generator(self):
+        def f():
+            for i in range(2):
+                yield i
+        def g(p):
+            next(f())
+
+        f_ident = ident(f)
+        g_ident = ident(g)
+        self.check_events(g, [(1, 'call', g_ident),
+                              (2, 'call', f_ident),
+                              (2, 'return', f_ident),
+                              # once more; the generator is being garbage collected
+                              # and it will do a PY_THROW
+                              (2, 'call', f_ident),
+                              (2, 'return', f_ident),
+                              (1, 'return', g_ident),
+                              ])
+
     def test_stop_iteration(self):
         def f():
             for i in range(2):
@@ -334,6 +353,15 @@ class ProfileSimulatorTestCase(TestCaseBase):
                               (1, 'return', j_ident),
                               ])
 
+    # bpo-34125: profiling method_descriptor with **kwargs
+    def test_unbound_method(self):
+        kwargs = {}
+        def f(p):
+            dict.get({}, 42, **kwargs)
+        f_ident = ident(f)
+        self.check_events(f, [(1, 'call', f_ident),
+                              (1, 'return', f_ident)])
+
     # Test an invalid call (bpo-34126)
     def test_unbound_method_no_args(self):
         def f(p):
@@ -346,6 +374,24 @@ class ProfileSimulatorTestCase(TestCaseBase):
     def test_unbound_method_invalid_args(self):
         def f(p):
             dict.get(print, 42)
+        f_ident = ident(f)
+        self.check_events(f, [(1, 'call', f_ident),
+                              (1, 'return', f_ident)])
+
+    # Test an invalid call (bpo-34125)
+    def test_unbound_method_no_keyword_args(self):
+        kwargs = {}
+        def f(p):
+            dict.get(**kwargs)
+        f_ident = ident(f)
+        self.check_events(f, [(1, 'call', f_ident),
+                              (1, 'return', f_ident)])
+
+    # Test an invalid call (bpo-34125)
+    def test_unbound_method_invalid_keyword_args(self):
+        kwargs = {}
+        def f(p):
+            dict.get(print, 42, **kwargs)
         f_ident = ident(f)
         self.check_events(f, [(1, 'call', f_ident),
                               (1, 'return', f_ident)])
@@ -386,6 +432,65 @@ def capture_events(callable, p=None):
 def show_events(callable):
     import pprint
     pprint.pprint(capture_events(callable))
+
+
+class TestEdgeCases(unittest.TestCase):
+
+    def setUp(self):
+        self.addCleanup(sys.setprofile, sys.getprofile())
+        sys.setprofile(None)
+
+    def test_reentrancy(self):
+        def foo(*args):
+            ...
+
+        def bar(*args):
+            ...
+
+        class A:
+            def __call__(self, *args):
+                pass
+
+            def __del__(self):
+                sys.setprofile(bar)
+
+        sys.setprofile(A())
+        sys.setprofile(foo)
+        self.assertEqual(sys.getprofile(), bar)
+
+    def test_same_object(self):
+        def foo(*args):
+            ...
+
+        sys.setprofile(foo)
+        del foo
+        sys.setprofile(sys.getprofile())
+
+    def test_profile_after_trace_opcodes(self):
+        def f():
+            ...
+
+        sys._getframe().f_trace_opcodes = True
+        prev_trace = sys.gettrace()
+        sys.settrace(lambda *args: None)
+        f()
+        sys.settrace(prev_trace)
+        sys.setprofile(lambda *args: None)
+        f()
+
+    def test_method_with_c_function(self):
+        # gh-122029
+        # When we have a PyMethodObject whose im_func is a C function, we
+        # should record both the call and the return. f = classmethod(repr)
+        # is just a way to create a PyMethodObject with a C function.
+        class A:
+            f = classmethod(repr)
+        events = []
+        sys.setprofile(lambda frame, event, args: events.append(event))
+        A().f()
+        sys.setprofile(None)
+        # The last c_call is the call to sys.setprofile
+        self.assertEqual(events, ['c_call', 'c_return', 'c_call'])
 
 
 if __name__ == "__main__":

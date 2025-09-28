@@ -1,8 +1,8 @@
-:mod:`webbrowser` --- Convenient Web-browser controller
-=======================================================
+:mod:`!webbrowser` --- Convenient web-browser controller
+========================================================
 
 .. module:: webbrowser
-   :synopsis: Easy-to-use controller for Web browsers.
+   :synopsis: Easy-to-use controller for web browsers.
 
 .. moduleauthor:: Fred L. Drake, Jr. <fdrake@acm.org>
 .. sectionauthor:: Fred L. Drake, Jr. <fdrake@acm.org>
@@ -12,7 +12,7 @@
 --------------
 
 The :mod:`webbrowser` module provides a high-level interface to allow displaying
-Web-based documents to users. Under most circumstances, simply calling the
+web-based documents to users. Under most circumstances, simply calling the
 :func:`.open` function from this module will do the right thing.
 
 Under Unix, graphical browsers are preferred under X11, but text-mode browsers
@@ -33,13 +33,27 @@ allow the remote browser to maintain its own windows on the display.  If remote
 browsers are not available on Unix, the controlling process will launch a new
 browser and wait.
 
+.. program:: webbrowser
+
 The script :program:`webbrowser` can be used as a command-line interface for the
 module. It accepts a URL as the argument. It accepts the following optional
-parameters: ``-n`` opens the URL in a new browser window, if possible;
-``-t`` opens the URL in a new browser page ("tab"). The options are,
-naturally, mutually exclusive.  Usage example::
+parameters:
 
-   python -m webbrowser -t "http://www.python.org"
+.. option:: -n, --new-window
+
+   Opens the URL in a new browser window, if possible.
+
+.. option:: -t, --new-tab
+
+   Opens the URL in a new browser tab.
+
+The options are, naturally, mutually exclusive.  Usage example:
+
+.. code-block:: bash
+
+   python -m webbrowser -t "https://www.python.org"
+
+.. include:: ../includes/wasm-notavail.rst
 
 The following exception is defined:
 
@@ -60,9 +74,13 @@ The following functions are defined:
    (note that under many window managers this will occur regardless of the
    setting of this variable).
 
+   Returns ``True`` if a browser was successfully launched, ``False`` otherwise.
+
    Note that on some platforms, trying to open a filename using this function,
    may work and start the operating system's associated program.  However, this
    is neither supported nor portable.
+
+   .. audit-event:: webbrowser.open url webbrowser.open
 
 
 .. function:: open_new(url)
@@ -70,10 +88,15 @@ The following functions are defined:
    Open *url* in a new window of the default browser, if possible, otherwise, open
    *url* in the only browser window.
 
+   Returns ``True`` if a browser was successfully launched, ``False`` otherwise.
+
+
 .. function:: open_new_tab(url)
 
    Open *url* in a new page ("tab") of the default browser, if possible, otherwise
    equivalent to :func:`open_new`.
+
+   Returns ``True`` if a browser was successfully launched, ``False`` otherwise.
 
 
 .. function:: get(using=None)
@@ -111,13 +134,7 @@ for the controller classes, all defined in this module.
 +------------------------+-----------------------------------------+-------+
 | ``'firefox'``          | :class:`Mozilla('mozilla')`             |       |
 +------------------------+-----------------------------------------+-------+
-| ``'netscape'``         | :class:`Mozilla('netscape')`            |       |
-+------------------------+-----------------------------------------+-------+
-| ``'galeon'``           | :class:`Galeon('galeon')`               |       |
-+------------------------+-----------------------------------------+-------+
-| ``'epiphany'``         | :class:`Galeon('epiphany')`             |       |
-+------------------------+-----------------------------------------+-------+
-| ``'skipstone'``        | :class:`BackgroundBrowser('skipstone')` |       |
+| ``'epiphany'``         | :class:`Epiphany('epiphany')`           |       |
 +------------------------+-----------------------------------------+-------+
 | ``'kfmclient'``        | :class:`Konqueror()`                    | \(1)  |
 +------------------------+-----------------------------------------+-------+
@@ -125,11 +142,7 @@ for the controller classes, all defined in this module.
 +------------------------+-----------------------------------------+-------+
 | ``'kfm'``              | :class:`Konqueror()`                    | \(1)  |
 +------------------------+-----------------------------------------+-------+
-| ``'mosaic'``           | :class:`BackgroundBrowser('mosaic')`    |       |
-+------------------------+-----------------------------------------+-------+
 | ``'opera'``            | :class:`Opera()`                        |       |
-+------------------------+-----------------------------------------+-------+
-| ``'grail'``            | :class:`Grail()`                        |       |
 +------------------------+-----------------------------------------+-------+
 | ``'links'``            | :class:`GenericBrowser('links')`        |       |
 +------------------------+-----------------------------------------+-------+
@@ -141,9 +154,9 @@ for the controller classes, all defined in this module.
 +------------------------+-----------------------------------------+-------+
 | ``'windows-default'``  | :class:`WindowsDefault`                 | \(2)  |
 +------------------------+-----------------------------------------+-------+
-| ``'macosx'``           | :class:`MacOSX('default')`              | \(3)  |
+| ``'macosx'``           | :class:`MacOSXOSAScript('default')`     | \(3)  |
 +------------------------+-----------------------------------------+-------+
-| ``'safari'``           | :class:`MacOSX('safari')`               | \(3)  |
+| ``'safari'``           | :class:`MacOSXOSAScript('safari')`      | \(3)  |
 +------------------------+-----------------------------------------+-------+
 | ``'google-chrome'``    | :class:`Chrome('google-chrome')`        |       |
 +------------------------+-----------------------------------------+-------+
@@ -167,14 +180,22 @@ Notes:
    Only on Windows platforms.
 
 (3)
-   Only on Mac OS X platform.
+   Only on macOS platform.
 
 .. versionadded:: 3.3
    Support for Chrome/Chromium has been added.
 
+.. versionchanged:: 3.12
+   Support for several obsolete browsers has been removed.
+   Removed browsers include Grail, Mosaic, Netscape, Galeon,
+   Skipstone, Iceape, and Firefox versions 35 and below.
+
+.. deprecated-removed:: 3.11 3.13
+   :class:`MacOSX` is deprecated, use :class:`MacOSXOSAScript` instead.
+
 Here are some simple examples::
 
-   url = 'http://docs.python.org/'
+   url = 'https://docs.python.org/'
 
    # Open URL in a new tab, if a browser window is already open.
    webbrowser.open_new_tab(url)
@@ -190,6 +211,11 @@ Browser Controller Objects
 
 Browser controllers provide these methods which parallel three of the
 module-level convenience functions:
+
+
+.. attribute:: name
+
+   System-dependent name for the browser.
 
 
 .. method:: controller.open(url, new=0, autoraise=True)

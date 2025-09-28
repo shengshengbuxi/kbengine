@@ -5,6 +5,7 @@
 
 #include "client_lib/entity_aspect.h"
 #include "common/common.h"
+#define PY_SSIZE_T_CLEAN
 #include "Python.h"
 
 namespace KBEngine{

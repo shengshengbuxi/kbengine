@@ -13,6 +13,7 @@ Functions:
 import os
 import stat
 from itertools import filterfalse
+from types import GenericAlias
 
 __all__ = ['clear_cache', 'cmp', 'dircmp', 'cmpfiles', 'DEFAULT_IGNORES']
 
@@ -35,8 +36,9 @@ def cmp(f1, f2, shallow=True):
 
     f2 -- Second file name
 
-    shallow -- Just check stat signature (do not read the files).
-               defaults to True.
+    shallow -- treat files as identical if their stat signatures (type, size,
+               mtime) are identical. Otherwise, files are considered different
+               if their sizes or contents differ.  [default: True]
 
     Return value:
 
@@ -114,7 +116,9 @@ class dircmp:
      same_files: list of identical files.
      diff_files: list of filenames which differ.
      funny_files: list of files which could not be compared.
-     subdirs: a dictionary of dircmp objects, keyed by names in common_dirs.
+     subdirs: a dictionary of dircmp instances (or MyDirCmp instances if this
+       object is of type MyDirCmp, a subclass of dircmp), keyed by names
+       in common_dirs.
      """
 
     def __init__(self, a, b, ignore=None, hide=None): # Initialize
@@ -153,17 +157,19 @@ class dircmp:
             a_path = os.path.join(self.left, x)
             b_path = os.path.join(self.right, x)
 
-            ok = 1
+            ok = True
             try:
                 a_stat = os.stat(a_path)
-            except OSError as why:
+            except (OSError, ValueError):
+                # See https://github.com/python/cpython/issues/122400
+                # for the rationale for protecting against ValueError.
                 # print('Can\'t stat', a_path, ':', why.args[1])
-                ok = 0
+                ok = False
             try:
                 b_stat = os.stat(b_path)
-            except OSError as why:
+            except (OSError, ValueError):
                 # print('Can\'t stat', b_path, ':', why.args[1])
-                ok = 0
+                ok = False
 
             if ok:
                 a_type = stat.S_IFMT(a_stat.st_mode)
@@ -184,14 +190,15 @@ class dircmp:
         self.same_files, self.diff_files, self.funny_files = xx
 
     def phase4(self): # Find out differences between common subdirectories
-        # A new dircmp object is created for each common subdirectory,
+        # A new dircmp (or MyDirCmp if dircmp was subclassed) object is created
+        # for each common subdirectory,
         # these are stored in a dictionary indexed by filename.
         # The hide and ignore properties are inherited from the parent
         self.subdirs = {}
         for x in self.common_dirs:
             a_x = os.path.join(self.left, x)
             b_x = os.path.join(self.right, x)
-            self.subdirs[x]  = dircmp(a_x, b_x, self.ignore, self.hide)
+            self.subdirs[x]  = self.__class__(a_x, b_x, self.ignore, self.hide)
 
     def phase4_closure(self): # Recursively call phase4() on subdirectories
         self.phase4()
@@ -237,7 +244,7 @@ class dircmp:
 
     methodmap = dict(subdirs=phase4,
                      same_files=phase3, diff_files=phase3, funny_files=phase3,
-                     common_dirs = phase2, common_files=phase2, common_funny=phase2,
+                     common_dirs=phase2, common_files=phase2, common_funny=phase2,
                      common=phase1, left_only=phase1, right_only=phase1,
                      left_list=phase0, right_list=phase0)
 
@@ -246,6 +253,9 @@ class dircmp:
             raise AttributeError(attr)
         self.methodmap[attr](self)
         return getattr(self, attr)
+
+    __class_getitem__ = classmethod(GenericAlias)
+
 
 def cmpfiles(a, b, common, shallow=True):
     """Compare common files in two directories.
@@ -272,12 +282,12 @@ def cmpfiles(a, b, common, shallow=True):
 # Return:
 #       0 for equal
 #       1 for different
-#       2 for funny cases (can't stat, etc.)
+#       2 for funny cases (can't stat, NUL bytes, etc.)
 #
 def _cmp(a, b, sh, abs=abs, cmp=cmp):
     try:
         return not abs(cmp(a, b, sh))
-    except OSError:
+    except (OSError, ValueError):
         return 2
 
 
