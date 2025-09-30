@@ -1,95 +1,65 @@
 # @GeneratedBy Trae AI Assistant v1.0
 # KBEngine Python 3.12.11 Makefile for Linux/CentOS compilation
-# This Makefile handles the compilation of Python 3.12.11 for KBEngine
+# Based on the working Python 3.7 Makefile from kbeold
 
-ifndef KBE_ROOT
-export KBE_ROOT := $(subst /kbe/src/lib/python,,$(CURDIR))
+all:: config.status
+
+CONFIG_ARGS =
+
+# SSL configuration - check for system SSL or use KBEngine's OpenSSL
+ifneq ("$(wildcard /usr/lib/x86_64-linux-gnu/libssl.a)", "")
+	CONFIG_SSL =
+else
+	CONFIG_SSL = --with-openssl=$(KBE_ROOT)/kbe/src/lib/dependencies/openssl
 endif
 
-ifndef KBE_CONFIG
-	KBE_CONFIG=Hybrid
-	ifeq ($(shell uname -m),x86_64)
-		 KBE_CONFIG=Hybrid64
-	endif
+# Optimization configuration based on build type
+ifeq ($(pythonbuild), release)
+	CONFIG_ARGS += --enable-optimizations 
+else
+ifneq (,$(findstring 64,$(KBE_CONFIG)))
+	CONFIG_ARGS += --enable-optimizations 
+endif
 endif
 
-# Python version configuration
-PYTHON_VERSION=3.12
-PYTHON_FULL_VERSION=3.12.11
-PYTHON_LIB_NAME=libpython$(PYTHON_VERSION).a
-
-# Build directories
-BUILD_DIR=$(CURDIR)/build
-INSTALL_DIR=$(CURDIR)/install
-LIB_OUTPUT_DIR=$(KBE_ROOT)/kbe/src/libs
-
-# Configure flags for Python compilation
-CONFIGURE_FLAGS = --prefix=$(INSTALL_DIR) \
-                  --enable-shared=no \
-                  --enable-static=yes \
-                  --with-ensurepip=no \
-                  --disable-test-modules \
-                  --enable-optimizations \
-                  --with-lto
-
-# Compiler flags
-CFLAGS += -fPIC -O3
-CPPFLAGS += -I$(CURDIR)/Include
-LDFLAGS += -L$(LIB_OUTPUT_DIR)
-
-# Export environment variables
-export CFLAGS CPPFLAGS LDFLAGS
-
-.PHONY: all clean install full
-
-all: $(PYTHON_LIB_NAME)
-
-$(PYTHON_LIB_NAME): configure
-	@echo "Building Python $(PYTHON_FULL_VERSION) for KBEngine..."
-	$(MAKE) -j$(shell nproc)
-	@echo "Installing Python libraries..."
-	$(MAKE) install
-	@echo "Copying Python library to KBEngine libs directory..."
-	cp -f "$(INSTALL_DIR)/lib/$(PYTHON_LIB_NAME)" "$(LIB_OUTPUT_DIR)/libpython.a"
-	@echo "Setting up Python runtime environment..."
+install: 
+	@chmod -R 755 .
+	export KBE_ROOT=$(KBE_ROOT) && \
+	export CPPFLAGS="-I$(KBE_ROOT)/kbe/src/lib/dependencies/zlib -I$(KBE_ROOT)/kbe/src/lib/dependencies/openssl/include" && \
+	export LDFLAGS="-L$(KBE_ROOT)/kbe/src/libs" && \
+	$(SHELL) configure --prefix=$(KBE_ROOT)/kbe/src/lib/python/install \
+		--enable-shared=no \
+		--enable-static=yes \
+		--with-ensurepip=no \
+		--disable-test-modules \
+		$(CONFIG_SSL) && \
+	make && make install
+	cp -f "$(KBE_ROOT)/kbe/src/lib/python/install/lib/libpython3.12.a" "$(KBE_ROOT)/kbe/src/libs/libpython.a"
 	mkdir -p "$(KBE_ROOT)/kbe/res/scripts/common/lib-dynload/"
-	if [ -d "$(INSTALL_DIR)/lib/python$(PYTHON_VERSION)/lib-dynload" ]; then \
-		cp -rf "$(INSTALL_DIR)/lib/python$(PYTHON_VERSION)/lib-dynload/"* "$(KBE_ROOT)/kbe/res/scripts/common/lib-dynload/"; \
+	if [ -d "$(KBE_ROOT)/kbe/src/lib/python/install/lib/python3.12/lib-dynload" ]; then \
+		cp -rf "$(KBE_ROOT)/kbe/src/lib/python/install/lib/python3.12/lib-dynload/"* "$(KBE_ROOT)/kbe/res/scripts/common/lib-dynload/"; \
 	fi
 	rm -rf "$(KBE_ROOT)/kbe/res/scripts/common/Lib/"*
-	cp -rf "$(CURDIR)/Lib" "$(KBE_ROOT)/kbe/res/scripts/common/Lib"
+	cp -rf "$(KBE_ROOT)/kbe/src/lib/python/Lib" "$(KBE_ROOT)/kbe/res/scripts/common/Lib"
 
-configure: Makefile.pre.in
-	@echo "Configuring Python $(PYTHON_FULL_VERSION)..."
-	./configure $(CONFIGURE_FLAGS)
+clean::
+	@echo "Cleaning Python 3.12.11 build..."
+	if [ -f Makefile ]; then make distclean; fi
+	rm -f config.status pyconfig.h
 
-Makefile.pre.in:
-	@echo "Error: Python source not properly configured. Please ensure Python $(PYTHON_FULL_VERSION) source is available."
-	@false
+# KBE modifys:
+# 1: PCbuild vcxprojs to KBE-vcxproj
 
-install: all
+# 2: configure
+# OPENSSL_LDFLAGS="-L${KBE_ROOT}/kbe/src/libs"
 
-clean:
-	@echo "Cleaning Python build..."
-	if [ -f Makefile ]; then $(MAKE) clean; fi
-	rm -rf $(BUILD_DIR) $(INSTALL_DIR)
-	rm -f Makefile pyconfig.h
+# 3: Modules/Setup.dist -> Modules/Setup (Python 3.12 change)
 
-full: clean all
+# 4: setup.py
+#    system_lib_dirs = ['/lib64', '/usr/lib64', '/lib', '/usr/lib', '$(KBE_ROOT)/kbe/src/libs']
+#    system_include_dirs = ['/usr/include', '$(KBE_ROOT)/kbe/src/lib/dependencies/zlib']
 
-# Help target
-help:
-	@echo "KBEngine Python $(PYTHON_FULL_VERSION) Build System"
-	@echo ""
-	@echo "Available targets:"
-	@echo "  all     - Build Python library (default)"
-	@echo "  clean   - Clean build artifacts"
-	@echo "  install - Build and install Python library"
-	@echo "  full    - Clean and rebuild everything"
-	@echo "  help    - Show this help message"
-	@echo ""
-	@echo "Configuration:"
-	@echo "  KBE_CONFIG: $(KBE_CONFIG)"
-	@echo "  Python Version: $(PYTHON_FULL_VERSION)"
-	@echo "  Build Directory: $(BUILD_DIR)"
-	@echo "  Install Directory: $(INSTALL_DIR)"
+# 5: Modules/Setup SSL and zlib configurations:
+#    SSL=$(KBE_ROOT)/kbe/src/lib/dependencies/vsopenssl
+#    _ssl _ssl.c -I$(SSL)/include -L$(SSL)/lib -lssl -lcrypto
+#    zlib zlibmodule.c -I$(KBE_ROOT)/kbe/src/lib/dependencies/zlib -L$(KBE_ROOT)/kbe/src/libs -lz
