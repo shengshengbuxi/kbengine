@@ -3,6 +3,7 @@
 /kbe/src/ipch
 __pycache__/
 logs/
+/kbeold
 *.suo
 *.user
 *.ncb
