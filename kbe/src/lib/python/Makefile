@@ -22,6 +22,12 @@ ifneq (,$(findstring 64,$(KBE_CONFIG)))
 endif
 endif
 
+config.status:
+	@chmod -R 755 .
+	export KBE_ROOT=$(KBE_ROOT)
+	$(SHELL) configure $(CONFIG_ARGS) $(CONFIG_SSL)
+	@make
+
 install: 
 	@chmod -R 755 .
 	export KBE_ROOT=$(KBE_ROOT) && \
@@ -42,10 +48,10 @@ install:
 	rm -rf "$(KBE_ROOT)/kbe/res/scripts/common/Lib/"*
 	cp -rf "$(KBE_ROOT)/kbe/src/lib/python/Lib" "$(KBE_ROOT)/kbe/res/scripts/common/Lib"
 
+.PHONY: clean
+
 clean::
-	@echo "Cleaning Python 3.12.11 build..."
-	if [ -f Makefile ]; then make distclean; fi
-	rm -f config.status pyconfig.h
+	echo "clean"
 
 # KBE modifys:
 # 1: PCbuild vcxprojs to KBE-vcxproj
