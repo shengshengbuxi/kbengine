@@ -1,24 +1,55 @@
-# @GeneratedBy Trae AI Assistant v1.0
-# KBEngine Python 3.12.11 Makefile for Linux/CentOS compilation
-# Based on the working Python 3.7 Makefile from kbeold
 
 all:: config.status
 
 CONFIG_ARGS =
 
-# SSL configuration - check for system SSL or use KBEngine's OpenSSL
-ifneq ("$(wildcard /usr/lib/x86_64-linux-gnu/libssl.a)", "")
-	CONFIG_SSL =
+CFLAGS += -I/usr/include/openssl
+LDFLAGS += -L/usr/lib64 -L/usr/lib -lssl -lcrypto -ldl
+
+# 检测系统OpenSSL文件位置
+# 首先检查符号链接指向的实际文件
+ifneq ("$(wildcard /usr/local/openssl/lib/libssl.so.1.1)", "")
+	CONFIG_SSL = --with-openssl=/usr/local/openssl --with-openssl-rpath=auto
+else ifneq ("$(wildcard /usr/local/openssl/lib64/libssl.so.1.1)", "")
+	CONFIG_SSL = --with-openssl=/usr/local/openssl --with-openssl-rpath=auto
+else ifneq ("$(wildcard /usr/lib64/libssl.so.1.1.1)", "")
+	CONFIG_SSL = --with-openssl=/usr --with-openssl-rpath=auto
+else ifneq ("$(wildcard /usr/lib64/libssl.so.1.1)", "")
+	CONFIG_SSL = --with-openssl=/usr --with-openssl-rpath=auto
+else ifneq ("$(wildcard /usr/lib/libssl.so.1.1.1)", "")
+	CONFIG_SSL = --with-openssl=/usr --with-openssl-rpath=auto
+else ifneq ("$(wildcard /usr/lib/libssl.so.1.1)", "")
+	CONFIG_SSL = --with-openssl=/usr --with-openssl-rpath=auto
+else ifneq ("$(wildcard /usr/lib64/libssl.so)", "")
+	# 检查符号链接是否指向有效文件
+	ifneq ("$(wildcard $(shell readlink -f /usr/lib64/libssl.so))", "")
+		CONFIG_SSL = --with-openssl=/usr --with-openssl-rpath=auto
+	else
+		CONFIG_SSL = --with-openssl=$(KBE_ROOT)/kbe/src/lib/dependencies/openssl --with-openssl-rpath=auto
+	endif
+else ifneq ("$(wildcard /usr/lib/libssl.so)", "")
+	# 检查符号链接是否指向有效文件
+	ifneq ("$(wildcard $(shell readlink -f /usr/lib/libssl.so))", "")
+		CONFIG_SSL = --with-openssl=/usr --with-openssl-rpath=auto
+	else
+		CONFIG_SSL = --with-openssl=$(KBE_ROOT)/kbe/src/lib/dependencies/openssl --with-openssl-rpath=auto
+	endif
+else ifneq ("$(wildcard /usr/local/openssl/bin/openssl)", "")
+	# 处理软链接情况，使用真实路径
+	CONFIG_SSL = --with-openssl=/usr/local/openssl --with-openssl-rpath=auto
+else ifneq ("$(wildcard /usr/local/openssl/lib/libssl.a)", "")
+	CONFIG_SSL = --with-openssl=/usr/local/openssl --with-openssl-rpath=auto
+else ifneq ("$(wildcard /usr/local/openssl/lib64/libssl.a)", "")
+	CONFIG_SSL = --with-openssl=/usr/local/openssl --with-openssl-rpath=auto
 else
-	CONFIG_SSL = --with-openssl=$(KBE_ROOT)/kbe/src/lib/dependencies/openssl
+	CONFIG_SSL = --with-openssl=$(KBE_ROOT)/kbe/src/lib/dependencies/openssl --with-openssl-rpath=auto
 endif
 
-# Optimization configuration based on build type
 ifeq ($(pythonbuild), release)
-	CONFIG_ARGS += --enable-optimizations 
+	CONFIG_ARGS += --with-openssl=/usr --enable-optimizations
 else
 ifneq (,$(findstring 64,$(KBE_CONFIG)))
-	CONFIG_ARGS += --enable-optimizations 
+	CONFIG_ARGS += --enable-optimizations --with-openssl=/usr
 endif
 endif
 
@@ -27,26 +58,6 @@ config.status:
 	export KBE_ROOT=$(KBE_ROOT)
 	$(SHELL) configure $(CONFIG_ARGS) $(CONFIG_SSL)
 	@make
-
-install: 
-	@chmod -R 755 .
-	export KBE_ROOT=$(KBE_ROOT) && \
-	export CPPFLAGS="-I$(KBE_ROOT)/kbe/src/lib/dependencies/zlib -I$(KBE_ROOT)/kbe/src/lib/dependencies/openssl/include" && \
-	export LDFLAGS="-L$(KBE_ROOT)/kbe/src/libs" && \
-	$(SHELL) configure --prefix=$(KBE_ROOT)/kbe/src/lib/python/install \
-		--enable-shared=no \
-		--enable-static=yes \
-		--with-ensurepip=no \
-		--disable-test-modules \
-		$(CONFIG_SSL) && \
-	make && make install
-	cp -f "$(KBE_ROOT)/kbe/src/lib/python/install/lib/libpython3.12.a" "$(KBE_ROOT)/kbe/src/libs/libpython.a"
-	mkdir -p "$(KBE_ROOT)/kbe/res/scripts/common/lib-dynload/"
-	if [ -d "$(KBE_ROOT)/kbe/src/lib/python/install/lib/python3.12/lib-dynload" ]; then \
-		cp -rf "$(KBE_ROOT)/kbe/src/lib/python/install/lib/python3.12/lib-dynload/"* "$(KBE_ROOT)/kbe/res/scripts/common/lib-dynload/"; \
-	fi
-	rm -rf "$(KBE_ROOT)/kbe/res/scripts/common/Lib/"*
-	cp -rf "$(KBE_ROOT)/kbe/src/lib/python/Lib" "$(KBE_ROOT)/kbe/res/scripts/common/Lib"
 
 .PHONY: clean
 
@@ -59,13 +70,8 @@ clean::
 # 2: configure
 # OPENSSL_LDFLAGS="-L${KBE_ROOT}/kbe/src/libs"
 
-# 3: Modules/Setup.dist -> Modules/Setup (Python 3.12 change)
+# 3:Modules/Setup.dist
 
 # 4: setup.py
-#    system_lib_dirs = ['/lib64', '/usr/lib64', '/lib', '/usr/lib', '$(KBE_ROOT)/kbe/src/libs']
-#    system_include_dirs = ['/usr/include', '$(KBE_ROOT)/kbe/src/lib/dependencies/zlib']
-
-# 5: Modules/Setup SSL and zlib configurations:
-#    SSL=$(KBE_ROOT)/kbe/src/lib/dependencies/vsopenssl
-#    _ssl _ssl.c -I$(SSL)/include -L$(SSL)/lib -lssl -lcrypto
-#    zlib zlibmodule.c -I$(KBE_ROOT)/kbe/src/lib/dependencies/zlib -L$(KBE_ROOT)/kbe/src/libs -lz
+#       system_lib_dirs = ['/lib64', '/usr/lib64', '/lib', '/usr/lib', '$(KBE_ROOT)/kbe/src/libs']
+#       system_include_dirs = ['/usr/include', '$(KBE_ROOT)/kbe/src/lib/dependencies/zlib']
