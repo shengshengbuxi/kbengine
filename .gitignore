@@ -16,7 +16,7 @@ logs/
 *.idb
 *.ilk
 *.exe
-*.pdb
+# *.pdb
 *.chw
 kbe/src/server/_objs
 kbe/src/.vs
@@ -6518,7 +6518,7 @@ kbe/tools/server/django_packages/Django-1.8.9/tests/staticfiles_tests/apps/test/
 kbe/tools/server/django_packages/Django-1.8.9/tests/staticfiles_tests/apps/test/static/test/nonascii.css
 kbe/tools/server/django_packages/Django-1.8.9/tests/staticfiles_tests/apps/test/static/test/test.ignoreme
 kbe/tools/server/django_packages/Django-1.8.9/tests/staticfiles_tests/apps/test/static/test/window.png
-kbe/tools/server/django_packages/Django-1.8.9/tests/staticfiles_tests/apps/test/static/test/âŠ?.txt
+kbe/tools/server/django_packages/Django-1.8.9/tests/staticfiles_tests/apps/test/static/test/ï¿½?.txt
 kbe/tools/server/django_packages/Django-1.8.9/tests/staticfiles_tests/project/documents/cached/absolute.css
 kbe/tools/server/django_packages/Django-1.8.9/tests/staticfiles_tests/project/documents/cached/css/fonts/font.eot
 kbe/tools/server/django_packages/Django-1.8.9/tests/staticfiles_tests/project/documents/cached/css/fonts/font.svg
