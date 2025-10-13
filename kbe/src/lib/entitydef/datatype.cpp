@@ -2242,6 +2242,10 @@ bool FixedDictType::initialize(XML* xml, tinyxml2::XMLNode* node, std::string& p
 
 					pDictItemDataType->persistent = persistent;
 					pDictItemDataType->databaseLength = databaseLength;
+					tinyxml2::XMLNode* desNode = xml->enterNode(propertiesNode->FirstChild(), "Des");
+					if (desNode) {
+						pDictItemDataType->des = xml->getValStr(desNode);
+					}
 					EntityDef::md5().append((void*)&persistent, sizeof(bool));
 					EntityDef::md5().append((void*)&databaseLength, sizeof(uint32));
 				}

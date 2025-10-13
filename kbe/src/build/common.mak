@@ -280,9 +280,12 @@ CXXFLAGS += -Wall -Wno-deprecated
 CXXFLAGS += -Wno-uninitialized -Wno-char-subscripts
 CXXFLAGS += -fno-strict-aliasing -Wno-non-virtual-dtor
 CXXFLAGS += -Wno-invalid-offsetof
-CXXFLAGS += -Wno-format-truncation
+# @GeneratedBy Trae AI GPT-5
+# Removed -Wno-format-truncation (unsupported on some GCC versions, e.g., CentOS) and made -Werror optional via STRICT_BUILD.
 CXXFLAGS += -Wno-comment
+ifdef STRICT_BUILD
 CXXFLAGS += -Werror
+endif
 CXXFLAGS += -std=c++11
 
 CPPFLAGS += -DKBE_SERVER -MMD -DKBE_CONFIG=\"${KBE_CONFIG}\"

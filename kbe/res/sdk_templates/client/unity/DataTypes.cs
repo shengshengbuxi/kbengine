@@ -17,7 +17,7 @@
 		{
 		}
 		
-		public virtual object createFromStream(MemoryStream stream)
+		public virtual object createFromStream(KBEMemoryStream stream)
 		{
 			return null;
 		}
@@ -39,7 +39,7 @@
 	
 	public class DATATYPE_INT8 : DATATYPE_BASE
 	{
-		public override object createFromStream(MemoryStream stream)
+		public override object createFromStream(KBEMemoryStream stream)
 		{
 			return stream.readInt8();
 		}
@@ -68,7 +68,7 @@
 	
 	public class DATATYPE_INT16 : DATATYPE_BASE
 	{
-		public override object createFromStream(MemoryStream stream)
+		public override object createFromStream(KBEMemoryStream stream)
 		{
 			return stream.readInt16();
 		}
@@ -97,7 +97,7 @@
 	
 	public class DATATYPE_INT32 : DATATYPE_BASE
 	{
-		public override object createFromStream(MemoryStream stream)
+		public override object createFromStream(KBEMemoryStream stream)
 		{
 			return stream.readInt32();
 		}
@@ -126,7 +126,7 @@
 	
 	public class DATATYPE_INT64 : DATATYPE_BASE
 	{
-		public override object createFromStream(MemoryStream stream)
+		public override object createFromStream(KBEMemoryStream stream)
 		{
 			return stream.readInt64();
 		}
@@ -155,7 +155,7 @@
 	
 	public class DATATYPE_UINT8 : DATATYPE_BASE
 	{
-		public override object createFromStream(MemoryStream stream)
+		public override object createFromStream(KBEMemoryStream stream)
 		{
 			return stream.readUint8();
 		}
@@ -184,7 +184,7 @@
 	
 	public class DATATYPE_UINT16 : DATATYPE_BASE
 	{
-		public override object createFromStream(MemoryStream stream)
+		public override object createFromStream(KBEMemoryStream stream)
 		{
 			return stream.readUint16();
 		}
@@ -213,7 +213,7 @@
 	
 	public class DATATYPE_UINT32 : DATATYPE_BASE
 	{
-		public override object createFromStream(MemoryStream stream)
+		public override object createFromStream(KBEMemoryStream stream)
 		{
 			return stream.readUint32();
 		}
@@ -242,7 +242,7 @@
 	
 	public class DATATYPE_UINT64 : DATATYPE_BASE
 	{
-		public override object createFromStream(MemoryStream stream)
+		public override object createFromStream(KBEMemoryStream stream)
 		{
 			return stream.readUint64();
 		}
@@ -271,7 +271,7 @@
 	
 	public class DATATYPE_FLOAT : DATATYPE_BASE
 	{
-		public override object createFromStream(MemoryStream stream)
+		public override object createFromStream(KBEMemoryStream stream)
 		{
 			return stream.readFloat();
 		}
@@ -301,7 +301,7 @@
 	
 	public class DATATYPE_DOUBLE : DATATYPE_BASE
 	{
-		public override object createFromStream(MemoryStream stream)
+		public override object createFromStream(KBEMemoryStream stream)
 		{
 			return stream.readDouble();
 		}
@@ -331,7 +331,7 @@
 	
 	public class DATATYPE_STRING : DATATYPE_BASE
 	{
-		public override object createFromStream(MemoryStream stream)
+		public override object createFromStream(KBEMemoryStream stream)
 		{
 			return stream.readString();
 		}
@@ -354,7 +354,7 @@
 	
 	public class DATATYPE_VECTOR2 : DATATYPE_BASE
 	{
-		public override object createFromStream(MemoryStream stream)
+		public override object createFromStream(KBEMemoryStream stream)
 		{
 			return new Vector2(stream.readFloat(), stream.readFloat());
 		}
@@ -378,7 +378,7 @@
 	
 	public class DATATYPE_VECTOR3 : DATATYPE_BASE
 	{
-		public override object createFromStream(MemoryStream stream)
+		public override object createFromStream(KBEMemoryStream stream)
 		{
 			return new Vector3(stream.readFloat(), stream.readFloat(), stream.readFloat());
 		}
@@ -403,7 +403,7 @@
 	
 	public class DATATYPE_VECTOR4 : DATATYPE_BASE
 	{
-		public override object createFromStream(MemoryStream stream)
+		public override object createFromStream(KBEMemoryStream stream)
 		{
 			return new Vector4(stream.readFloat(), stream.readFloat(), stream.readFloat(), stream.readFloat());
 		}
@@ -429,7 +429,7 @@
 	
 	public class DATATYPE_PYTHON : DATATYPE_BASE
 	{
-		public override object createFromStream(MemoryStream stream)
+		public override object createFromStream(KBEMemoryStream stream)
 		{
 			return stream.readBlob();
 		}
@@ -452,7 +452,7 @@
 	
 	public class DATATYPE_UNICODE : DATATYPE_BASE
 	{
-		public override object createFromStream(MemoryStream stream)
+		public override object createFromStream(KBEMemoryStream stream)
 		{
 			return System.Text.Encoding.UTF8.GetString(stream.readBlob());
 		}
@@ -475,7 +475,7 @@
 	
 	public class DATATYPE_ENTITYCALL : DATATYPE_BASE
 	{
-		public override object createFromStream(MemoryStream stream)
+		public override object createFromStream(KBEMemoryStream stream)
 		{
 			return stream.readBlob();
 		}
@@ -498,7 +498,7 @@
 	
 	public class DATATYPE_BLOB : DATATYPE_BASE
 	{
-		public override object createFromStream(MemoryStream stream)
+		public override object createFromStream(KBEMemoryStream stream)
 		{
 			return stream.readBlob();
 		}
@@ -532,7 +532,7 @@
 					vtype = EntityDef.id2datatypes[(UInt16)vtype];
 		}
 		
-		public override object createFromStream(MemoryStream stream)
+		public override object createFromStream(KBEMemoryStream stream)
 		{
 			UInt32 size = stream.readUint32();
 			List<object> datas = new List<object>();
@@ -608,7 +608,7 @@
 			}
 		}
 		
-		public override object createFromStream(MemoryStream stream)
+		public override object createFromStream(KBEMemoryStream stream)
 		{
 			Dictionary<string, object> datas = new Dictionary<string, object>();
 			foreach(string itemkey in dicttype.Keys)

@@ -16,8 +16,16 @@ logs/
 *.idb
 *.ilk
 *.exe
-*.pdb
+# *.pdb
 *.chw
+kbe/src/server/_objs
+kbe/src/.vs
+*.tlog
+*.obj
+*.res
+*.pyd.recipe
+*.iobj
+/kbe3123
 
 # -------------[ OS generated ]------------------------ #
 .DS_Store
@@ -31,7 +39,7 @@ Thumbs.db
 *.o
 *.d
 *.a
-*.s
+# *.s
 *.lo
 /kbe/bin/server/baseapp
 /kbe/bin/server/baseappmgr
@@ -275,12 +283,12 @@ Thumbs.db
 /kbe/src/lib/dependencies/vsopenssl/test/verify_extra_test
 /kbe/src/lib/dependencies/vsopenssl/test/wp_test
 /kbe/src/lib/dependencies/vsopenssl/tools/c_rehash.bak
-/kbe/src/lib/python/Makefile.pre
-/kbe/src/lib/python/Misc/python-config.sh
-/kbe/src/lib/python/Misc/python.pc
-/kbe/src/lib/python/Modules/Setup
-/kbe/src/lib/python/Modules/Setup.config
-/kbe/src/lib/python/Modules/Setup.local
+# /kbe/src/lib/python/Makefile.pre
+# /kbe/src/lib/python/Misc/python-config.sh
+# /kbe/src/lib/python/Misc/python.pc
+# /kbe/src/lib/python/Modules/Setup
+# /kbe/src/lib/python/Modules/Setup.config
+# /kbe/src/lib/python/Modules/Setup.local
 /kbe/src/lib/python/Modules/_testembed
 /kbe/src/lib/python/Modules/config.c
 /kbe/src/lib/python/Modules/ld_so_aix
@@ -289,8 +297,8 @@ Thumbs.db
 /kbe/src/lib/python/config.log
 /kbe/src/lib/python/config.status
 /kbe/src/lib/python/pybuilddir.txt
-/kbe/src/lib/python/pyconfig.h
-/kbe/src/lib/python/python
+# /kbe/src/lib/python/pyconfig.h
+# /kbe/src/lib/python/python
 /kbe/src/lib/python/python-config
 /kbe/src/lib/python/python-config.py
 /kbe/src/lib/python/python-gdb.py
@@ -6510,7 +6518,7 @@ kbe/tools/server/django_packages/Django-1.8.9/tests/staticfiles_tests/apps/test/
 kbe/tools/server/django_packages/Django-1.8.9/tests/staticfiles_tests/apps/test/static/test/nonascii.css
 kbe/tools/server/django_packages/Django-1.8.9/tests/staticfiles_tests/apps/test/static/test/test.ignoreme
 kbe/tools/server/django_packages/Django-1.8.9/tests/staticfiles_tests/apps/test/static/test/window.png
-kbe/tools/server/django_packages/Django-1.8.9/tests/staticfiles_tests/apps/test/static/test/⊗.txt
+kbe/tools/server/django_packages/Django-1.8.9/tests/staticfiles_tests/apps/test/static/test/�?.txt
 kbe/tools/server/django_packages/Django-1.8.9/tests/staticfiles_tests/project/documents/cached/absolute.css
 kbe/tools/server/django_packages/Django-1.8.9/tests/staticfiles_tests/project/documents/cached/css/fonts/font.eot
 kbe/tools/server/django_packages/Django-1.8.9/tests/staticfiles_tests/project/documents/cached/css/fonts/font.svg
@@ -8159,3 +8167,4 @@ kbengine_demos_assets-def/.vscode/ipch/d572960409cfb3fb/mmap_address.bin
 kbengine_demos_assets-def/.vscode/ipch/f0fe369686ea1e4c/mmap_address.bin
 kbengine_demos_assets-def/.vscode/ipch/6f826720859d1530/mmap_address.bin
 kbengine_demos_assets-def/.vscode/ipch/803b7eea0fbefcc9/mmap_address.bin
+

@@ -125,7 +125,7 @@
 						}
 
 						Dbg.WARNING_MSG("PacketReceiverTCP::_asyncReceive(): waiting for space, Please adjust 'RECV_BUFFER_MAX'! retries=" + first);
-						System.Threading.Thread.Sleep(5);
+						System.Threading.Thread.Sleep(200);
 					}
 
 					first += 1;

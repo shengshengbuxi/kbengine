@@ -178,11 +178,12 @@ bool ClientSDKUnity::writeServerErrorDescrsModuleBegin()
 	sourcefileBody_ = headerBody;
 	strutil::kbe_replace(sourcefileBody_, "#REPLACE#", "");
 
-	sourcefileBody_ += "namespace KBEngine\n{\n";
+	sourcefileBody_ += "namespace " + spaceName() + "\n{\n";
 	sourcefileBody_ += "\tusing UnityEngine;\n";
 	sourcefileBody_ += "\tusing System;\n";
 	sourcefileBody_ += "\tusing System.Collections;\n";
 	sourcefileBody_ += "\tusing System.Collections.Generic;\n\n";
+	sourcefileBody_ += "\tusing System.Text;\n";
 
 	sourcefileBody_ += fmt::format("\tpublic struct {}\n\t{{\n\t\tpublic string name;\n\t\tpublic string descr;\n\t\tpublic UInt16 id;\n", "ServerErr");
 	sourcefileBody_ += "\t}";
@@ -190,6 +191,7 @@ bool ClientSDKUnity::writeServerErrorDescrsModuleBegin()
 	sourcefileBody_ += "\n\n\t// defined in */res/server/server_errors.xml\n\n";
 	sourcefileBody_ += fmt::format("\tpublic class {}\n\t{{\n", "ServerErrorDescrs");
 	sourcefileBody_ += "\t\tpublic static Dictionary<UInt16, ServerErr> serverErrs = new Dictionary<UInt16, ServerErr>();\n\n";
+	sourcefileBody_ += "\t\tprivate StringBuilder m_errorMsg = new StringBuilder();\n\n";
 
 	sourcefileBody_ += "\t\tpublic ServerErrorDescrs()\n\t\t{\n";
 	return true;
@@ -210,7 +212,7 @@ bool ClientSDKUnity::writeServerErrorDescrsModuleEnd()
 
 	sourcefileBody_ += "\t\tpublic void Clear()\n\t\t{\n\t\t\tserverErrs.Clear();\n\t\t}\n\n";
 
-	sourcefileBody_ += "\t\tpublic string serverErrStr(UInt16 id)\n\t\t{\n\t\t\tServerErr e;\n\t\t\tif(!serverErrs.TryGetValue(id, out e))\n\t\t\t{\n\t\t\t\treturn \"\";\n\t\t\t}\n\n\t\t\treturn e.name + \"[\" + e.descr + \"]\";\n\t\t}\n\n";
+	sourcefileBody_ += "\t\tpublic string serverErrStr(UInt16 id)\n\t\t{\n\t\t\tServerErr e;\n\t\t\tif(!serverErrs.TryGetValue(id, out e))\n\t\t\t{\n\t\t\tm_errorMsg.Clear();\n\t\t\t\treturn m_errorMsg.ToString();\n\t\t\t}\n\n\t\t\tm_errorMsg.Clear();\n\t\t\tm_errorMsg.Append(e.name).Append(\"[\").Append(e.descr).Append(\"]\");\n\t\t\treturn m_errorMsg.ToString();\n\t\t}\n\n";
 	sourcefileBody_ += "\t\tpublic ServerErr serverErr(UInt16 id)\n\t\t{\n\t\t\tServerErr e;\n\t\t\tserverErrs.TryGetValue(id, out e);\n\t\t\treturn e;\n\t\t}\n\n";
 
 	sourcefileBody_ += "\n\n\n\t}\n}";
@@ -224,7 +226,7 @@ bool ClientSDKUnity::writeEngineMessagesModuleBegin()
 	sourcefileBody_ = headerBody;
 	strutil::kbe_replace(sourcefileBody_, "#REPLACE#", "");
 
-	sourcefileBody_ += "namespace KBEngine\n{\n";
+	sourcefileBody_ += "namespace " + spaceName() + "\n{\n";
 	sourcefileBody_ += "\tusing UnityEngine;\n";
 	sourcefileBody_ += "\tusing System;\n";
 	sourcefileBody_ += "\tusing System.Collections;\n";
@@ -254,7 +256,7 @@ bool ClientSDKUnity::writeEngineMessagesModuleBegin()
 
 	sourcefileBody_ += "\n\t\t}\n\n";
 
-	sourcefileBody_ += "\t\tpublic virtual void handleMessage(MemoryStream msgstream)\n";
+	sourcefileBody_ += "\t\tpublic virtual void handleMessage(KBEMemoryStream msgstream)\n";
 	sourcefileBody_ += "\t\t{\n";
 	sourcefileBody_ += "\t\t}\n";
 
@@ -270,7 +272,7 @@ bool ClientSDKUnity::writeEngineMessagesModuleMessage(Network::ExposedMessageInf
 	sourcefileBody_ += fmt::format("\n\t\tpublic Message_{}(MessageID msgid, string msgname, Int16 length, sbyte argstype, List<Byte> msgargtypes):\n\t\t\tbase(msgid, msgname, length, argstype, msgargtypes)\n\t\t{{\n", messageInfos.name);
 	sourcefileBody_ += "\n\t\t}\n\n";
 
-	sourcefileBody_ += "\t\tpublic override void handleMessage(MemoryStream msgstream)\n";
+	sourcefileBody_ += "\t\tpublic override void handleMessage(KBEMemoryStream msgstream)\n";
 	sourcefileBody_ += "\t\t{\n";
 
 	if (messageInfos.argsTypes.size() == 0)
@@ -390,7 +392,7 @@ bool ClientSDKUnity::writeEntityDefsModuleBegin()
 	sourcefileBody_ = headerBody;
 	strutil::kbe_replace(sourcefileBody_, "#REPLACE#", "");
 
-	sourcefileBody_ += "namespace KBEngine\n{\n";
+	sourcefileBody_ += "namespace " + spaceName() + "\n{\n";
 	sourcefileBody_ += "\tusing UnityEngine;\n";
 	sourcefileBody_ += "\tusing System;\n";
 	sourcefileBody_ += "\tusing System.Collections;\n";
@@ -563,7 +565,7 @@ bool ClientSDKUnity::writeEntityCallBegin(ScriptDefModule* pScriptDefModule)
 	strutil::kbe_replace(sourcefileBody_, "#REPLACE#", fmt::format("\t\n",
 		sourcefileName_));
 
-	sourcefileBody_ += "namespace KBEngine\n{\n";
+	sourcefileBody_ += "namespace " + spaceName() + "\n{\n";
 	sourcefileBody_ += "\tusing UnityEngine;\n";
 	sourcefileBody_ += "\tusing System;\n";
 	sourcefileBody_ += "\tusing System.Collections;\n";
@@ -757,7 +759,7 @@ bool ClientSDKUnity::writeCustomDataTypesBegin()
 	sourcefileBody_ = headerBody;
 	strutil::kbe_replace(sourcefileBody_, "#REPLACE#", "");
 
-	sourcefileBody_ += "namespace KBEngine\n{\n";
+	sourcefileBody_ += "namespace " + spaceName() + "\n{\n";
 	sourcefileBody_ += "\tusing UnityEngine;\n";
 	sourcefileBody_ += "\tusing System;\n";
 	sourcefileBody_ += "\tusing System.Collections;\n";
@@ -815,7 +817,7 @@ bool ClientSDKUnity::createArrayChildClass(DataType* pRootDataType, DataType* pD
 			typeName = fmt::format("List<{}>", typeName);
 		}
 
-		sourcefileBody_ += fmt::format("{}\tpublic {} createFromStreamEx(MemoryStream stream)\n{}\t{{\n", tabs, typeName, tabs);
+		sourcefileBody_ += fmt::format("{}\tpublic {} createFromStreamEx(KBEMemoryStream stream)\n{}\t{{\n", tabs, typeName, tabs);
 		sourcefileBody_ += fmt::format("{}\t\tUInt32 size = stream.readUint32();\n", tabs);
 		sourcefileBody_ += fmt::format("{}\t\t{} datas = new {}();\n\n", tabs, typeName, typeName);
 		sourcefileBody_ += fmt::format("{}\t\twhile(size > 0)\n", tabs);
@@ -886,7 +888,7 @@ bool ClientSDKUnity::createArrayChildClass(DataType* pRootDataType, DataType* pD
 		if (!createArrayChildClass(pRootDataType, pFixedArrayType->getDataType(), childClassName, tabs + "\t", numLayer + 1))
 			return false;
 
-		sourcefileBody_ += fmt::format("{}\tpublic {} createFromStreamEx(MemoryStream stream)\n{}\t{{\n", tabs, typeName, tabs);
+		sourcefileBody_ += fmt::format("{}\tpublic {} createFromStreamEx(KBEMemoryStream stream)\n{}\t{{\n", tabs, typeName, tabs);
 		sourcefileBody_ += fmt::format("{}\t\tUInt32 size = stream.readUint32();\n", tabs);
 		sourcefileBody_ += fmt::format("{}\t\t{} datas = new {}();\n\n", tabs, typeName, typeName);
 		sourcefileBody_ += fmt::format("{}\t\twhile(size > 0)\n", tabs);
@@ -928,7 +930,7 @@ bool ClientSDKUnity::createArrayChildClass(DataType* pRootDataType, DataType* pD
 		readName[0] = std::toupper(readName[0]);
 		readName = fmt::format("stream.read{}()", readName);
 
-		sourcefileBody_ += fmt::format("{}\tpublic List<{}> createFromStreamEx(MemoryStream stream)\n{}\t{{\n", tabs, typeName, tabs);
+		sourcefileBody_ += fmt::format("{}\tpublic List<{}> createFromStreamEx(KBEMemoryStream stream)\n{}\t{{\n", tabs, typeName, tabs);
 		sourcefileBody_ += fmt::format("{}\t\tUInt32 size = stream.readUint32();\n", tabs);
 		sourcefileBody_ += fmt::format("{}\t\tList<{}> datas = new List<{}>();\n\n", tabs, typeName, typeName);
 		sourcefileBody_ += fmt::format("{}\t\twhile(size > 0)\n", tabs);
@@ -1029,7 +1031,7 @@ bool ClientSDKUnity::writeCustomDataType(const DataType* pDataType)
 
 		// 创建createFromStreamEx方法
 		{
-			sourcefileBody_ += fmt::format("\t\tpublic {} createFromStreamEx(MemoryStream stream)\n\t\t{{\n", typeName);
+			sourcefileBody_ += fmt::format("\t\tpublic {} createFromStreamEx(KBEMemoryStream stream)\n\t\t{{\n", typeName);
 
 			sourcefileBody_ += fmt::format("\t\t\t{} datas = new {}();\n", typeName, typeName);
 
@@ -1130,7 +1132,7 @@ bool ClientSDKUnity::writeCustomDataType(const DataType* pDataType)
 			sourcefileBody_ += fmt::format("\t\tprivate DATATYPE_{} itemType = new DATATYPE_{}();\n\n",
 			pFixedArrayType->getDataType()->aliasName(), pFixedArrayType->getDataType()->aliasName());
 
-			sourcefileBody_ += fmt::format("\t\tpublic {} createFromStreamEx(MemoryStream stream)\n\t\t{{\n", typeName);
+			sourcefileBody_ += fmt::format("\t\tpublic {} createFromStreamEx(KBEMemoryStream stream)\n\t\t{{\n", typeName);
 			sourcefileBody_ += fmt::format("\t\t\tUInt32 size = stream.readUint32();\n");
 			sourcefileBody_ += fmt::format("\t\t\t{} datas = new {}();\n\n", typeName, typeName);
 			sourcefileBody_ += fmt::format("\t\t\twhile(size > 0)\n");
@@ -1174,7 +1176,7 @@ bool ClientSDKUnity::writeCustomDataType(const DataType* pDataType)
 
 			createArrayChildClass(pFixedArrayType, pFixedArrayType->getDataType(), className + "_ChildArray", "\t\t");
 
-			sourcefileBody_ += fmt::format("\t\tpublic {} createFromStreamEx(MemoryStream stream)\n\t\t{{\n", typeName);
+			sourcefileBody_ += fmt::format("\t\tpublic {} createFromStreamEx(KBEMemoryStream stream)\n\t\t{{\n", typeName);
 			sourcefileBody_ += fmt::format("\t\t\treturn {};\n", readName);
 			sourcefileBody_ += fmt::format("\t\t}}\n\n");
 
@@ -1192,7 +1194,7 @@ bool ClientSDKUnity::writeCustomDataType(const DataType* pDataType)
 			readName[0] = std::toupper(readName[0]);
 			readName = fmt::format("stream.read{}()", readName);
 
-			sourcefileBody_ += fmt::format("\t\tpublic {} createFromStreamEx(MemoryStream stream)\n\t\t{{\n", typeName);
+			sourcefileBody_ += fmt::format("\t\tpublic {} createFromStreamEx(KBEMemoryStream stream)\n\t\t{{\n", typeName);
 			sourcefileBody_ += fmt::format("\t\t\tUInt32 size = stream.readUint32();\n");
 			sourcefileBody_ += fmt::format("\t\t\t{} datas = new {}();\n\n", typeName, typeName);
 			sourcefileBody_ += fmt::format("\t\t\twhile(size > 0)\n");
@@ -1403,7 +1405,7 @@ bool ClientSDKUnity::writeTypesBegin()
 	sourcefileBody_ = headerBody;
 	strutil::kbe_replace(sourcefileBody_, "#REPLACE#", "");
 
-	sourcefileBody_ += "namespace KBEngine\n{\n";
+	sourcefileBody_ += "namespace " + spaceName() + "\n{\n";
 	sourcefileBody_ += "\tusing UnityEngine;\n";
 	sourcefileBody_ += "\tusing System;\n";
 	sourcefileBody_ += "\tusing System.Collections;\n";
@@ -1423,7 +1425,7 @@ bool ClientSDKUnity::writeTypesEnd()
 //-------------------------------------------------------------------------------------
 bool ClientSDKUnity::writeTypeBegin(std::string typeName, FixedDictType* pDataType)
 {
-	sourcefileBody_ += fmt::format("\tpublic class {}\n\t{{\n", typeName);
+	sourcefileBody_ += fmt::format("\tpublic partial class {}\n\t{{\n", typeName);
 	return true;
 }
 
@@ -1463,7 +1465,7 @@ bool ClientSDKUnity::writeTypeEnd(std::string typeName, DataType* pDataType)
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_AliasName(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_AliasName(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
 	if (childItemName == "UINT8" || childItemName == "UINT16" || childItemName == "UINT32" || childItemName == "UINT64" || 
 		childItemName == "INT8" || childItemName == "INT16" || childItemName == "INT32" || childItemName == "INT64" || 
@@ -1555,122 +1557,161 @@ bool ClientSDKUnity::writeTypeItemType_AliasName(const std::string& itemName, co
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_INT8(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_INT8(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
-	sourcefileBody_ += fmt::format("\t\tpublic SByte {} = 0;\n", itemName);
+	if (des == "")
+		sourcefileBody_ += fmt::format("\t\tpublic SByte {} = 0;\n", des, itemName);
+	else
+		sourcefileBody_ += fmt::format("\t\t/// <summary>\n\t\t/// {}\n\t\t/// </summary>\n\t\tpublic SByte {} = 0;\n", des, itemName);
 	return true;
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_INT16(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_INT16(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
-	sourcefileBody_ += fmt::format("\t\tpublic Int16 {} = 0;\n", itemName);
+	if (des == "")
+		sourcefileBody_ += fmt::format("\t\tpublic Int16 {} = 0;\n", itemName);
+	else
+		sourcefileBody_ += fmt::format("\t\t/// <summary>\n\t\t/// {}\n\t\t/// </summary>\n\t\tpublic Int16 {} = 0;\n", des, itemName);
 	return true;
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_INT32(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_INT32(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
-	sourcefileBody_ += fmt::format("\t\tpublic Int32 {} = 0;\n", itemName);
+	if (des == "")
+		sourcefileBody_ += fmt::format("\t\tpublic Int32 {} = 0;\n", itemName);
+	else
+		sourcefileBody_ += fmt::format("\t\t/// <summary>\n\t\t/// {}\n\t\t/// </summary>\n\t\tpublic Int32 {} = 0;\n", des, itemName);
 	return true;
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_INT64(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_INT64(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
-	sourcefileBody_ += fmt::format("\t\tpublic Int64 {} = 0;\n", itemName);
+	if (des == "")
+		sourcefileBody_ += fmt::format("\t\tpublic Int64 {} = 0;\n", itemName);
+	else
+		sourcefileBody_ += fmt::format("\t\t/// <summary>\n\t\t/// {}\n\t\t/// </summary>\n\t\tpublic Int64 {} = 0;\n", des, itemName);
 	return true;
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_UINT8(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_UINT8(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
-	sourcefileBody_ += fmt::format("\t\tpublic Byte {} = 0;\n", itemName);
+	if (des == "")
+		sourcefileBody_ += fmt::format("\t\tpublic Byte {} = 0;\n", itemName);
+	else
+		sourcefileBody_ += fmt::format("\t\t/// <summary>\n\t\t/// {}\n\t\t/// </summary>\n\t\tpublic Byte {} = 0;\n", des, itemName);
 	return true;
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_UINT16(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_UINT16(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
-	sourcefileBody_ += fmt::format("\t\tpublic UInt16 {} = 0;\n", itemName);
+	if (des == "")
+		sourcefileBody_ += fmt::format("\t\tpublic UInt16 {} = 0;\n", itemName);
+	else
+		sourcefileBody_ += fmt::format("\t\t/// <summary>\n\t\t/// {}\n\t\t/// </summary>\n\t\tpublic UInt16 {} = 0;\n", des, itemName);
 	return true;
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_UINT32(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_UINT32(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
-	sourcefileBody_ += fmt::format("\t\tpublic UInt32 {} = 0;\n", itemName);
+	if (des == "")
+		sourcefileBody_ += fmt::format("\t\tpublic UInt32 {} = 0;\n", itemName);
+	else
+		sourcefileBody_ += fmt::format("\t\t/// <summary>\n\t\t/// {}\n\t\t/// </summary>\n\t\tpublic UInt32 {} = 0;\n", des, itemName);
 	return true;
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_UINT64(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_UINT64(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
-	sourcefileBody_ += fmt::format("\t\tpublic UInt64 {} = 0;\n", itemName);
+	if (des == "")
+		sourcefileBody_ += fmt::format("\t\tpublic UInt64 {} = 0;\n", itemName);
+	else
+		sourcefileBody_ += fmt::format("\t\t/// <summary>\n\t\t/// {}\n\t\t/// </summary>\n\t\tpublic UInt64 {} = 0;\n", des, itemName);
 	return true;
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_FLOAT(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_FLOAT(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
-	sourcefileBody_ += fmt::format("\t\tpublic float {} = 0f;\n", itemName);
+	if (des == "")
+		sourcefileBody_ += fmt::format("\t\tpublic float {} = 0f;\n", itemName);
+	else
+		sourcefileBody_ += fmt::format("\t\t/// <summary>\n\t\t/// {}\n\t\t/// </summary>\n\t\tpublic float {} = 0f;\n", des, itemName);
 	return true;
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_DOUBLE(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_DOUBLE(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
-	sourcefileBody_ += fmt::format("\t\tpublic double {} = 0d;\n", itemName);
+	if (des == "")
+		sourcefileBody_ += fmt::format("\t\tpublic double {} = 0d;\n", itemName);
+	else
+		sourcefileBody_ += fmt::format("\t\t/// <summary>\n\t\t/// {}\n\t\t/// </summary>\n\t\tpublic double {} = 0d;\n", des, itemName);
 	return true;
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_STRING(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_STRING(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
-	sourcefileBody_ += fmt::format("\t\tpublic string {} = \"\";\n", itemName);
+	if (des == "")
+		sourcefileBody_ += fmt::format("\t\tpublic string {} = \"\";\n", itemName);
+	else
+		sourcefileBody_ += fmt::format("\t\t/// <summary>\n\t\t/// {}\n\t\t/// </summary>\n\t\tpublic string {} = \"\";\n", des, itemName);
 	return true;
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_UNICODE(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_UNICODE(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
-	sourcefileBody_ += fmt::format("\t\tpublic string {} = \"\";\n", itemName);
+	if (des == "")
+		sourcefileBody_ += fmt::format("\t\tpublic string {} = \"\";\n", itemName);
+	else
+		sourcefileBody_ += fmt::format("\t\t/// <summary>\n\t\t/// {}\n\t\t/// </summary>\n\t\tpublic string {} = \"\";\n", des, itemName);
 	return true;
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_PYTHON(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_PYTHON(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
-	return writeTypeItemType_BLOB(itemName, childItemName);
+	return writeTypeItemType_BLOB(itemName, childItemName, des);
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_PY_DICT(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_PY_DICT(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
-	return writeTypeItemType_BLOB(itemName, childItemName);
+	return writeTypeItemType_BLOB(itemName, childItemName, des);
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_PY_TUPLE(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_PY_TUPLE(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
-	return writeTypeItemType_BLOB(itemName, childItemName);
+	return writeTypeItemType_BLOB(itemName, childItemName, des);
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_PY_LIST(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_PY_LIST(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
-	return writeTypeItemType_BLOB(itemName, childItemName);
+	return writeTypeItemType_BLOB(itemName, childItemName, des);
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_BLOB(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_BLOB(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
-	sourcefileBody_ += fmt::format("\t\tpublic byte[] {} = new byte[0];\n", itemName);
+	if (des == "")
+		sourcefileBody_ += fmt::format("\t\tpublic byte[] {} = new byte[0];\n", itemName);
+	else
+		sourcefileBody_ += fmt::format("\t\t/// <summary>\n\t\t/// {}\n\t\t/// </summary>\n\t\tpublic byte[] {} = new byte[0];\n", des, itemName);
 	return true;
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_ARRAY(const std::string& itemName, const std::string& childItemName, DataType* pDataType)
+bool ClientSDKUnity::writeTypeItemType_ARRAY(const std::string& itemName, const std::string& childItemName, DataType* pDataType, const std::string& des)
 {
 	std::string typeStr;
 
@@ -1688,14 +1729,14 @@ bool ClientSDKUnity::writeTypeItemType_ARRAY(const std::string& itemName, const 
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_FIXED_DICT(const std::string& itemName, const std::string& childItemName, DataType* pDataType)
+bool ClientSDKUnity::writeTypeItemType_FIXED_DICT(const std::string& itemName, const std::string& childItemName, DataType* pDataType, const std::string& des)
 {
 	sourcefileBody_ += fmt::format("\t\tpublic {} {} = new {}();\n", childItemName, itemName, childItemName);
 	return true;
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_VECTOR2(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_VECTOR2(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
 #ifdef CLIENT_NO_FLOAT
 	sourcefileBody_ += fmt::format("\t\tpublic Vector2Int {} = new Vector2Int(0, 0);\n", itemName);
@@ -1707,7 +1748,7 @@ bool ClientSDKUnity::writeTypeItemType_VECTOR2(const std::string& itemName, cons
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_VECTOR3(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_VECTOR3(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
 #ifdef CLIENT_NO_FLOAT
 	sourcefileBody_ += fmt::format("\t\tpublic Vector3Int {} = new Vector3Int(0, 0, 0);\n", itemName);
@@ -1719,7 +1760,7 @@ bool ClientSDKUnity::writeTypeItemType_VECTOR3(const std::string& itemName, cons
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_VECTOR4(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_VECTOR4(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
 #ifdef CLIENT_NO_FLOAT
 	sourcefileBody_ += fmt::format("\t\tpublic Vector4Int {} = new Vector4Int(0, 0, 0, 0);\n", itemName);
@@ -1731,7 +1772,7 @@ bool ClientSDKUnity::writeTypeItemType_VECTOR4(const std::string& itemName, cons
 }
 
 //-------------------------------------------------------------------------------------
-bool ClientSDKUnity::writeTypeItemType_ENTITYCALL(const std::string& itemName, const std::string& childItemName)
+bool ClientSDKUnity::writeTypeItemType_ENTITYCALL(const std::string& itemName, const std::string& childItemName, const std::string& des)
 {
 	sourcefileBody_ += fmt::format("\t\tpublic byte[] {} = new byte[0];\n", itemName);
 	return true;
@@ -1746,7 +1787,7 @@ bool ClientSDKUnity::writeEntityModuleBegin(ScriptDefModule* pEntityScriptDefMod
 	strutil::kbe_replace(sourcefileBody_, "#REPLACE#", fmt::format("\tPlease inherit this module, such as: (class {} : {}{})\n",
 		pEntityScriptDefModule->getName(), pEntityScriptDefModule->getName(), moduleSuffix));
 
-	sourcefileBody_ += "namespace KBEngine\n{\n";
+	sourcefileBody_ += "namespace " + spaceName() + "\n{\n";
 	sourcefileBody_ += "\tusing UnityEngine;\n";
 	sourcefileBody_ += "\tusing System;\n";
 	sourcefileBody_ += "\tusing System.Collections;\n";
@@ -1756,7 +1797,7 @@ bool ClientSDKUnity::writeEntityModuleBegin(ScriptDefModule* pEntityScriptDefMod
 
 	if (pEntityScriptDefModule->isComponentModule())
 	{
-		sourcefileBody_ += fmt::format("\tpublic abstract class {} : EntityComponent\n\t{{\n", newModuleName);
+		sourcefileBody_ += fmt::format("\tpublic abstract class {} : KBEEntityComponent\n\t{{\n", newModuleName);
 
 		// 写entityCall属性
 		sourcefileBody_ += fmt::format("\t\tpublic EntityBaseEntityCall_{} baseEntityCall = null;\n", newModuleName);
@@ -1831,7 +1872,7 @@ bool ClientSDKUnity::writeEntityProcessMessagesMethod(ScriptDefModule* pEntitySc
 
 	if (pEntityScriptDefModule->isComponentModule())
 	{
-		sourcefileBody_ += fmt::format("\n\t\tpublic override void createFromStream(MemoryStream stream)\n\t\t{{\n");
+		sourcefileBody_ += fmt::format("\n\t\tpublic override void createFromStream(KBEMemoryStream stream)\n\t\t{{\n");
 		sourcefileBody_ += fmt::format("\t\t\tbase.createFromStream(stream);\n");
 		sourcefileBody_ += fmt::format("\t\t}}\n");
 
@@ -1865,7 +1906,7 @@ bool ClientSDKUnity::writeEntityProcessMessagesMethod(ScriptDefModule* pEntitySc
 			EntityComponentType * pEntityComponentType = (EntityComponentType*)pPropertyDescription->getDataType();
 
 			sourcefileBody_ += fmt::format("\t\t\tforeach (System.Reflection.Assembly ass in AppDomain.CurrentDomain.GetAssemblies())\n\t\t\t{{\n");
-			sourcefileBody_ += fmt::format("\t\t\t\tType entityComponentScript = ass.GetType(\"KBEngine.{}\");\n", pEntityComponentType->pScriptDefModule()->getName());
+			sourcefileBody_ += "\t\t\t\tType entityComponentScript = ass.GetType(\"" + spaceName() + "." + pEntityComponentType->pScriptDefModule()->getName() + "\");\n";
 			sourcefileBody_ += fmt::format("\t\t\t\tif(entityComponentScript != null)\n\t\t\t\t{{\n");
 			sourcefileBody_ += fmt::format("\t\t\t\t\t{} = ({}{})Activator.CreateInstance(entityComponentScript);\n", pPropertyDescription->getName(), pEntityComponentType->pScriptDefModule()->getName(), moduleSuffix);
 			sourcefileBody_ += fmt::format("\t\t\t\t\t{}.owner = this;\n", pPropertyDescription->getName());
@@ -1919,8 +1960,8 @@ bool ClientSDKUnity::writeEntityProcessMessagesMethod(ScriptDefModule* pEntitySc
 
 		if (!components.empty())
 		{
-			sourcefileBody_ += fmt::format("\n\t\tpublic override List<EntityComponent> getComponents(string componentName, bool all)\n\t\t{{\n");
-			sourcefileBody_ += fmt::format("\t\t\tList<EntityComponent> founds = new List<EntityComponent>();\n\n");
+			sourcefileBody_ += fmt::format("\n\t\tpublic override List<KBEEntityComponent> getComponents(string componentName, bool all)\n\t\t{{\n");
+			sourcefileBody_ += fmt::format("\t\t\tList<KBEEntityComponent> founds = new List<KBEEntityComponent>();\n\n");
 			std::vector<PropertyDescription*>::const_iterator iter = components.begin();
 			for (; iter != components.end(); ++iter)
 			{
@@ -2028,9 +2069,9 @@ bool ClientSDKUnity::writeEntityProcessMessagesMethod(ScriptDefModule* pEntitySc
 
 	// 处理方法
 	if (!pEntityScriptDefModule->isComponentModule())
-		sourcefileBody_ += fmt::format("\n\t\tpublic override void onRemoteMethodCall(MemoryStream stream)\n\t\t{{\n");
+		sourcefileBody_ += fmt::format("\n\t\tpublic override void onRemoteMethodCall(KBEMemoryStream stream)\n\t\t{{\n");
 	else
-		sourcefileBody_ += fmt::format("\n\t\tpublic override void onRemoteMethodCall(UInt16 methodUtype, MemoryStream stream)\n\t\t{{\n");
+		sourcefileBody_ += fmt::format("\n\t\tpublic override void onRemoteMethodCall(UInt16 methodUtype, KBEMemoryStream stream)\n\t\t{{\n");
 
 	sourcefileBody_ += fmt::format("\t\t\tScriptModule sm = EntityDef.moduledefs[\"{}\"];\n\n", pEntityScriptDefModule->getName());
 	
@@ -2269,10 +2310,10 @@ bool ClientSDKUnity::writeEntityProcessMessagesMethod(ScriptDefModule* pEntitySc
 	if (pEntityScriptDefModule->usePropertyDescrAlias() && spaceDescription.aliasID() == -1)
 		spaceDescription.aliasID(ENTITY_BASE_PROPERTY_ALIASID_SPACEID);
 
-	if(pEntityScriptDefModule->isComponentModule())
-		sourcefileBody_ += fmt::format("\n\t\tpublic override void onUpdatePropertys(UInt16 propUtype, MemoryStream stream, int maxCount)\n\t\t{{\n");
+	if (pEntityScriptDefModule->isComponentModule())
+		sourcefileBody_ += fmt::format("\n\t\tpublic override void onUpdatePropertys(UInt16 propUtype, KBEMemoryStream stream, int maxCount)\n\t\t{{\n");
 	else
-		sourcefileBody_ += fmt::format("\n\t\tpublic override void onUpdatePropertys(MemoryStream stream)\n\t\t{{\n");
+		sourcefileBody_ += fmt::format("\n\t\tpublic override void onUpdatePropertys(KBEMemoryStream stream)\n\t\t{{\n");
 
 	sourcefileBody_ += fmt::format("\t\t\tScriptModule sm = EntityDef.moduledefs[\"{}\"];\n", pEntityScriptDefModule->getName());
 	sourcefileBody_ += fmt::format("\t\t\tDictionary<UInt16, Property> pdatas = sm.idpropertys;\n\n");
@@ -2745,7 +2786,7 @@ bool ClientSDKUnity::writeEntityProperty_ARRAY(ScriptDefModule* pEntityScriptDef
 		std::string s = sourcefileBody_;
 		sourcefileBody_ = "";
 
-		bool ret = writeTypeItemType_ARRAY(pPropertyDescription->getName(), pPropertyDescription->getDataType()->aliasName(), pPropertyDescription->getDataType());
+		bool ret = writeTypeItemType_ARRAY(pPropertyDescription->getName(), pPropertyDescription->getDataType()->aliasName(), pPropertyDescription->getDataType(), "");
 		std::vector<std::string> values;
 		KBEngine::strutil::kbe_splits(sourcefileBody_, " ", values);
 		sourcefileBody_ = s + sourcefileBody_;

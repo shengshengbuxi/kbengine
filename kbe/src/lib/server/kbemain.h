@@ -6,6 +6,7 @@
 #include "helper/memory_helper.h"
 
 #include "serverapp.h"
+#define PY_SSIZE_T_CLEAN
 #include "Python.h"
 #include "common/common.h"
 #include "common/kbekey.h"

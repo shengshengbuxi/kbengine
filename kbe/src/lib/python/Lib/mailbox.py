@@ -18,6 +18,7 @@ import email.message
 import email.generator
 import io
 import contextlib
+from types import GenericAlias
 try:
     import fcntl
 except ImportError:
@@ -259,6 +260,8 @@ class Mailbox:
                 target.write(linesep)
         else:
             raise TypeError('Invalid message type: %s' % type(message))
+
+    __class_getitem__ = classmethod(GenericAlias)
 
 
 class Maildir(Mailbox):
@@ -695,9 +698,13 @@ class _singlefileMailbox(Mailbox):
         _sync_close(new_file)
         # self._file is about to get replaced, so no need to sync.
         self._file.close()
-        # Make sure the new file's mode is the same as the old file's
-        mode = os.stat(self._path).st_mode
-        os.chmod(new_file.name, mode)
+        # Make sure the new file's mode and owner are the same as the old file's
+        info = os.stat(self._path)
+        os.chmod(new_file.name, info.st_mode)
+        try:
+            os.chown(new_file.name, info.st_uid, info.st_gid)
+        except (AttributeError, OSError):
+            pass
         try:
             os.rename(new_file.name, self._path)
         except FileExistsError:
@@ -775,16 +782,17 @@ class _mboxMMDF(_singlefileMailbox):
         """Return a Message representation or raise a KeyError."""
         start, stop = self._lookup(key)
         self._file.seek(start)
-        from_line = self._file.readline().replace(linesep, b'')
+        from_line = self._file.readline().replace(linesep, b'').decode('ascii')
         string = self._file.read(stop - self._file.tell())
         msg = self._message_factory(string.replace(linesep, b'\n'))
-        msg.set_from(from_line[5:].decode('ascii'))
+        msg.set_unixfrom(from_line)
+        msg.set_from(from_line[5:])
         return msg
 
     def get_string(self, key, from_=False):
         """Return a string representation or raise a KeyError."""
         return email.message_from_bytes(
-            self.get_bytes(key)).as_string(unixfrom=from_)
+            self.get_bytes(key, from_)).as_string(unixfrom=from_)
 
     def get_bytes(self, key, from_=False):
         """Return a string representation or raise a KeyError."""
@@ -1953,10 +1961,7 @@ class _ProxyFile:
 
     def __iter__(self):
         """Iterate over lines."""
-        while True:
-            line = self.readline()
-            if not line:
-                return
+        while line := self.readline():
             yield line
 
     def tell(self):
@@ -2014,6 +2019,8 @@ class _ProxyFile:
         if not hasattr(self._file, 'closed'):
             return False
         return self._file.closed
+
+    __class_getitem__ = classmethod(GenericAlias)
 
 
 class _PartialFile(_ProxyFile):

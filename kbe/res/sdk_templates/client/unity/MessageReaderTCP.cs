@@ -33,7 +33,7 @@
 		private MessageLength msglen = 0;
 		private MessageLengthEx expectSize = 2;
 		private READ_STATE state = READ_STATE.READ_STATE_MSGID;
-		private MemoryStream stream = new MemoryStream();
+		private KBEMemoryStream stream = new KBEMemoryStream();
 		
 		public MessageReaderTCP()
 		{

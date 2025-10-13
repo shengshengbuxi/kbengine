@@ -4,6 +4,7 @@
 #define KBE_SCRIPTOBJECT_H
 
 #include <vector>	
+#define PY_SSIZE_T_CLEAN
 #include "Python.h"     
 #include "py_macros.h" 
 #include "helper/debug_helper.h"

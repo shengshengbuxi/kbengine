@@ -3,6 +3,7 @@
 import fnmatch
 import sys
 import os
+from contextlib import contextmanager
 from inspect import CO_GENERATOR, CO_COROUTINE, CO_ASYNC_GENERATOR
 
 __all__ = ["BdbQuit", "Bdb", "Breakpoint"]
@@ -33,12 +34,15 @@ class Bdb:
         self.breaks = {}
         self.fncache = {}
         self.frame_returning = None
+        self.enterframe = None
+
+        self._load_breaks()
 
     def canonic(self, filename):
         """Return canonical form of filename.
 
         For real filenames, the canonical form is a case-normalized (on
-        case insenstive filesystems) absolute path.  'Filenames' with
+        case insensitive filesystems) absolute path.  'Filenames' with
         angle brackets, such as "<stdin>", generated in interactive
         mode, are returned unchanged.
         """
@@ -57,6 +61,12 @@ class Bdb:
         linecache.checkcache()
         self.botframe = None
         self._set_stopinfo(None, None)
+
+    @contextmanager
+    def set_enterframe(self, frame):
+        self.enterframe = frame
+        yield
+        self.enterframe = None
 
     def trace_dispatch(self, frame, event, arg):
         """Dispatch a trace function for debugged frames based on the event.
@@ -82,24 +92,26 @@ class Bdb:
 
         The arg parameter depends on the previous event.
         """
-        if self.quitting:
-            return # None
-        if event == 'line':
-            return self.dispatch_line(frame)
-        if event == 'call':
-            return self.dispatch_call(frame, arg)
-        if event == 'return':
-            return self.dispatch_return(frame, arg)
-        if event == 'exception':
-            return self.dispatch_exception(frame, arg)
-        if event == 'c_call':
+
+        with self.set_enterframe(frame):
+            if self.quitting:
+                return # None
+            if event == 'line':
+                return self.dispatch_line(frame)
+            if event == 'call':
+                return self.dispatch_call(frame, arg)
+            if event == 'return':
+                return self.dispatch_return(frame, arg)
+            if event == 'exception':
+                return self.dispatch_exception(frame, arg)
+            if event == 'c_call':
+                return self.trace_dispatch
+            if event == 'c_exception':
+                return self.trace_dispatch
+            if event == 'c_return':
+                return self.trace_dispatch
+            print('bdb.Bdb.dispatch: unknown debugging event:', repr(event))
             return self.trace_dispatch
-        if event == 'c_exception':
-            return self.trace_dispatch
-        if event == 'c_return':
-            return self.trace_dispatch
-        print('bdb.Bdb.dispatch: unknown debugging event:', repr(event))
-        return self.trace_dispatch
 
     def dispatch_line(self, frame):
         """Invoke user function and return trace function for line event.
@@ -117,7 +129,7 @@ class Bdb:
         """Invoke user function and return trace function for call event.
 
         If the debugger stops on this function call, invoke
-        self.user_call(). Raise BbdQuit if self.quitting is set.
+        self.user_call(). Raise BdbQuit if self.quitting is set.
         Return self.trace_dispatch to continue tracing in this scope.
         """
         # XXX 'arg' is no longer used
@@ -155,6 +167,11 @@ class Bdb:
             # The user issued a 'next' or 'until' command.
             if self.stopframe is frame and self.stoplineno != -1:
                 self._set_stopinfo(None, None)
+            # The previous frame might not have f_trace set, unless we are
+            # issuing a command that does not expect to stop, we should set
+            # f_trace
+            if self.stoplineno != -1:
+                self._set_caller_tracefunc(frame)
         return self.trace_dispatch
 
     def dispatch_exception(self, frame, arg):
@@ -190,6 +207,8 @@ class Bdb:
 
     def is_skipped_module(self, module_name):
         "Return True if module_name matches any skip pattern."
+        if module_name is None:  # some modules do not have names
+            return False
         for pattern in self.skip:
             if fnmatch.fnmatch(module_name, pattern):
                 return True
@@ -282,6 +301,16 @@ class Bdb:
         # stoplineno -1 means: don't stop at all
         self.stoplineno = stoplineno
 
+    def _set_caller_tracefunc(self, current_frame):
+        # Issue #13183: pdb skips frames after hitting a breakpoint and running
+        # step commands.
+        # Restore the trace function in the caller (that may not have been set
+        # for performance reasons) when returning from the current frame, unless
+        # the caller is the botframe.
+        caller_frame = current_frame.f_back
+        if caller_frame and not caller_frame.f_trace and caller_frame is not self.botframe:
+            caller_frame.f_trace = self.trace_dispatch
+
     # Derived classes and clients can call the following methods
     # to affect the stepping state.
 
@@ -295,14 +324,6 @@ class Bdb:
 
     def set_step(self):
         """Stop after one line of code."""
-        # Issue #13183: pdb skips frames after hitting a breakpoint and running
-        # step commands.
-        # Restore the trace function in the caller (that may not have been set
-        # for performance reasons) when returning from the current frame.
-        if self.frame_returning:
-            caller_frame = self.frame_returning.f_back
-            if caller_frame and not caller_frame.f_trace:
-                caller_frame.f_trace = self.trace_dispatch
         self._set_stopinfo(None, None)
 
     def set_next(self, frame):
@@ -321,14 +342,16 @@ class Bdb:
 
         If frame is not specified, debugging starts from caller's frame.
         """
+        sys.settrace(None)
         if frame is None:
             frame = sys._getframe().f_back
         self.reset()
-        while frame:
-            frame.f_trace = self.trace_dispatch
-            self.botframe = frame
-            frame = frame.f_back
-        self.set_step()
+        with self.set_enterframe(frame):
+            while frame:
+                frame.f_trace = self.trace_dispatch
+                self.botframe = frame
+                frame = frame.f_back
+            self.set_step()
         sys.settrace(self.trace_dispatch)
 
     def set_continue(self):
@@ -363,6 +386,12 @@ class Bdb:
     # Call self.get_*break*() to see the breakpoints or better
     # for bp in Breakpoint.bpbynumber: if bp: bp.bpprint().
 
+    def _add_to_breaks(self, filename, lineno):
+        """Add breakpoint to breaks, if not already there."""
+        bp_linenos = self.breaks.setdefault(filename, [])
+        if lineno not in bp_linenos:
+            bp_linenos.append(lineno)
+
     def set_break(self, filename, lineno, temporary=False, cond=None,
                   funcname=None):
         """Set a new breakpoint for filename:lineno.
@@ -375,14 +404,31 @@ class Bdb:
         line = linecache.getline(filename, lineno)
         if not line:
             return 'Line %s:%d does not exist' % (filename, lineno)
-        list = self.breaks.setdefault(filename, [])
-        if lineno not in list:
-            list.append(lineno)
+        self._add_to_breaks(filename, lineno)
         bp = Breakpoint(filename, lineno, temporary, cond, funcname)
+        # After we set a new breakpoint, we need to search through all frames
+        # and set f_trace to trace_dispatch if there could be a breakpoint in
+        # that frame.
+        frame = self.enterframe
+        while frame:
+            if self.break_anywhere(frame):
+                frame.f_trace = self.trace_dispatch
+            frame = frame.f_back
         return None
 
+    def _load_breaks(self):
+        """Apply all breakpoints (set in other instances) to this one.
+
+        Populates this instance's breaks list from the Breakpoint class's
+        list, which can have breakpoints set by another Bdb instance. This
+        is necessary for interactive sessions to keep the breakpoints
+        active across multiple calls to run().
+        """
+        for (filename, lineno) in Breakpoint.bplist.keys():
+            self._add_to_breaks(filename, lineno)
+
     def _prune_breaks(self, filename, lineno):
-        """Prune breakpoints for filname:lineno.
+        """Prune breakpoints for filename:lineno.
 
         A list of breakpoints is maintained in the Bdb instance and in
         the Breakpoint class.  If a breakpoint in the Bdb instance no
@@ -546,21 +592,17 @@ class Bdb:
             s += frame.f_code.co_name
         else:
             s += "<lambda>"
-        if '__args__' in frame.f_locals:
-            args = frame.f_locals['__args__']
-        else:
-            args = None
-        if args:
-            s += reprlib.repr(args)
-        else:
-            s += '()'
+        s += '()'
         if '__return__' in frame.f_locals:
             rv = frame.f_locals['__return__']
             s += '->'
             s += reprlib.repr(rv)
-        line = linecache.getline(filename, lineno, frame.f_globals)
-        if line:
-            s += lprefix + line.strip()
+        if lineno is not None:
+            line = linecache.getline(filename, lineno, frame.f_globals)
+            if line:
+                s += lprefix + line.strip()
+        else:
+            s += f'{lprefix}Warning: lineno is None'
         return s
 
     # The following methods can be called by clients to use
@@ -616,7 +658,7 @@ class Bdb:
 
     # This method is more useful to debug a single function call.
 
-    def runcall(self, func, *args, **kwds):
+    def runcall(self, func, /, *args, **kwds):
         """Debug a single function call.
 
         Return the result of the function call.
@@ -685,6 +727,12 @@ class Breakpoint:
             self.bplist[file, line].append(self)
         else:
             self.bplist[file, line] = [self]
+
+    @staticmethod
+    def clearBreakpoints():
+        Breakpoint.next = 1
+        Breakpoint.bplist = {}
+        Breakpoint.bpbynumber = [None]
 
     def deleteMe(self):
         """Delete the breakpoint from the list associated to a file:line.
@@ -787,15 +835,18 @@ def checkfuncname(b, frame):
     return True
 
 
-# Determines if there is an effective (active) breakpoint at this
-# line of code.  Returns breakpoint number or 0 if none
 def effective(file, line, frame):
-    """Determine which breakpoint for this file:line is to be acted upon.
+    """Return (active breakpoint, delete temporary flag) or (None, None) as
+       breakpoint to act upon.
 
-    Called only if we know there is a breakpoint at this location.  Return
-    the breakpoint that was triggered and a boolean that indicates if it is
-    ok to delete a temporary breakpoint.  Return (None, None) if there is no
-    matching breakpoint.
+       The "active breakpoint" is the first entry in bplist[line, file] (which
+       must exist) that is enabled, for which checkfuncname is True, and that
+       has neither a False condition nor a positive ignore count.  The flag,
+       meaning that a temporary breakpoint should be deleted, is False only
+       when the condiion cannot be evaluated (in which case, ignore count is
+       ignored).
+
+       If no such entry exists, then (None, None) is returned.
     """
     possibles = Breakpoint.bplist[file, line]
     for b in possibles:
