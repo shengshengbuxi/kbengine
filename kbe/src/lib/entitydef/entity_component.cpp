@@ -37,7 +37,7 @@ EntityComponent::ENTITY_COMPONENTS EntityComponent::entity_components;
 		{																									\
 			const char* ccattr_DEBUG_OP_ATTRIBUTE = PyUnicode_AsUTF8AndSize(ccattr, NULL);					\
 			DEBUG_MSG(fmt::format("{}.{}(refc={}, id={})::debug_op_attr:op={}, {}.\n",						\
-												owner()->ob_type->tp_name,									\
+										owner_!=NULL ? owner_->ob_type->tp_name : ownerID_>0 ? owner()->ob_type->tp_name : "",	\
 										(pComponentDescrs_ ? pComponentDescrs_->getName() : ""),			\
 												static_cast<PyObject*>(this)->ob_refcnt, this->ownerID(),	\
 															op, ccattr_DEBUG_OP_ATTRIBUTE));				\
@@ -49,14 +49,14 @@ EntityComponent::ENTITY_COMPONENTS EntityComponent::entity_components;
 			const char* ccattr_DEBUG_CREATE_NAMESPACE = PyUnicode_AsUTF8AndSize(key, NULL);					\
 			PyObject* pytsval = PyObject_Str(value);														\
 			const char* cccpytsval = PyUnicode_AsUTF8AndSize(pytsval, NULL);								\
-			Py_DECREF(pytsval);																				\
 			DEBUG_MSG(fmt::format("{}.{}(refc={}, id={})::debug_createNamespace:add {}({}).\n",				\
-												owner()->ob_type->tp_name,									\
+										owner_!=NULL ? owner_->ob_type->tp_name : ownerID_>0 ? owner()->ob_type->tp_name : "",	\
 										(pComponentDescrs_ ? pComponentDescrs_->getName() : ""),			\
 												static_cast<PyObject*>(this)->ob_refcnt,					\
 												this->ownerID(),											\
 																ccattr_DEBUG_CREATE_NAMESPACE,				\
 																cccpytsval));								\
+			Py_DECREF(pytsval);																				\
 		}																									\
 
 

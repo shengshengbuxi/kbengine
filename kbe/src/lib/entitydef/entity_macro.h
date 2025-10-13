@@ -196,13 +196,13 @@ namespace KBEngine{
 			const char* ccattr_DEBUG_CREATE_ENTITY_NAMESPACE = PyUnicode_AsUTF8AndSize(key, NULL);			\
 			PyObject* pytsval = PyObject_Str(value);														\
 			const char* cccpytsval = PyUnicode_AsUTF8AndSize(pytsval, NULL);								\
-			Py_DECREF(pytsval);																				\
 			DEBUG_MSG(fmt::format("{}(refc={}, id={})::debug_createNamespace:add {}({}).\n",				\
 												scriptName(),												\
 												static_cast<PyObject*>(this)->ob_refcnt,					\
 												this->id(),													\
 																ccattr_DEBUG_CREATE_ENTITY_NAMESPACE,		\
 																cccpytsval));								\
+			Py_DECREF(pytsval);																				\
 		}																									\
 
 

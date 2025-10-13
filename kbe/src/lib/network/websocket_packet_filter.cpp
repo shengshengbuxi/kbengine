@@ -94,8 +94,8 @@ Reason WebSocketPacketFilter::send(Channel * pChannel, PacketSender& sender, Pac
 	int space = pPacket->length() - pRetTCPPacket->space();
 	if(space > 0)
 	{
-		WARNING_MSG(fmt::format("WebSocketPacketFilter::send: no free space, buffer added:{}, total={}.\n",
-			space, pRetTCPPacket->size()));
+		//WARNING_MSG(fmt::format("WebSocketPacketFilter::send: no free space, buffer added:{}, total={}.\n",
+		//	space, pRetTCPPacket->size()));
 
 		pRetTCPPacket->data_resize(pRetTCPPacket->size() + space);
 	}

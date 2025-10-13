@@ -224,7 +224,7 @@ def executeRawDatabaseCommand(command, callback, threadID=0, dbInterfaceName="")
     pass
 
 
-def urlopen(url, callback, postData, headers):
+def urlopen(url, callback, postData, headers, timeout):
     """
     功能说明：
     这个脚本函数在提供对外HTTP/HTTPS异步请求。
@@ -264,6 +264,8 @@ def urlopen(url, callback, postData, headers):
     @headers
     可选参数，请求时使用的HTTP头，如：{"Content-Type": "application/x-www-form-urlencoded"}，它是一个字典。
 
+    @timeout
+    可选参数，请求的超时时间，单位为秒，默认为10秒。
 
 
 

@@ -110,13 +110,13 @@ namespace Http
 
 		Status setPostData(const void* data, unsigned int size);
 
-		Status setTimeout(uint32 time);
+		Status setTimeout(uint32 ms);
 
 		Status setHeader(const std::vector<std::string>& headers);
 		Status setHeader(const std::map<std::string, std::string>& headers);
 		Status setHeader(const std::string& header);
 
-		// set cert、ca、key
+		// set cert
 		Status setCAInfo(const std::string& cainfo);
 		Status setSSLCert(const std::string& sslCert);
 		Status setSSLKey(const std::string& sslKey);

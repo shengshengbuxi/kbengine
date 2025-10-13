@@ -80,7 +80,7 @@ Request::Request():
 	curl_easy_setopt((CURL*)pContext_, CURLOPT_NOSIGNAL, 1);
 
 	curl_easy_setopt((CURL*)pContext_, CURLOPT_CONNECTTIMEOUT_MS, 10000);
-	setTimeout(10);
+	setTimeout(10*1000);
 
 	KBE_ASSERT(sizeof(error_) >= CURL_ERROR_SIZE);
 	curl_easy_setopt((CURL*)pContext_, CURLOPT_ERRORBUFFER, error_);
@@ -422,13 +422,13 @@ Request::Status Request::setHeader(const std::map<std::string, std::string>& hea
 }
 
 //-------------------------------------------------------------------------------------
-Request::Status Request::setTimeout(uint32 secs)
+Request::Status Request::setTimeout(uint32 ms)
 {
-	CURLcode curlCode = curl_easy_setopt((CURL*)pContext_, CURLOPT_TIMEOUT, secs);
+	CURLcode curlCode = curl_easy_setopt((CURL*)pContext_, CURLOPT_TIMEOUT_MS, ms);
 	if (CURLE_OK != curlCode)
 	{
 		ERROR_MSG(fmt::format("Http::Request::setTimeout: "
-			"curl_easy_setopt(CURLOPT_TIMEOUT) error! curlCode={}, secs={}\n", curlCode, secs));
+			"curl_easy_setopt(CURLOPT_TIMEOUT_MS) error! curlCode={}, secs={}\n", curlCode, ms));
 
 		return INVALID_OPT;
 	}

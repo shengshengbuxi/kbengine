@@ -14,6 +14,22 @@ class EntityComponent:
         """组件父对象ID"""
         pass
 
+    
+    @property
+    def name(self):
+        """组件属性名称"""
+        pass
+
+    @property
+    def className(self):
+        """组件类名"""
+        pass
+
+    @property
+    def isDestroyed(self):
+        """组件是否被销毁"""
+        pass
+
     @property
     def client(self):
         """实体对应的客户端实体"""
@@ -60,8 +76,8 @@ class EntityComponent:
     def onEnterTrap(self, entity, rangeXZ, rangeY, controllerID, userArg):
         pass
 
-	def onDestroy(self):
-		pass
+    def onDestroy(self):
+        pass
 
 
 class Entity:
@@ -2641,7 +2657,7 @@ def time():
     pass
 
 
-def urlopen(url, callback, postData, headers):
+def urlopen(url, callback, postData, headers, timeout):
     """    
     功能说明：
     这个脚本函数在提供对外HTTP/HTTPS异步请求。
@@ -2681,6 +2697,8 @@ def urlopen(url, callback, postData, headers):
     @headers
     可选参数，请求时使用的HTTP头，如：{"Content-Type": "application/x-www-form-urlencoded"}，它是一个字典。
 
+    @timeout
+    可选参数，请求的超时时间，单位为秒，默认为10秒。
 
 
 
